@@ -1,8 +1,9 @@
 class Building:
-    def __init__(self, acronym, woodCost, buildingTime, hp, size1, size2, goldCost = 0, population=0, resourceDropPoint=False, spawnsUnits=False, containsFood=False, walkable=False):
+    def __init__(self, acronym, woodCost, goldCost, buildTime, hp, size1, size2, population=0, resourceDropPoint=False, spawnsUnits=False, containsFood=False, walkable=False, attack=0, range=0):
         self.acronym = acronym
         self.woodCost = woodCost
-        self.buildingTime = buildingTime
+        self.goldCost = goldCost
+        self.buildTime = buildTime
         self.hp = hp
         self.size1 = size1
         self.size2 = size2
@@ -11,4 +12,5 @@ class Building:
         self.spawnsUnits = spawnsUnits
         self.containsFood = containsFood
         self.walkable = walkable
-
+        self.attack = attack
+        self.range = range
