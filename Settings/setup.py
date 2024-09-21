@@ -41,3 +41,14 @@ MARINES_NUMBER_OF_STABLES = 2  # Nombre d'écuries
 MARINES_NUMBER_OF_ARCHERY_RANGES = 2  # Nombre de champs de tir à l'arc
 
 ####################
+
+TILE_SIZE = 12  # Taille d'une tuile en pixels
+MAP_WIDTH = 120 * TILE_SIZE
+MAP_HEIGHT = 120 * TILE_SIZE
+
+# Nombre de tuiles de chaque type
+
+NUM_MOUNTAIN_TILES = 1000
+NUM_GOLD_TILES = 1000
+NUM_WOOD_TILES = 1000
+NUM_FOOD_TILES = 1000

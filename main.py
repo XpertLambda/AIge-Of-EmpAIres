@@ -1,13 +1,12 @@
-from Models.Building import TownCentre, House, Camp, Farm, Barracks, Stable, ArcheryRange, Keep
+from Controller.init_map import *
 
-town_centre = TownCentre()
-house = House()
-camp = Camp()
-farm = Farm()
-barracks = Barracks()
-stable = Stable()
-archery_range = ArcheryRange()
-keep = Keep()
+# Fonction principale pour exécuter le jeu
+def main():
+    screen = init_pygame()
+    textures = load_textures()
+    game_map = GameMap(width=MAP_WIDTH, height=MAP_HEIGHT)
+    draw_map(screen, game_map, textures)  # Dessiner la carte une seule fois
+    game_loop(screen, game_map, textures)  # Lancer la boucle principale
 
-print(town_centre.acronym, town_centre.woodCost, town_centre.population)
-print(house.acronym, house.woodCost, house.population)
+if __name__ == "__main__":
+    main()
