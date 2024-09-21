@@ -42,9 +42,14 @@ MARINES_NUMBER_OF_ARCHERY_RANGES = 2  # Nombre de champs de tir à l'arc
 
 ####################
 
-TILE_SIZE = 12  # Taille d'une tuile en pixels
+
+TILE_SIZE = 16  # Taille d'une tuile en pixels
 MAP_WIDTH = 120 * TILE_SIZE
 MAP_HEIGHT = 120 * TILE_SIZE
+
+TILES_IN_VIEW = 75  # Nombre de tuiles visibles en largeur et hauteur
+WINDOW_WIDTH = TILES_IN_VIEW * TILE_SIZE
+WINDOW_HEIGHT = TILES_IN_VIEW * TILE_SIZE
 
 # Nombre de tuiles de chaque type
 
