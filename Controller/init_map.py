@@ -77,7 +77,6 @@ def game_loop(screen, game_map, textures):
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_z]:  # Z
-            print(camera.camera.right, camera.camera.bottom)
             if camera.camera.top > 0:  # Vérifie si on peut déplacer vers le haut
                 camera.camera.y -= 5
         if keys[pygame.K_s]:  # S
@@ -92,8 +91,8 @@ def game_loop(screen, game_map, textures):
 
         draw_map(screen, game_map, textures, camera)  # Dessiner la carte avec la caméra
 
-        # Limiter la boucle à 60 images par seconde
-        clock.tick(60)
+        # Limiter la boucle à 120 images par seconde
+        clock.tick(120)
 
     pygame.quit()
     sys.exit()
