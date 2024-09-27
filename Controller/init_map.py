@@ -1,10 +1,9 @@
+# Controller/init_map.py
 import pygame
 import sys
 from Models.Map import GameMap
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TILES_IN_VIEW, WINDOW_WIDTH, WINDOW_HEIGHT
-
-# Constantes pour la caméra
-
+from Controller.map_2_5d import draw_map
 
 class Camera:
     def __init__(self, width, height):
@@ -18,53 +17,15 @@ class Camera:
         y = target.rect.centery - self.camera.height // 2
         self.camera = pygame.Rect(x, y, self.camera.width, self.camera.height)
 
-# Initialisation de Pygame
 def init_pygame():
     pygame.init()
-    window_width = MAP_WIDTH
-    window_height = MAP_HEIGHT
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption("Age of Empires - Python Version")
     return screen
 
-# Chargement des textures
 def load_textures():
-    grass_texture = pygame.image.load('assets/grass.png')
-    grass_texture = pygame.transform.scale(grass_texture, (TILE_SIZE, TILE_SIZE))
-    moutain_texture = pygame.image.load('assets/mountain.jpg')
-    moutain_texture = pygame.transform.scale(moutain_texture, (TILE_SIZE, TILE_SIZE))
-    food_texture = pygame.image.load('assets/food.png')
-    food_texture = pygame.transform.scale(food_texture, (TILE_SIZE, TILE_SIZE))
-    wood_texture = pygame.image.load('assets/wood.png')
-    wood_texture = pygame.transform.scale(wood_texture, (TILE_SIZE, TILE_SIZE))
-    gold_texture = pygame.image.load('assets/gold.png')
-    gold_texture = pygame.transform.scale(gold_texture, (TILE_SIZE, TILE_SIZE))
-    
-    return {'grass': grass_texture, 
-            'mountain': moutain_texture,
-            'food': food_texture,
-            'wood': wood_texture,
-            'gold': gold_texture}
+    return {}  # Retourne un dictionnaire vide car nous n'utilisons pas de textures
 
-# Dessin de la carte
-def draw_map(screen, game_map, textures, camera):
-    screen.fill((0, 0, 0))  # Effacer l'écran
-    for y in range(game_map.height//TILE_SIZE):
-        for x in range(game_map.width//TILE_SIZE):
-            tile = game_map.grid[y][x]
-            if tile.terrain_type == "grass":
-                screen.blit(textures['grass'], (x * TILE_SIZE - camera.camera.x, y * TILE_SIZE - camera.camera.y))
-            elif tile.terrain_type == "mountain":
-                screen.blit(textures['mountain'], (x * TILE_SIZE - camera.camera.x, y * TILE_SIZE - camera.camera.y))  
-            elif tile.terrain_type == "gold":
-                screen.blit(textures['gold'], (x * TILE_SIZE - camera.camera.x, y * TILE_SIZE - camera.camera.y))
-            elif tile.terrain_type == "wood":
-                screen.blit(textures['wood'], (x * TILE_SIZE - camera.camera.x, y * TILE_SIZE - camera.camera.y))
-            elif tile.terrain_type == "food":
-                screen.blit(textures['food'], (x * TILE_SIZE - camera.camera.x, y * TILE_SIZE - camera.camera.y))
-    pygame.display.flip()  # Mets à jour l'affichage
-
-# Boucle principale du jeu
 def game_loop(screen, game_map, textures):
     clock = pygame.time.Clock()
     camera = Camera(TILES_IN_VIEW, TILES_IN_VIEW)
@@ -96,4 +57,3 @@ def game_loop(screen, game_map, textures):
 
     pygame.quit()
     sys.exit()
-
