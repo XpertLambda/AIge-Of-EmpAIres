@@ -1,26 +1,32 @@
-# Controller/init_map.py
 import pygame
 import sys
 from Models.Map import GameMap
-from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TILES_IN_VIEW, WINDOW_WIDTH, WINDOW_HEIGHT
-from Controller.map_2_5d import draw_map
+from Settings.setup import TILE_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT
+from Controller.map_2_5d import draw_map, to_isometric
 
 class Camera:
-    def __init__(self, width, height):
-        self.camera = pygame.Rect(0, 0, width * TILE_SIZE, height * TILE_SIZE)
+    def __init__(self):
+        self.camera = pygame.Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.zoom = 1.0
 
-    def apply(self, entity):
-        return entity.rect.move(-self.camera.topleft)
+    def apply_zoom(self, pos):
+        return (pos[0] * self.zoom, pos[1] * self.zoom)
 
-    def update(self, target):
-        x = target.rect.centerx - self.camera.width // 2
-        y = target.rect.centery - self.camera.height // 2
-        self.camera = pygame.Rect(x, y, self.camera.width, self.camera.height)
+    def zoom_in(self):
+        self.zoom *= 1.1
+
+    def zoom_out(self):
+        self.zoom /= 1.1
+
+    def move(self, dx, dy):
+        self.camera.x += dx
+        self.camera.y += dy
 
 def init_pygame():
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    pygame.display.set_caption("Age of Empires - Python Version")
+    # Mode plein écran
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.FULLSCREEN)
+    pygame.display.set_caption("Age of Empires - Version Python")
     return screen
 
 def load_textures():
@@ -28,31 +34,48 @@ def load_textures():
 
 def game_loop(screen, game_map, textures):
     clock = pygame.time.Clock()
-    camera = Camera(TILES_IN_VIEW, TILES_IN_VIEW)
+    camera = Camera()
+
+    num_tiles_x = game_map.width // TILE_SIZE
+    num_tiles_y = game_map.height // TILE_SIZE
+
+    # Calculer le centre isométrique de la carte
+    map_center_x = num_tiles_x // 2
+    map_center_y = num_tiles_y // 2
+    iso_center_x, iso_center_y = to_isometric(map_center_x, map_center_y, TILE_SIZE)
+    iso_center_x, iso_center_y = camera.apply_zoom((iso_center_x, iso_center_y))
+
+    # Centrer la caméra
+    camera.camera.x = iso_center_x - WINDOW_WIDTH // 2
+    camera.camera.y = iso_center_y - WINDOW_HEIGHT // 2
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 4:  # Molette vers le haut
+                    camera.zoom_in()
+                elif event.button == 5:  # Molette vers le bas
+                    camera.zoom_out()
 
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_z]:  # Z
-            if camera.camera.top > 0:  # Vérifie si on peut déplacer vers le haut
-                camera.camera.y -= 5
-        if keys[pygame.K_s]:  # S
-            if camera.camera.bottom < game_map.height:  # Vérifie si on peut déplacer vers le bas
-                camera.camera.y += 5
-        if keys[pygame.K_q]:  # Q
-            if camera.camera.left > 0:  # Vérifie si on peut déplacer vers la gauche
-                camera.camera.x -= 5
-        if keys[pygame.K_d]:  # D
-            if camera.camera.right < game_map.width:  # Vérifie si on peut déplacer vers la droite
-                camera.camera.x += 5
+        move_speed = 10 if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]) else 5
 
-        draw_map(screen, game_map, textures, camera)  # Dessiner la carte avec la caméra
+        dx, dy = 0, 0
+        if keys[pygame.K_z]:
+            dy -= move_speed
+        if keys[pygame.K_s]:
+            dy += move_speed
+        if keys[pygame.K_q]:
+            dx -= move_speed
+        if keys[pygame.K_d]:
+            dx += move_speed
 
-        # Limiter la boucle à 120 images par seconde
+        camera.move(dx, dy)
+
+        draw_map(screen, game_map, textures, camera)
         clock.tick(120)
 
     pygame.quit()
