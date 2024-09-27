@@ -1,5 +1,5 @@
 import pygame
-from Settings.setup import TILE_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT
+from Settings.setup import TILE_SIZE
 
 def to_isometric(x, y, tile_size):
     iso_x = (x - y) * (tile_size // 2)
