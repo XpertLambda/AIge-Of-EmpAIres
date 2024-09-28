@@ -3,12 +3,7 @@ from Settings.setup import MEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_FOOD, MEAN
 from Settings.setup import MARINES_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_FOOD, MARINES_STARTING_GOLD, MARINES_STARTING_VILLAGERS, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_STARTING_WOOD
 
 class Team:
-    def __init__(self, resources, units, buildings):
-        self.resources = resources
-        self.units = units
-        self.buildings = buildings
-        
-    def initDifficulty(self, difficulty):
+    def __init__(self, difficulty):
         if difficulty == 'lean':
             self.resources = {'food': LEAN_STARTING_FOOD, 'wood': LEAN_STARTING_WOOD, 'gold': LEAN_STARTING_GOLD}
             self.units = {'villagers': LEAN_STARTING_VILLAGERS}
@@ -30,3 +25,5 @@ class Team:
             }
         else:
             raise ValueError("Invalid difficulty level.")
+        
+        

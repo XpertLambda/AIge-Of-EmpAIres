@@ -15,9 +15,10 @@ class Tile:
 
 
 class GameMap:
-    def __init__(self, width=MAP_WIDTH, height=MAP_HEIGHT):
+    def __init__(self, numberOfPlayers=2, width=MAP_WIDTH, height=MAP_HEIGHT):
         self.width = width
         self.height = height
+        self.numberOfPlayers = numberOfPlayers
         self.grid = self.random_map(width, height)  
 
 
