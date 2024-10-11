@@ -1,4 +1,6 @@
 from Models.Building.Building import Building
+from Models.Unit.Swordsman import Swordsman
+import time
 
 class Barracks(Building):
     def __init__(self):
@@ -12,3 +14,7 @@ class Barracks(Building):
             size2=3,
             spawnsUnits=True
         )
+    def entraine(self):
+        s=Swordsman()
+        time.sleep(s.training_time)
+        return s

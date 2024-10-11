@@ -1,4 +1,5 @@
 from Models.Building.Building import Building
+from Models.Unit.Archer import Archer
 
 class ArcheryRange(Building):
     def __init__(self):
@@ -12,3 +13,7 @@ class ArcheryRange(Building):
             size2=3,
             spawnsUnits=True
         )
+    def entraine(self):
+        a.Archer()
+        time.sleep(h.training_time)
+        return a
