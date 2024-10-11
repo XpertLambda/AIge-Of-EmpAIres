@@ -15,11 +15,11 @@ class Tile:
 
 
 class GameMap:
-    def __init__(self, numberOfPlayers=2, width=MAP_WIDTH, height=MAP_HEIGHT):
+    def __init__(self, players, width=MAP_WIDTH, height=MAP_HEIGHT):
         self.width = width
         self.height = height
-        self.numberOfPlayers = numberOfPlayers
-        self.grid = self.random_map(width, height)  
+        self.players = players
+        self.grid = self.random_map(width, height, players)  
 
 
     def place_building(self, x, y, building):
@@ -34,7 +34,7 @@ class GameMap:
             return True
         return False
     
-    def random_map(self, width, height):
+    def random_map(self, width, height, players):
         grid = [] 
 
         tiles = (
@@ -64,7 +64,7 @@ class GameMap:
     def print_map(self):
         # Mapping des types de terrain aux acronymes
         terrain_acronyms = {
-            'grass': '#',
+            'grass': ' ',
             'mountain': 'M',
             'gold': 'G',
             'wood': 'W',

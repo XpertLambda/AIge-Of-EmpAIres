@@ -60,3 +60,7 @@ NUM_FOOD_TILES = 1000
 
 # Difficulté du jeu
 DIFFICULTY = 'lean'
+
+
+# Nombre de joueurs 
+NUMBER_OF_PLAYERS = 2 
