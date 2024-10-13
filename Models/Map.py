@@ -18,6 +18,8 @@ class GameMap:
     def __init__(self, players, width=MAP_WIDTH, height=MAP_HEIGHT):
         self.width = width
         self.height = height
+        self.num_tiles_x = width // TILE_SIZE
+        self.num_tiles_y = height // TILE_SIZE
         self.players = players
         self.grid = self.random_map(width, height, players)  
 
@@ -41,7 +43,7 @@ class GameMap:
                     attempts += 1
                 if attempts == max_attempts:
                     raise ValueError("Unable to place building, grid might be fully occupied.")
-                print(x, y)
+                
                 for i in range(building.size1):
                     for j in range(building.size2):
                         grid[y + j][x + i].building = building
@@ -75,7 +77,8 @@ class GameMap:
 
 
         # Nombre total de tuiles
-        total_tiles = num_tiles_x * num_tiles_y
+        
+        total_tiles = self.num_tiles_x * self.num_tiles_y
         remaining_tiles = total_tiles - len(tiles)
         tiles += ['grass'] * remaining_tiles  # Ajoute des tuiles d'herbe pour combler les espaces
 
