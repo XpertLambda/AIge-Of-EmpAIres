@@ -1,3 +1,5 @@
+# Models/Map.py
+
 import random
 from Models.Building import Building
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_MOUNTAIN_TILES, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES
@@ -5,15 +7,12 @@ from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_MOUNTAIN_TILES,
 class Tile:
     def __init__(self, terrain_type, tile_size=TILE_SIZE):
         self.tile_size = tile_size
-        self.terrain_type = terrain_type  # Grass, Mountain, Gold, Wood, Food
-        self.building = None    # Tuile sans bâtiment
-        self.unit = None        # Tuile sans unité
+        self.terrain_type = terrain_type  # 'grass', 'mountain', 'gold', 'wood', 'food'
+        self.building = None  # Pas de bâtiment
+        self.unit = None      # Pas d'unité
 
     def is_walkable(self):
         return self.building is None
-
-
-
 
 class GameMap:
     def __init__(self, players, width=MAP_WIDTH, height=MAP_HEIGHT):
@@ -74,8 +73,9 @@ class GameMap:
             ['food'] * NUM_FOOD_TILES
         )
 
+
         # Nombre total de tuiles
-        total_tiles = (width // TILE_SIZE) * (height // TILE_SIZE)
+        total_tiles = num_tiles_x * num_tiles_y
         remaining_tiles = total_tiles - len(tiles)
         tiles += ['grass'] * remaining_tiles  # Ajoute des tuiles d'herbe pour combler les espaces
 
@@ -89,6 +89,7 @@ class GameMap:
                 grid[y][x].terrain_type = terrain_type
 
         return grid
+
 
     def print_map(self):
         terrain_acronyms = {
