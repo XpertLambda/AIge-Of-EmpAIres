@@ -32,17 +32,32 @@ class GameMap:
         for player in players:
             for building in player.buildings:
                 attempts = 0
-                max_attempts = 1000  # Nombre maximum de tentatives pour placer un bâtiment
+                max_attempts = MAP_WIDTH*MAP_HEIGHT*TILE_SIZE  # Nombre maximum de tentatives pour placer un bâtiment
                 x, y = 0, 0  # initialisation
-                while grid[y][x].building is not None and attempts < max_attempts:
+                while attempts < max_attempts:
                     x = random.randint(0, self.width // TILE_SIZE - 1)
                     y = random.randint(0, self.height // TILE_SIZE - 1)
+                    if self.can_place_building(grid, x, y, building):
+                        break
                     attempts += 1
                 if attempts == max_attempts:
                     raise ValueError("Unable to place building, grid might be fully occupied.")
                 print(x, y)
-                grid[y][x].building = building
-                grid[y][x].terrain_type = building.acronym
+                for i in range(building.size1):
+                    for j in range(building.size2):
+                        grid[y + j][x + i].building = building
+                        grid[y + j][x + i].terrain_type = building.acronym
+
+    def can_place_building(self, grid, x, y, building):
+        if x + building.size1 > self.width // TILE_SIZE or y + building.size2 > self.height // TILE_SIZE:
+            return False
+        for i in range(building.size1):
+            for j in range(building.size2):
+                if grid[y + j][x + i].building is not None:
+                    return False
+        return True
+                
+                
 
     def random_map(self, width, height, players):
         # Créer une grille vide initiale
@@ -76,20 +91,22 @@ class GameMap:
         return grid
 
     def print_map(self):
-        # Mapping des types de terrain aux acronymes
         terrain_acronyms = {
             'grass': ' ',
             'mountain': 'M',
             'gold': 'G',
             'wood': 'W',
-            'food': 'F', 
-            'town_centre': 'T',
+            'food': 'F',
         }
 
         for row in self.grid:
             row_display = []
             for tile in row:
-                row_display.append(terrain_acronyms.get(tile.terrain_type, '??'))
+                if tile.building is not None:
+                    row_display.append(tile.building.acronym)
+                else:
+                    row_display.append(terrain_acronyms.get(tile.terrain_type, '??'))
             print(''.join(row_display))
+
            
     
