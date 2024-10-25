@@ -23,6 +23,12 @@ def main():
     print(s2.hp,"ok")
     #game_loop(screen, game_map, textures)
 
+    ###TEST HTML###
+    t=Team("lean")
+    t.army.add(s1)
+    t.army.add(s2)
+    t.write_html()
+
 
 if __name__ == "__main__":
     main()

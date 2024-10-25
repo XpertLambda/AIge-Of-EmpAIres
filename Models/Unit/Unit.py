@@ -7,6 +7,7 @@ def dist(x1,y1,x2,y2):
         return sqrt((x1-x2)**2 + (y1-y2)**2)
 
 class Unit(Team):
+    cpt=1
     def __init__(self, acronym, cost_food, cost_gold, cost_wood, hp, attack, speed, training_time,x,y):
         self.acronym = acronym          # Nom de l'unité (Villager, Swordsman, etc.)
         self.cost_food = cost_food  # Coût en nourriture
@@ -19,7 +20,9 @@ class Unit(Team):
         #position
         self.x=x
         self.y=y
-    
+        self.task="nothing"
+        self.id=Unit.cpt
+        Unit.cpt+=1
     
 
     def attaquer(self,cible):
@@ -27,7 +30,6 @@ class Unit(Team):
             cible.hp-=self.attack
             return True
         return False
-
     
     def SeDeplacer(self,x,y,map):
         while(self.x!=x and self.y!=y):
