@@ -20,7 +20,7 @@ def draw_player_selection(screen, players, selected_player, minimap_rect):
         
         # Texte du joueur (utilisez pygame.font pour le rendu du texte)
         font = pygame.font.Font(None, 24)
-        text = font.render(f"Player {i}", True, (255, 255, 255))
+        text = font.render(f"Bot {i+1}", True, (255, 255, 255))
         text_rect = text.get_rect(center=rect.center)
         screen.blit(text, text_rect)
 

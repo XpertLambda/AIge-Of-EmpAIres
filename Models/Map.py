@@ -33,32 +33,48 @@ class GameMap:
         num_players = len(players)
         zone_width = self.width // (num_players if num_players % 2 == 0 else 1) // TILE_SIZE
         zone_height = self.height // (num_players if num_players % 2 == 0 else 1) // TILE_SIZE
-        
+
         for index, player in enumerate(players):
             # Calcul de la zone de départ du joueur
             x_start = (index % (num_players // 2)) * zone_width
             y_start = (index // (num_players // 2)) * zone_height
             x_end = x_start + zone_width
             y_end = y_start + zone_height
-                        
+
             for building in player.buildings:
+                max_attempts = zone_width * zone_height
                 attempts = 0
-                max_attempts = zone_width * zone_height  # Limite de tentatives pour la zone du joueur
-                x, y = 0, 0
+                placed = False
+
+                # Tentatives aléatoires de placement
                 while attempts < max_attempts:
                     x = random.randint(x_start, x_end - building.size1)
                     y = random.randint(y_start, y_end - building.size2)
                     if self.can_place_building(grid, x, y, building):
+                        placed = True
                         break
                     attempts += 1
-                if attempts == max_attempts:
+
+                # Si l'aléatoire échoue, recherche systématique de la première place libre
+                if not placed:
+                    for y in range(y_start, y_end - building.size2 + 1):
+                        for x in range(x_start, x_end - building.size1 + 1):
+                            if self.can_place_building(grid, x, y, building):
+                                placed = True
+                                break
+                        if placed:
+                            break
+
+                # Si aucun placement n'est possible, lever l'exception
+                if not placed:
                     raise ValueError("Unable to place building in player zone; zone might be fully occupied.")
-                
+
                 # Placement du bâtiment sur la grille
                 for i in range(building.size1):
                     for j in range(building.size2):
                         grid[y + j][x + i].building = building
                         grid[y + j][x + i].terrain_type = building.acronym
+
 
 
     def can_place_building(self, grid, x, y, building):
@@ -123,6 +139,3 @@ class GameMap:
                 else:
                     row_display.append(terrain_acronyms.get(tile.terrain_type, '??'))
             print(''.join(row_display))
-
-           
-    
