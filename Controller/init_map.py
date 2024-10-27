@@ -3,6 +3,7 @@
 import pygame
 import sys
 from Models.Map import GameMap
+from Controller.select_player import draw_player_selection
 from Settings.setup import (
     TILE_SIZE,
     WINDOW_WIDTH,
@@ -296,7 +297,7 @@ def init_pygame():
     return screen, screen_width, screen_height
 
 # --- Fonction de la Boucle de Jeu ---
-def game_loop(screen, game_map, screen_width, screen_height):
+def game_loop(screen, game_map, screen_width, screen_height, players):
     """
     Boucle principale du jeu qui gère les événements, le déplacement et le zoom de la caméra,
     ainsi que le dessin de la carte.
@@ -308,6 +309,10 @@ def game_loop(screen, game_map, screen_width, screen_height):
 
     # Créer la minimap
     minimap_background = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+    
+    selected_player = players[0]  # Joueur par défaut
+    minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - 10, screen_height - MINIMAP_HEIGHT - 30, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+
 
     running = True
     while running:
@@ -328,6 +333,15 @@ def game_loop(screen, game_map, screen_width, screen_height):
                     camera.set_zoom(camera.zoom * 1.1)
                 elif event.button == 5:  # Molette vers le bas
                     camera.set_zoom(camera.zoom / 1.1)
+                else:
+                    # Gérer la sélection du joueur avec clic
+                    mouse_x, mouse_y = event.pos
+                    for i, player in enumerate(players):
+                        rect_y = minimap_rect.y - (i + 1) * (30 + 5)
+                        rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
+                        if rect.collidepoint(mouse_x, mouse_y):
+                            selected_player = player
+                            break
 
         keys = pygame.key.get_pressed()
         move_speed = 300 * dt  # Vitesse en pixels par seconde
@@ -352,6 +366,9 @@ def game_loop(screen, game_map, screen_width, screen_height):
 
         # Dessiner la minimap
         draw_minimap(screen, minimap_background, camera, game_map)
+
+        # Dessiner la sélection des joueurs au-dessus de la minimap
+        draw_player_selection(screen, players, selected_player, minimap_rect)
 
         # Mettre à jour l'affichage
         pygame.display.flip()

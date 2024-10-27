@@ -16,7 +16,7 @@ def main():
     game_map.print_map()  
     
     # Lancer la boucle de jeu avec tous les arguments requis
-    game_loop(screen, game_map, screen_width, screen_height)
+    game_loop(screen, game_map, screen_width, screen_height, players)  
 
 
 if __name__ == "__main__":
