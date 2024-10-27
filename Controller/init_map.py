@@ -3,7 +3,7 @@
 import pygame
 import sys
 from Models.Map import GameMap
-from Controller.select_player import draw_player_selection
+from Controller.select_player import draw_player_selection, draw_player_info
 from Settings.setup import (
     TILE_SIZE,
     WINDOW_WIDTH,
@@ -369,6 +369,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         # Dessiner la sélection des joueurs au-dessus de la minimap
         draw_player_selection(screen, players, selected_player, minimap_rect)
+        
+         # Afficher les informations du joueur sélectionné en bas de l'écran
+        draw_player_info(screen, selected_player, screen_width, screen_height)
 
         # Mettre à jour l'affichage
         pygame.display.flip()

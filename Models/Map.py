@@ -40,9 +40,7 @@ class GameMap:
             y_start = (index // (num_players // 2)) * zone_height
             x_end = x_start + zone_width
             y_end = y_start + zone_height
-            
-            print(f"P{index}-x_start: {x_start}, x_end: {x_end}, y_start: {y_start}, y_end: {y_end}")
-            
+                        
             for building in player.buildings:
                 attempts = 0
                 max_attempts = zone_width * zone_height  # Limite de tentatives pour la zone du joueur

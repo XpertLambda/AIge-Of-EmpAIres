@@ -1,4 +1,5 @@
 import pygame
+from collections import Counter
 
 def draw_player_selection(screen, players, selected_player, minimap_rect):
     """
@@ -24,3 +25,34 @@ def draw_player_selection(screen, players, selected_player, minimap_rect):
         screen.blit(text, text_rect)
 
     return selection_height * len(players) + padding * (len(players) - 1)
+
+
+def draw_player_info(screen, selected_player, screen_width, screen_height):
+    """
+    Affiche les informations du joueur sélectionné en bas de l'écran :
+    - Types et nombre d'unités
+    - Nombre de ressources
+    - Types de bâtiments et leur nombre
+    """
+    font = pygame.font.Font(None, 24)
+    padding = 5
+    info_y = screen_height - 100  # Position de départ en bas de l'écran
+
+    # Afficher les ressources
+    resources_text = f"Resources - Food: {selected_player.resources.food}, Wood: {selected_player.resources.wood}, Gold: {selected_player.resources.gold}"
+    resources_surface = font.render(resources_text, True, (255, 255, 255))
+    screen.blit(resources_surface, (padding, info_y))
+
+    # Afficher les unités (types et nombre)
+    unit_counts = Counter(unit.acronym for unit in selected_player.units)
+    units_text = "Units - " + ", ".join([f"{acronym}: {count}" for acronym, count in unit_counts.items()])
+    units_surface = font.render(units_text, True, (255, 255, 255))
+    screen.blit(units_surface, (padding, info_y + 30))
+
+    # Afficher les bâtiments (types et nombre)
+    building_counts = Counter(building.acronym for building in selected_player.buildings)
+    buildings_text = "Buildings - " + ", ".join([f"{acronym}: {count}" for acronym, count in building_counts.items()])
+    buildings_surface = font.render(buildings_text, True, (255, 255, 255))
+    screen.blit(buildings_surface, (padding, info_y + 60))
+    
+    

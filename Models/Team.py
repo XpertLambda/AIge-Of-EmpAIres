@@ -22,8 +22,6 @@ class Team:
 
         elif difficulty == 'mean':
             self.resources = Resources(MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_GOLD)
-            self.units = Villager()
-            
             for _ in range(MEAN_STARTING_VILLAGERS):
                 self.units.append(Villager())
             
@@ -32,11 +30,8 @@ class Team:
 
         elif difficulty == 'marines':
             self.resources = Resources(MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_STARTING_GOLD)
-            self.units = Villager()
             
             # Ajout des bâtiments
-            for _ in range(MARINES_NUMBER_OF_TOWER_CENTRE):
-                self.buildings.append(TownCentre())
                 
             for _ in range(MARINES_NUMBER_OF_BARRACKS):
                 self.buildings.append(Barracks())
