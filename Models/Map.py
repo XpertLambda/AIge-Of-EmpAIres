@@ -30,24 +30,38 @@ class GameMap:
         pass
 
     def building_generation(self, grid, players):
-        for player in players:
+        num_players = len(players)
+        zone_width = self.width // (num_players if num_players % 2 == 0 else 1) // TILE_SIZE
+        zone_height = self.height // (num_players if num_players % 2 == 0 else 1) // TILE_SIZE
+        
+        for index, player in enumerate(players):
+            # Calcul de la zone de départ du joueur
+            x_start = (index % (num_players // 2)) * zone_width
+            y_start = (index // (num_players // 2)) * zone_height
+            x_end = x_start + zone_width
+            y_end = y_start + zone_height
+            
+            print(f"P{index}-x_start: {x_start}, x_end: {x_end}, y_start: {y_start}, y_end: {y_end}")
+            
             for building in player.buildings:
                 attempts = 0
-                max_attempts = MAP_WIDTH*MAP_HEIGHT*TILE_SIZE  # Nombre maximum de tentatives pour placer un bâtiment
-                x, y = 0, 0  # initialisation
+                max_attempts = zone_width * zone_height  # Limite de tentatives pour la zone du joueur
+                x, y = 0, 0
                 while attempts < max_attempts:
-                    x = random.randint(0, self.width // TILE_SIZE - 1)
-                    y = random.randint(0, self.height // TILE_SIZE - 1)
+                    x = random.randint(x_start, x_end - building.size1)
+                    y = random.randint(y_start, y_end - building.size2)
                     if self.can_place_building(grid, x, y, building):
                         break
                     attempts += 1
                 if attempts == max_attempts:
-                    raise ValueError("Unable to place building, grid might be fully occupied.")
+                    raise ValueError("Unable to place building in player zone; zone might be fully occupied.")
                 
+                # Placement du bâtiment sur la grille
                 for i in range(building.size1):
                     for j in range(building.size2):
                         grid[y + j][x + i].building = building
                         grid[y + j][x + i].terrain_type = building.acronym
+
 
     def can_place_building(self, grid, x, y, building):
         if x + building.size1 > self.width // TILE_SIZE or y + building.size2 > self.height // TILE_SIZE:

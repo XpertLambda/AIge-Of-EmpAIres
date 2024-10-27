@@ -83,4 +83,4 @@ MINIMAP_MARGIN = 10
 
 
 # Nombre de joueurs 
-NUMBER_OF_PLAYERS = 2 
+NUMBER_OF_PLAYERS = 2
