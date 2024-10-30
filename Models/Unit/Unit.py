@@ -1,14 +1,7 @@
 from Models.Team import Team
-from Models.Map import *
-from math import sqrt
-import time
-
-def dist(x1,y1,x2,y2):
-        return sqrt((x1-x2)**2 + (y1-y2)**2)
 
 class Unit(Team):
-    cpt=1
-    def __init__(self, acronym, cost_food, cost_gold, cost_wood, hp, attack, speed, training_time,x,y):
+    def __init__(self, acronym, cost_food, cost_gold, cost_wood, hp, attack, speed, training_time):
         self.acronym = acronym          # Nom de l'unité (Villager, Swordsman, etc.)
         self.cost_food = cost_food  # Coût en nourriture
         self.cost_gold = cost_gold  # Coût en or

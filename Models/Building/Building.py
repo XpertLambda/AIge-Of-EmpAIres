@@ -1,7 +1,9 @@
+
 from Models.Team import Team
 import time
 
-class Building(Team):
+
+class Building:
     def __init__(self, acronym, woodCost, goldCost, buildTime, hp, size1, size2, population=0, resourceDropPoint=False, spawnsUnits=False, containsFood=False, walkable=False, attack=0, range=0):
         self.acronym = acronym
         self.woodCost = woodCost
