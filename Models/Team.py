@@ -4,6 +4,7 @@ from Settings.setup import MARINES_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_FOOD
 from Models.Building import TownCentre, Barracks, Stable, ArcheryRange
 from Models.Unit import Villager
 from Models.Resources import Resources
+import webbrowser
 
 class Team:
     def __init__(self, difficulty):
@@ -76,7 +77,7 @@ class Team:
 
             """ %(u.id,u.acronym,u.task,u.hp,u.x,u.y)
 
-        for b in self.building:
+        for b in self.buildings:
             template+="""
 
             """
@@ -87,4 +88,5 @@ class Team:
 """
         file.write(template)
         file.close()
+        webbrowser.open("données.html")
         
