@@ -48,3 +48,43 @@ class Team:
             
             
             
+    def write_html(self):
+        file=open("données.html","w")
+        template="""
+<html>
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> Données du jeu </title>
+</head>
+<body>
+<h1>Données du jeu </h1>
+    <details>
+            <summary>Armée</summary>
+
+"""     
+        for u in self.units:
+            template+="""
+
+<p>
+<b>id</b>:%s 
+<b>acronym</b>: %s 
+<b>tache</b>: %s   
+<b>hp</b>: %d 
+<b>position</b>:(%d,%d) 
+</p>\n        
+
+            """ %(u.id,u.acronym,u.task,u.hp,u.x,u.y)
+
+        for b in self.building:
+            template+="""
+
+            """
+        template+="""
+    </details>
+</body>
+</html>
+"""
+        file.write(template)
+        file.close()
+        
