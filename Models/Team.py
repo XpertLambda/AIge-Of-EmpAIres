@@ -120,8 +120,13 @@ class Team:
 
         return reussi
 
-
-   
+    def attack_army(self,t,map):
+        for s in self.soldats:
+            s.tache="attack"
+        for s in range(0,len(t.soldats)):
+            self.soldats[s].SeDeplacer(t.soldats[s].x,soldats[s].y,map)
+            self.soldats[s].attack(t.soldats[s])
+        #a finir
 
 
     def write_html(self):
