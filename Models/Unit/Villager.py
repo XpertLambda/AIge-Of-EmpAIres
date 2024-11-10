@@ -8,7 +8,5 @@ class Villager(Unit):
         self.resource_collection_rate = RESOURCE_COLLECTION_RATE  # Taux de collecte de ressources (unités par minute)
         self.resource_capacity = RESOURCE_CAPACITY  # Capacité de transport des ressources
         
-  
-	# Calcule le temps de construction en fonction du nombre de villageois
-    def build_time(self, remaining_time, num_villagers):
-        return (3 * remaining_time) / (num_villagers + 2)
+
+    
