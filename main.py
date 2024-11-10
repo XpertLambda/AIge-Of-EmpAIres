@@ -12,18 +12,19 @@ from Models.Building.Stable import Stable
 
 def main():
     b=Barracks()
-
-    s1=b.entraine()
-    s2=b.entraine()
+    t=Team("lean")
+    s1=b.entraine(t)
+    s2=b.entraine(t)
     #s1.SeDeplacer(2,2,game_map)
     s1.attaquer(s2)
 
     print(s2.hp,"ok")
     ###TEST HTML###
-    t=Team("lean")
+    
     t.units.append(s1)
     t.units.append(s2)
-    t.write_html()
+    print(t.builds(False,"B"))
+    #t.write_html()
     print("fin")
 
 
