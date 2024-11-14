@@ -1,6 +1,4 @@
-from Models.Team import Team
-
-class Unit(Team):
+class Unit:
     def __init__(self, acronym, cost_food, cost_gold, cost_wood, hp, attack, speed, training_time):
         self.acronym = acronym          # Nom de l'unité (Villager, Swordsman, etc.)
         self.cost_food = cost_food  # Coût en nourriture
