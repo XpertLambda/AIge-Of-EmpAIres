@@ -106,11 +106,16 @@ def draw_map(screen, game_map, camera):
     bottom_right_world = camera.unapply(screen.get_width(), screen.get_height())
 
     # Step 2: Adjust margin dynamically based on zoom level
-    margin = int(8 / camera.zoom)
+    margin = int(10 / camera.zoom)
     min_tile_x = max(0, int((top_left_world[0] / (tile_width / 2) + top_left_world[1] / (tile_height / 2)) / 2) - margin)
     max_tile_x = min(game_map.num_tiles_x, int((bottom_right_world[0] / (tile_width / 2) + bottom_right_world[1] / (tile_height / 2)) / 2) + 1 + margin)
     min_tile_y = max(0, int((top_left_world[1] / (tile_height / 2) - top_left_world[0] / (tile_width / 2)) / 2) - margin)
     max_tile_y = min(game_map.num_tiles_y, int((bottom_right_world[1] / (tile_height / 2) - bottom_right_world[0] / (tile_width / 2)) / 2) + 1 + margin)
+
+
+    # Define the isometric tile polygon points based on screen_x, screen_y
+    half_tile_width = tile_width / 2 * camera.zoom
+    half_tile_height = tile_height / 2 * camera.zoom
 
     # Step 3: Loop through the tiles within the extended visible range
     for y in range(min_tile_y, max_tile_y):
@@ -121,9 +126,6 @@ def draw_map(screen, game_map, camera):
             iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
             screen_x, screen_y = camera.apply(iso_x, iso_y)
 
-            # Define the isometric tile polygon points based on screen_x, screen_y
-            half_tile_width = tile_width / 2 * camera.zoom
-            half_tile_height = tile_height / 2 * camera.zoom
             points = [
                 (screen_x, screen_y - half_tile_height),  # Top
                 (screen_x + half_tile_width, screen_y),   # Right
@@ -140,7 +142,7 @@ def draw_map(screen, game_map, camera):
                 color = get_color_for_terrain(tile.terrain_type)
 
                 # Draw the isometric diamond representing the tile
-                #pygame.draw.polygon(screen, color, points)
+                pygame.draw.polygon(screen, color, points)
                 fill_grass(screen,screen_x,screen_y, camera)
                 draw_terrain(tile.terrain_type, screen, screen_x, screen_y,camera) 
 
@@ -170,7 +172,7 @@ def compute_map_bounds(game_map):
 
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
 
-def create_minimap_background(game_map, minimap_width, minimap_height):
+def create_minimap_background(game_map, minimap_width, minimap_height, camera):
     """
     Crée la surface de la minimap représentant l'ensemble de la carte.
     """
@@ -229,7 +231,6 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
             # Dessiner le losange sur la minimap
             pygame.draw.polygon(minimap_surface, color, points)
-
     return minimap_surface
 
 def draw_minimap(screen, minimap_background, camera, game_map):
@@ -335,11 +336,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
     # Créer la minimap
-    minimap_background = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+    minimap_background = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT,camera)
     
     selected_player = players[0]  # Joueur par défaut
     minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - 10, screen_height - MINIMAP_HEIGHT - 30, MINIMAP_WIDTH, MINIMAP_HEIGHT)
-
 
     running = True
     while running:
