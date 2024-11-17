@@ -14,6 +14,8 @@ from Settings.setup import (
     MINIMAP_MARGIN
 )
 
+
+
 # --- Fonctions Utilitaires Isométriques ---
 def to_isometric(x, y, tile_width, tile_height):
     """
@@ -41,7 +43,7 @@ class Camera:
     def __init__(self, width, height):
         self.offset_x = 0
         self.offset_y = 0
-        self.zoom = 1.0
+        self.zoom = 0.25
         self.width = width
         self.height = height
         self.min_x = None
@@ -67,7 +69,7 @@ class Camera:
 
     def set_zoom(self, zoom_factor):
         # Limiter le zoom entre un minimum et un maximum
-        min_zoom = 1.0
+        min_zoom = 0.1
         max_zoom = 3.0
         self.zoom = max(min_zoom, min(zoom_factor, max_zoom))
         self.limit_camera()
@@ -200,6 +202,9 @@ def draw_map(screen, game_map, camera):
             fill_grass(screen, screen_x, screen_y, camera)
             draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
 
+
+MAP_PADDING = 200  # Valeur en pixels, ajustez selon vos besoins
+
 def compute_map_bounds(game_map):
     """
     Calcule les limites de la carte en coordonnées isométriques.
@@ -219,10 +224,10 @@ def compute_map_bounds(game_map):
 
     iso_coords = [to_isometric(x, y, tile_width, tile_height) for x, y in corners]
 
-    min_iso_x = min(coord[0] for coord in iso_coords)
-    max_iso_x = max(coord[0] for coord in iso_coords)
-    min_iso_y = min(coord[1] for coord in iso_coords)
-    max_iso_y = max(coord[1] for coord in iso_coords)
+    min_iso_x = min(coord[0] for coord in iso_coords) - MAP_PADDING
+    max_iso_x = max(coord[0] for coord in iso_coords) + MAP_PADDING
+    min_iso_y = min(coord[1] for coord in iso_coords) - MAP_PADDING
+    max_iso_y = max(coord[1] for coord in iso_coords) + MAP_PADDING
 
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
 
@@ -427,7 +432,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         keys = pygame.key.get_pressed()
         move_speed = 300 * dt  # Vitesse en pixels par seconde
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-            move_speed *= 2  # Accélération avec Shift
+            move_speed *= 2.5  # Acceleration with Shift
 
         dx, dy = 0, 0
         if keys[pygame.K_q] or keys[pygame.K_LEFT]:
