@@ -1,5 +1,3 @@
-
-
 #from Models.Team import Team
 from Models.Map import *
 from math import sqrt

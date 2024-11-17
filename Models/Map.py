@@ -85,8 +85,6 @@ class GameMap:
                 if grid[y + j][x + i].building is not None:
                     return False
         return True
-                
-                
 
     def random_map(self, width, height, players):
         # Créer une grille vide initiale
