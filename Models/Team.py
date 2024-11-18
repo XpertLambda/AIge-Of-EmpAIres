@@ -13,12 +13,12 @@ class Team:
         self.units = []
         self.soldats=[]
         self.villagers=[]
-        self.buildings = []
+        self.buildings =[]
         
         if difficulty == 'lean':
             self.resources = {'food': LEAN_STARTING_FOOD, 'wood': LEAN_STARTING_WOOD, 'gold': LEAN_STARTING_GOLD}
             self.units = {'villagers': LEAN_STARTING_VILLAGERS}
-            self.buildings = {'town_centres': LEAN_NUMBER_OF_TOWER_CENTRE}
+            #self.buildings = {'town_centres': LEAN_NUMBER_OF_TOWER_CENTRE}
             self.resources = Resources(LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_GOLD)
            
             for _ in range(LEAN_STARTING_VILLAGERS):

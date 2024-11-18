@@ -1,5 +1,3 @@
-from Models.Team import Team
-
 
 #from Models.Team import Team
 from Models.Map import *
@@ -10,7 +8,7 @@ def dist(x1,y1,x2,y2):
         return sqrt((x1-x2)**2 + (y1-y2)**2)
 
 
-class Unit(Team):
+class Unit():
     cpt=0
     def __init__(self, acronym, cost_food, cost_gold, cost_wood, hp, attack, speed, training_time,x=0,y=0):
         self.acronym = acronym          # Nom de l'unité (Villager, Swordsman, etc.)

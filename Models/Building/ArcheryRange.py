@@ -17,4 +17,4 @@ class ArcheryRange(Building):
     def entraine(self):
         a.Archer()
         time.sleep(h.training_time)
-        return a
+

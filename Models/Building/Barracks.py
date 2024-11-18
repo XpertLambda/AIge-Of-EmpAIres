@@ -18,6 +18,5 @@ class Barracks(Building):
         s=Swordsman()
         time.sleep(s.training_time)
         t.soldats.append(s)
-        return s
     def build_time(self,num_villagers):
         return (3 *Barracks.build_time ) / (num_villagers + 2)

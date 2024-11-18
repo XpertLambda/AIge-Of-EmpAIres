@@ -9,21 +9,28 @@ from Models.Unit.Swordsman import *
 from Models.Building.Barracks import Barracks
 from Models.Building.ArcheryRange import ArcheryRange
 from Models.Building.Stable import Stable
+import time
+import threading
+
 
 def main():
+    tps1=time.clock_gettime(time.CLOCK_REALTIME)
     b=Barracks()
     t=Team("lean")
-    s1=b.entraine(t)
-    s2=b.entraine(t)
-    #s1.SeDeplacer(2,2,game_map)
-    s1.attaquer(s2)
+    thread1=threading.Thread(target=b.entraine(t))
+    thread1.start()
+    thread2=threading.Thread(target=b.entraine(t))
+    thread2.start()
+    thread1.join()
+    thread2.join()
+    threading.Thread(target=t.soldats[0].attaquer(t.soldats[1]))
+    
 
-    print(s2.hp,"ok")
     ###TEST HTML###
     
-    t.units.append(s1)
-    t.units.append(s2)
     print(t.builds(False,"B"))
+    tps2=time.clock_gettime(time.CLOCK_REALTIME)
+    print(tps2-tps1)
     #t.write_html()
     print("fin")
 
