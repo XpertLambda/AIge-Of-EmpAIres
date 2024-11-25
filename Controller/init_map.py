@@ -369,7 +369,7 @@ def init_pygame():
     screen_height = infoObject.current_h
     
     # Initialiser la fenêtre en mode plein écran
-    screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN | pygame.RESIZABLE)
+    screen = pygame.display.set_mode((screen_width, screen_height),pygame.RESIZABLE)
     
     return screen, screen_width, screen_height
 
