@@ -2,6 +2,9 @@
 import pygame
 import sys
 import math
+import pickle
+import os
+from tkinter import Tk, filedialog
 from Models.Map import GameMap
 from Controller.select_player import draw_player_selection, draw_player_info
 from Controller.init_sprites import draw_terrain, fill_grass
@@ -15,6 +18,7 @@ from Settings.setup import (
     MINIMAP_HEIGHT,
     MINIMAP_MARGIN
 )
+
 
 # --- Fonctions Utilitaires Isométriques ---
 def to_isometric(x, y, tile_width, tile_height):
@@ -380,6 +384,13 @@ def display_fps(screen, clock):
     fps_text = font.render(f'FPS: {fps}', True, pygame.Color('white'))
     screen.blit(fps_text, (10, 10))
 
+# Définir le répertoire de sauvegarde
+SAVE_DIRECTORY = 'saves'
+
+# Assurez-vous que le répertoire de sauvegarde existe
+if not os.path.exists(SAVE_DIRECTORY):
+    os.makedirs(SAVE_DIRECTORY)
+
 # --- Fonction de la Boucle de Jeu ---
 def game_loop(screen, game_map, screen_width, screen_height, players):
     """
@@ -406,6 +417,20 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                    #   Ajout de la sauvegarde et du chargement de la carte
+                if event.key == pygame.K_k:  # Appuyer sur 'k' pour sauvegarder
+                    game_map.save_map()
+                elif event.key == pygame.K_l:  # Appuyer sur 'l' pour charger
+                    root = Tk()
+                    root.withdraw()  # Cacher la fenêtre principale
+                    filename = filedialog.askopenfilename(  # Ouvrir une boîte de dialogue pour choisir un fichier
+                        initialdir=SAVE_DIRECTORY,
+                        title="Select save file",
+                        filetypes=(("Pickle files", "*.pkl"), ("All files", "*.*"))
+                    )
+                    if filename:
+                        game_map.load_map(filename)
+                    root.destroy()
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS:
                     camera.set_zoom(camera.zoom * 1.1)
                 elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:

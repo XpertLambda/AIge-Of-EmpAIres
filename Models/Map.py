@@ -1,6 +1,9 @@
 # Models/Map.py
 
 import random
+import os
+import pickle
+from datetime import datetime
 from Models.Building import Building
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_MOUNTAIN_TILES, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES
 
@@ -28,7 +31,34 @@ class GameMap:
 
     def place_unit(self, x, y, unit):
         pass
+    # Sauvegarder la carte dans un fichier JSON 
+    def save_map(self, directory='saves'):
+        # Créer le répertoire de sauvegarde s'il n'existe pas
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = os.path.join(directory, f'save_{timestamp}.pkl')
+        game_state = {
+            'players': self.players,
+            'tiles': self.grid
+        }
+        try:
+            with open(filename, 'wb') as file:
+                pickle.dump(game_state, file)
+            print(f"Game map saved successfully to {filename}.")
+        except Exception as e:
+            print(f"Error saving game map: {e}")
 
+    def load_map(self, filename):
+        try:
+            with open(filename, 'rb') as file:
+                game_state = pickle.load(file)
+            self.players = game_state['players']
+            self.grid = game_state['tiles']
+            print(f"Game map loaded successfully from {filename}.")
+        except Exception as e:
+            print(f"Error loading game map: {e}")
+        
     def building_generation(self, grid, players):
         num_players = len(players)
         zone_width = self.width // (num_players if num_players % 2 == 0 else 1) // TILE_SIZE
