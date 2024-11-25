@@ -30,7 +30,6 @@ def get_color_for_terrain(terrain_type):
     """
     terrain_colors = {
         'grass': (0, 255, 0),
-        'mountain': (139, 137, 137),
         'gold': (255, 215, 0),
         'wood': (139, 69, 19),
         'food': (255, 0, 0)
@@ -184,24 +183,12 @@ def draw_map(screen, game_map, camera):
             # Retrieve the tile from the game map
             tile = game_map.grid[y][x]
 
-            # Define the isometric tile polygon points
-            points = [
-                (screen_x, screen_y - b_zoom),    # Top
-                (screen_x + a_zoom, screen_y),    # Right
-                (screen_x, screen_y + b_zoom),    # Bottom
-                (screen_x - a_zoom, screen_y)     # Left
-            ]
-
-            # Draw the isometric diamond representing the tile
-            color = get_color_for_terrain(tile.terrain_type)
-            pygame.draw.polygon(screen, color, points)
-
             # Draw additional details (grass, terrain features)
             fill_grass(screen, screen_x, screen_y, camera)
             draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
 
 
-MAP_PADDING = 200
+MAP_PADDING = 500
 
 def compute_map_bounds(game_map):
     """
@@ -369,7 +356,7 @@ def init_pygame():
     screen_height = infoObject.current_h
     
     # Initialiser la fenêtre en mode plein écran
-    screen = pygame.display.set_mode((screen_width, screen_height),pygame.RESIZABLE)
+    screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
     
     return screen, screen_width, screen_height
 
@@ -391,7 +378,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
     # Créer la minimap
-    minimap_background = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT,camera)
+    minimap_background = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT, camera)
     
     selected_player = players[0]  # Joueur par défaut
     minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - 10, screen_height - MINIMAP_HEIGHT - 30, MINIMAP_WIDTH, MINIMAP_HEIGHT)
@@ -427,7 +414,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         keys = pygame.key.get_pressed()
         move_speed = 300 * dt  # Vitesse en pixels par seconde
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-            move_speed *= 2.5  # Acceleration with Shift
+            move_speed *= 2.5  # Accélération avec Shift
 
         dx, dy = 0, 0
         if keys[pygame.K_q] or keys[pygame.K_LEFT]:
@@ -451,7 +438,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # Dessiner la sélection des joueurs au-dessus de la minimap
         draw_player_selection(screen, players, selected_player, minimap_rect)
         
-         # Afficher les informations du joueur sélectionné en bas de l'écran
+        # Afficher les informations du joueur sélectionné en bas de l'écran
         draw_player_info(screen, selected_player, screen_width, screen_height)
 
         display_fps(screen, clock)

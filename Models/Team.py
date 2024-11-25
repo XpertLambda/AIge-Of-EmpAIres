@@ -13,7 +13,7 @@ class Team:
         
         if difficulty == 'lean':
             self.resources = Resources(LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_GOLD)
-           
+        
             for _ in range(LEAN_STARTING_VILLAGERS):
                 self.units.append(Villager())           
             for _ in range(LEAN_NUMBER_OF_TOWER_CENTRE):
