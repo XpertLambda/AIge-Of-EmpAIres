@@ -5,6 +5,7 @@ import math
 from Models.Map import GameMap
 from Controller.select_player import draw_player_selection, draw_player_info
 from Controller.init_sprites import draw_terrain, fill_grass
+from Models.Team import Team
 
 from Settings.setup import (
     TILE_SIZE,
@@ -369,7 +370,7 @@ def init_pygame():
     screen_height = infoObject.current_h
     
     # Initialiser la fenêtre en mode plein écran
-    screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN | pygame.RESIZABLE)
+    screen = pygame.display.set_mode((screen_width, screen_height),pygame.RESIZABLE)
     
     return screen, screen_width, screen_height
 
@@ -438,6 +439,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             dy += move_speed
         if keys[pygame.K_s] or keys[pygame.K_DOWN]:
             dy -= move_speed
+        if keys[pygame.K_TAB]:
+            Team.write_html(selected_player)
 
         if dx != 0 or dy != 0:
             camera.move(dx, dy)
