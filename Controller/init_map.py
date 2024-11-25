@@ -14,8 +14,8 @@ from Settings.setup import (
 )
 
 # --- Redéfinition des dimensions de la minimap ---
-MINIMAP_WIDTH = 500  # Agrandir la largeur de la minimap
-MINIMAP_HEIGHT = 300  # Agrandir la hauteur de la minimap
+MINIMAP_WIDTH = 550  # Agrandir la largeur de la minimap
+MINIMAP_HEIGHT = 280  # Agrandir la hauteur de la minimap
 MINIMAP_MARGIN = 20   # Ajuster la marge si nécessaire
 
 # --- Fonctions Utilitaires Isométriques ---
@@ -32,8 +32,7 @@ def get_color_for_terrain(terrain_type):
     Retourne la couleur associée à un type de terrain.
     """
     terrain_colors = {
-        'grass': (34, 139, 34),         # Vert plus foncé
-        'mountain': (139, 137, 137),
+        'grass': (34, 139, 34),        
         'gold': (255, 215, 0),
         'wood': (139, 69, 19),
         'food': (255, 0, 0)
@@ -190,7 +189,7 @@ def draw_map(screen, game_map, camera):
             fill_grass(screen, screen_x, screen_y, camera)
             draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
 
-MAP_PADDING = 200
+MAP_PADDING = 650
 
 def compute_map_bounds(game_map):
     """
@@ -371,6 +370,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     
     selected_player = players[0]  # Joueur par défaut
     minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - MINIMAP_MARGIN, screen_height - MINIMAP_HEIGHT - MINIMAP_MARGIN, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+    
+    # Variable pour suivre si la minimap est en cours de glissement
+    minimap_dragging = False
+
     running = True
     while running:
         dt = clock.tick(60) / 1000  # Temps écoulé en secondes
@@ -387,25 +390,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     camera.set_zoom(camera.zoom / 1.1)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = event.pos
-                if event.button == 4:  # Molette vers le haut
-                    camera.set_zoom(camera.zoom * 1.1)
-                elif event.button == 5:  # Molette vers le bas
-                    camera.set_zoom(camera.zoom / 1.1)
-                else:
-                    # Vérifier si le clic est sur la minimap
+                if event.button == 1:  # Bouton gauche de la souris
                     if minimap_rect.collidepoint(mouse_x, mouse_y):
-                        # Calculer la position correspondante sur la carte
-                        minimap_click_x = mouse_x - minimap_rect.x
-                        minimap_click_y = mouse_y - minimap_rect.y
-
-                        # Convertir les coordonnées de la minimap en coordonnées isométriques
-                        iso_x = (minimap_click_x - minimap_offset_x) / minimap_scale + minimap_min_iso_x
-                        iso_y = (minimap_click_y - minimap_offset_y) / minimap_scale + minimap_min_iso_y
-
-                        # Mettre à jour le décalage de la caméra pour centrer la vue sur la position cliquée
-                        camera.offset_x = -iso_x
-                        camera.offset_y = -iso_y
-                        camera.limit_camera()
+                        minimap_dragging = True
                     else:
                         # Gérer la sélection du joueur avec clic
                         for i, player in enumerate(players):
@@ -414,6 +401,29 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             if rect.collidepoint(mouse_x, mouse_y):
                                 selected_player = player
                                 break
+                elif event.button == 4:  # Molette vers le haut
+                    camera.set_zoom(camera.zoom * 1.1)
+                elif event.button == 5:  # Molette vers le bas
+                    camera.set_zoom(camera.zoom / 1.1)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    minimap_dragging = False
+
+        # Mise à jour de la caméra si la minimap est en cours de glissement
+        if minimap_dragging:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            # Calculer la position correspondante sur la carte
+            minimap_click_x = mouse_x - minimap_rect.x
+            minimap_click_y = mouse_y - minimap_rect.y
+
+            # Convertir les coordonnées de la minimap en coordonnées isométriques
+            iso_x = (minimap_click_x - minimap_offset_x) / minimap_scale + minimap_min_iso_x
+            iso_y = (minimap_click_y - minimap_offset_y) / minimap_scale + minimap_min_iso_y
+
+            # Mettre à jour le décalage de la caméra pour centrer la vue sur la position cliquée
+            camera.offset_x = -iso_x
+            camera.offset_y = -iso_y
+            camera.limit_camera()
 
         keys = pygame.key.get_pressed()
         move_speed = 300 * dt  # Vitesse en pixels par seconde
