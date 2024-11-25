@@ -11,10 +11,13 @@ from Settings.setup import (
     TILE_SIZE,
     WINDOW_WIDTH,
     WINDOW_HEIGHT,
-    MINIMAP_WIDTH,
-    MINIMAP_HEIGHT,
     MINIMAP_MARGIN
 )
+
+# --- Redéfinition des dimensions de la minimap ---
+MINIMAP_WIDTH = 550  # Agrandir la largeur de la minimap
+MINIMAP_HEIGHT = 280  # Agrandir la hauteur de la minimap
+MINIMAP_MARGIN = 20   # Ajuster la marge si nécessaire
 
 # --- Fonctions Utilitaires Isométriques ---
 def to_isometric(x, y, tile_width, tile_height):
@@ -30,8 +33,7 @@ def get_color_for_terrain(terrain_type):
     Retourne la couleur associée à un type de terrain.
     """
     terrain_colors = {
-        'grass': (0, 255, 0),
-        'mountain': (139, 137, 137),
+        'grass': (34, 139, 34),        
         'gold': (255, 215, 0),
         'wood': (139, 69, 19),
         'food': (255, 0, 0)
@@ -57,7 +59,7 @@ class Camera:
         return x, y
 
     def unapply(self, screen_x, screen_y):
-        # Convert screen coordinates back to world coordinates
+        # Convertit les coordonnées de l'écran en coordonnées du monde
         world_x = (screen_x - self.width / 2) / self.zoom - self.offset_x
         world_y = (screen_y - self.height / 2) / self.zoom - self.offset_y
         return world_x, world_y
@@ -96,14 +98,13 @@ class Camera:
         self.offset_x = max(min_offset_x, min(self.offset_x, max_offset_x))
         self.offset_y = max(min_offset_y, min(self.offset_y, max_offset_y))
 
-
-# Helper function to convert screen coordinates to world (isometric) coordinates
+# Fonction pour convertir les coordonnées écran en coordonnées du monde (isométriques)
 def screen_to_world(sx, sy, screen_width_half, screen_height_half, zoom, offset_x, offset_y):
     iso_x = (sx - screen_width_half) / zoom - offset_x
     iso_y = (sy - screen_height_half) / zoom - offset_y
     return iso_x, iso_y
 
-# Helper function to convert isometric coordinates to tile indices
+# Fonction pour convertir les coordonnées isométriques en indices de tuiles
 def iso_to_tile(iso_x, iso_y, a, b):
     x = ((iso_x / a) + (iso_y / b)) / 2
     y = ((iso_y / b) - (iso_x / a)) / 2
@@ -111,7 +112,7 @@ def iso_to_tile(iso_x, iso_y, a, b):
 
 def draw_map(screen, game_map, camera):
     """
-    Draws only the visible part of the isometric map on the screen, optimized for performance.
+    Dessine uniquement les sprites sur la carte isométrique visible à l'écran.
     """
     tile_width = TILE_SIZE
     tile_height = TILE_SIZE / 2
@@ -124,85 +125,72 @@ def draw_map(screen, game_map, camera):
     screen_height_half = screen_height / 2
     zoom = camera.zoom
 
-    # Precompute constants
+    # Pré-calcul des constantes
     a = half_tile_width
     b = half_tile_height
     a_zoom = a * zoom
     b_zoom = b * zoom
 
-    # Camera offsets
+    # Décalages de la caméra
     offset_x = camera.offset_x
     offset_y = camera.offset_y
 
-    # Screen corners
+    # Coins de l'écran
     corners_screen = [
-        (0, 0),  # Top-left
-        (screen_width, 0),  # Top-right
-        (0, screen_height),  # Bottom-left
-        (screen_width, screen_height)  # Bottom-right
+        (0, 0),  # Haut-gauche
+        (screen_width, 0),  # Haut-droit
+        (0, screen_height),  # Bas-gauche
+        (screen_width, screen_height)  # Bas-droit
     ]
 
-    # Convert screen corners to world (isometric) coordinates
+    # Convertir les coins de l'écran en coordonnées du monde (isométriques)
     corners_world = [
         screen_to_world(sx, sy, screen_width_half, screen_height_half, zoom, offset_x, offset_y)
         for sx, sy in corners_screen
     ]
 
-    # Convert isometric coordinates to tile indices
+    # Convertir les coordonnées isométriques en indices de tuiles
     tile_indices = [
         iso_to_tile(iso_x, iso_y, a, b)
         for iso_x, iso_y in corners_world
     ]
 
-    # Separate x and y indices
+    # Séparer les indices x et y
     x_indices = [tile_x for tile_x, _ in tile_indices]
     y_indices = [tile_y for _, tile_y in tile_indices]
 
-    # Find min and max tile indices, adding a sufficient margin
-    margin = 2  # Adjust as needed
+    # Trouver les indices minimaux et maximaux des tuiles, en ajoutant une marge suffisante
+    margin = 2  # Ajuster si nécessaire
 
     min_tile_x = max(0, int(math.floor(min(x_indices))) - margin)
     max_tile_x = min(game_map.num_tiles_x - 1, int(math.ceil(max(x_indices))) + margin)
     min_tile_y = max(0, int(math.floor(min(y_indices))) - margin)
     max_tile_y = min(game_map.num_tiles_y - 1, int(math.ceil(max(y_indices))) + margin)
 
-    # Loop through the tiles within the extended visible range
+    # Boucler à travers les tuiles dans la plage visible étendue
     for y in range(min_tile_y, max_tile_y + 1):
         for x in range(min_tile_x, max_tile_x + 1):
-            # Convert tile indices to isometric coordinates
+            # Convertir les indices de tuiles en coordonnées isométriques
             iso_x = (x - y) * a
             iso_y = (x + y) * b
 
-            # Apply camera transformations to get screen coordinates
+            # Appliquer les transformations de la caméra pour obtenir les coordonnées écran
             screen_x = (iso_x + offset_x) * zoom + screen_width_half
             screen_y = (iso_y + offset_y) * zoom + screen_height_half
 
-            # Quick check if the tile is outside the screen boundaries
+            # Vérification rapide si la tuile est en dehors des limites de l'écran
             if (screen_x + a_zoom < 0 or screen_x - a_zoom > screen_width or
                 screen_y + b_zoom < 0 or screen_y - b_zoom > screen_height):
-                continue  # Skip tiles not visible on the screen
+                continue  # Ignorer les tuiles non visibles à l'écran
 
-            # Retrieve the tile from the game map
+            # Récupérer la tuile de la carte du jeu
             tile = game_map.grid[y][x]
 
-            # Define the isometric tile polygon points
-            points = [
-                (screen_x, screen_y - b_zoom),    # Top
-                (screen_x + a_zoom, screen_y),    # Right
-                (screen_x, screen_y + b_zoom),    # Bottom
-                (screen_x - a_zoom, screen_y)     # Left
-            ]
-
-            # Draw the isometric diamond representing the tile
-            color = get_color_for_terrain(tile.terrain_type)
-            pygame.draw.polygon(screen, color, points)
-
-            # Draw additional details (grass, terrain features)
+            # Dessiner les sprites (herbe, terrains)
             fill_grass(screen, screen_x, screen_y, camera)
             draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
 
-
-MAP_PADDING = 200
+MAP_PADDING = 650
 
 def compute_map_bounds(game_map):
     """
@@ -229,11 +217,11 @@ def compute_map_bounds(game_map):
 
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
 
-def create_minimap_background(game_map, minimap_width, minimap_height, camera):
+def create_minimap_background(game_map, minimap_width, minimap_height):
     """
     Crée la surface de la minimap représentant l'ensemble de la carte.
     """
-    # Create a surface with per-pixel alpha
+    # Créer une surface avec transparence par pixel
     minimap_surface = pygame.Surface((minimap_width, minimap_height))
     minimap_surface.fill((0, 0, 0))  # Fond noir de la minimap
 
@@ -257,10 +245,19 @@ def create_minimap_background(game_map, minimap_width, minimap_height, camera):
 
     # Calcul du facteur d'échelle pour adapter la carte à la minimap
     scale = min(minimap_width / iso_map_width, minimap_height / iso_map_height)
+    
+    # Assurer que les tuiles ont une taille minimale sur la minimap
+    min_tile_size = 4  # Taille minimale des tuiles en pixels
+    min_scale = min_tile_size / tile_width
+    scale = max(scale, min_scale)
+
+    # Recalculer les dimensions de la minimap pour s'adapter à la nouvelle échelle
+    scaled_iso_map_width = iso_map_width * scale
+    scaled_iso_map_height = iso_map_height * scale
 
     # Calcul des décalages pour centrer la carte sur la minimap
-    offset_x = (minimap_width - iso_map_width * scale) / 2
-    offset_y = (minimap_height - iso_map_height * scale) / 2
+    offset_x = (minimap_width - scaled_iso_map_width) / 2
+    offset_y = (minimap_height - scaled_iso_map_height) / 2
 
     for y in range(num_tiles_y):
         for x in range(num_tiles_x):
@@ -288,9 +285,9 @@ def create_minimap_background(game_map, minimap_width, minimap_height, camera):
 
             # Dessiner le losange sur la minimap
             pygame.draw.polygon(minimap_surface, color, points)
-    return minimap_surface
+    return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
-def draw_minimap(screen, minimap_background, camera, game_map):
+def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, offset_y, min_iso_x, min_iso_y):
     """
     Dessine la minimap à l'écran, avec le rectangle représentant la zone visible par le joueur.
     """
@@ -309,28 +306,6 @@ def draw_minimap(screen, minimap_background, camera, game_map):
     tile_width = TILE_SIZE
     tile_height = TILE_SIZE / 2
 
-    # Calcul des limites isométriques de la carte
-    num_tiles_x = game_map.num_tiles_x
-    num_tiles_y = game_map.num_tiles_y
-
-    iso_coords = [to_isometric(x, y, tile_width, tile_height) for x in [0, num_tiles_x -1] for y in [0, num_tiles_y -1]]
-    iso_x_values = [coord[0] for coord in iso_coords]
-    iso_y_values = [coord[1] for coord in iso_coords]
-    min_iso_x = min(iso_x_values)
-    max_iso_x = max(iso_x_values)
-    min_iso_y = min(iso_y_values)
-    max_iso_y = max(iso_y_values)
-
-    iso_map_width = max_iso_x - min_iso_x
-    iso_map_height = max_iso_y - min_iso_y
-
-    # Calcul du facteur d'échelle (doit être le même que pour le fond de la minimap)
-    scale = min(minimap_width / iso_map_width, minimap_height / iso_map_height)
-
-    # Calcul des décalages pour centrer la carte sur la minimap
-    offset_x = minimap_x + (minimap_width - iso_map_width * scale) / 2
-    offset_y = minimap_y + (minimap_height - iso_map_height * scale) / 2
-
     # Calcul des dimensions de la vue de la caméra en coordonnées isométriques
     half_screen_width = camera.width / (2 * camera.zoom)
     half_screen_height = camera.height / (2 * camera.zoom)
@@ -346,10 +321,10 @@ def draw_minimap(screen, minimap_background, camera, game_map):
     bottom_right_iso_y = center_iso_y + half_screen_height
 
     # Adapter les coordonnées à la minimap
-    rect_left = (top_left_iso_x - min_iso_x) * scale + offset_x
-    rect_top = (top_left_iso_y - min_iso_y) * scale + offset_y
-    rect_right = (bottom_right_iso_x - min_iso_x) * scale + offset_x
-    rect_bottom = (bottom_right_iso_y - min_iso_y) * scale + offset_y
+    rect_left = (top_left_iso_x - min_iso_x) * scale + minimap_x + offset_x
+    rect_top = (top_left_iso_y - min_iso_y) * scale + minimap_y + offset_y
+    rect_right = (bottom_right_iso_x - min_iso_x) * scale + minimap_x + offset_x
+    rect_bottom = (bottom_right_iso_y - min_iso_y) * scale + minimap_y + offset_y
 
     # Créer le rectangle
     rect_x = rect_left
@@ -370,7 +345,7 @@ def init_pygame():
     screen_height = infoObject.current_h
     
     # Initialiser la fenêtre en mode plein écran
-    screen = pygame.display.set_mode((screen_width, screen_height),pygame.RESIZABLE)
+    screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
     
     return screen, screen_width, screen_height
 
@@ -391,11 +366,15 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
-    # Créer la minimap
-    minimap_background = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT,camera)
+    # Créer la minimap et récupérer les paramètres nécessaires
+    minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT)
     
     selected_player = players[0]  # Joueur par défaut
-    minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - 10, screen_height - MINIMAP_HEIGHT - 30, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+    minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - MINIMAP_MARGIN, screen_height - MINIMAP_HEIGHT - MINIMAP_MARGIN, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+    
+    # Variable pour suivre si la minimap est en cours de glissement
+    minimap_dragging = False
+
     running = True
     while running:
         dt = clock.tick(120) / 1000  # Temps écoulé en secondes
@@ -411,24 +390,46 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
                     camera.set_zoom(camera.zoom / 1.1)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 4:  # Molette vers le haut
+                mouse_x, mouse_y = event.pos
+                if event.button == 1:  # Bouton gauche de la souris
+                    if minimap_rect.collidepoint(mouse_x, mouse_y):
+                        minimap_dragging = True
+                    else:
+                        # Gérer la sélection du joueur avec clic
+                        for i, player in enumerate(players):
+                            rect_y = minimap_rect.y - (i + 1) * (30 + 5)
+                            rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
+                            if rect.collidepoint(mouse_x, mouse_y):
+                                selected_player = player
+                                break
+                elif event.button == 4:  # Molette vers le haut
                     camera.set_zoom(camera.zoom * 1.1)
                 elif event.button == 5:  # Molette vers le bas
                     camera.set_zoom(camera.zoom / 1.1)
-                else:
-                    # Gérer la sélection du joueur avec clic
-                    mouse_x, mouse_y = event.pos
-                    for i, player in enumerate(players):
-                        rect_y = minimap_rect.y - (i + 1) * (30 + 5)
-                        rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
-                        if rect.collidepoint(mouse_x, mouse_y):
-                            selected_player = player
-                            break
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    minimap_dragging = False
+
+        # Mise à jour de la caméra si la minimap est en cours de glissement
+        if minimap_dragging:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            # Calculer la position correspondante sur la carte
+            minimap_click_x = mouse_x - minimap_rect.x
+            minimap_click_y = mouse_y - minimap_rect.y
+
+            # Convertir les coordonnées de la minimap en coordonnées isométriques
+            iso_x = (minimap_click_x - minimap_offset_x) / minimap_scale + minimap_min_iso_x
+            iso_y = (minimap_click_y - minimap_offset_y) / minimap_scale + minimap_min_iso_y
+
+            # Mettre à jour le décalage de la caméra pour centrer la vue sur la position cliquée
+            camera.offset_x = -iso_x
+            camera.offset_y = -iso_y
+            camera.limit_camera()
 
         keys = pygame.key.get_pressed()
         move_speed = 300 * dt  # Vitesse en pixels par seconde
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-            move_speed *= 2.5  # Acceleration with Shift
+            move_speed *= 2.5  # Accélération avec Shift
 
         dx, dy = 0, 0
         if keys[pygame.K_q] or keys[pygame.K_LEFT]:
@@ -449,12 +450,12 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         draw_map(screen, game_map, camera)
 
         # Dessiner la minimap
-        draw_minimap(screen, minimap_background, camera, game_map)
+        draw_minimap(screen, minimap_background, camera, game_map, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y)
 
         # Dessiner la sélection des joueurs au-dessus de la minimap
         draw_player_selection(screen, players, selected_player, minimap_rect)
         
-         # Afficher les informations du joueur sélectionné en bas de l'écran
+        # Afficher les informations du joueur sélectionné en bas de l'écran
         draw_player_info(screen, selected_player, screen_width, screen_height)
 
         display_fps(screen, clock)

@@ -25,10 +25,6 @@ sprite_config = {
             'directory': 'assets/terrain/grass/',
             'scale': (TILE_SIZE + 35, TILE_SIZE // 2 + 25)
         },
-        'mountain': {
-            'directory': 'assets/terrain/mountain/',
-            'scale': (TILE_SIZE, TILE_SIZE)
-        },
         'gold': {
             'directory': 'assets/terrain/gold/',
             'scale': (TILE_SIZE, TILE_SIZE)

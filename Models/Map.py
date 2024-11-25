@@ -95,7 +95,6 @@ class GameMap:
 
         # Liste des types de terrain à placer
         tiles = (
-            ['mountain'] * NUM_MOUNTAIN_TILES +
             ['gold'] * NUM_GOLD_TILES +
             ['wood'] * NUM_WOOD_TILES +
             ['food'] * NUM_FOOD_TILES
@@ -123,7 +122,6 @@ class GameMap:
     def print_map(self):
         terrain_acronyms = {
             'grass': ' ',
-            'mountain': 'M',
             'gold': 'G',
             'wood': 'W',
             'food': 'F',
