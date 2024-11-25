@@ -6,6 +6,7 @@ from Models.Map import GameMap
 from Controller.select_player import draw_player_selection, draw_player_info
 from Controller.init_sprites import draw_terrain, fill_grass
 from Models.Team import Team
+from Models.Building import TownCentre
 
 from Settings.setup import (
     TILE_SIZE,
@@ -423,7 +424,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                         rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
                         if rect.collidepoint(mouse_x, mouse_y):
                             selected_player = player
-                            break
+                            for building in selected_player.buildings:
+                                if isinstance(building, TownCentre):
+                                    camera.offset_x, camera.offset_y = to_isometric(building.x, building.y, TILE_SIZE, TILE_SIZE)
+                                    camera.offset_x = -camera.offset_x
+                                    camera.offset_y = -camera.offset_y
+                                    break
+
 
         keys = pygame.key.get_pressed()
         move_speed = 300 * dt  # Vitesse en pixels par seconde

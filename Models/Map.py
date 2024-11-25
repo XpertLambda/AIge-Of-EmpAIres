@@ -74,6 +74,8 @@ class GameMap:
                     for j in range(building.size2):
                         grid[y + j][x + i].building = building
                         grid[y + j][x + i].terrain_type = building.acronym
+                        building.x = x
+                        building.y = y
 
 
 
