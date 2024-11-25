@@ -398,7 +398,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - 10, screen_height - MINIMAP_HEIGHT - 30, MINIMAP_WIDTH, MINIMAP_HEIGHT)
     running = True
     while running:
-        dt = clock.tick(60) / 1000  # Temps écoulé en secondes
+        dt = clock.tick(120) / 1000  # Temps écoulé en secondes
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
