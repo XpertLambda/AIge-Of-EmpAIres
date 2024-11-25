@@ -397,12 +397,19 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                         minimap_dragging = True
                     else:
                         # Gérer la sélection du joueur avec clic
+                        mouse_x, mouse_y = event.pos
                         for i, player in enumerate(players):
                             rect_y = minimap_rect.y - (i + 1) * (30 + 5)
                             rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
                             if rect.collidepoint(mouse_x, mouse_y):
                                 selected_player = player
-                                break
+                                for building in selected_player.buildings:
+                                    if isinstance(building, TownCentre):
+                                        camera.offset_x, camera.offset_y = to_isometric(building.x, building.y, TILE_SIZE, TILE_SIZE)
+                                        camera.offset_x = -camera.offset_x
+                                        camera.offset_y = -camera.offset_y
+                                        break
+                            
                 elif event.button == 4:  # Molette vers le haut
                     camera.set_zoom(camera.zoom * 1.1)
                 elif event.button == 5:  # Molette vers le bas
@@ -410,6 +417,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     minimap_dragging = False
+                if event.button == 4:  # Molette vers le haut
+                    camera.set_zoom(camera.zoom * 1.1)
+                elif event.button == 5:  # Molette vers le bas
+                    camera.set_zoom(camera.zoom / 1.1)
+                
 
         # Mise à jour de la caméra si la minimap est en cours de glissement
         if minimap_dragging:
@@ -426,24 +438,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             camera.offset_x = -iso_x
             camera.offset_y = -iso_y
             camera.limit_camera()
-                if event.button == 4:  # Molette vers le haut
-                    camera.set_zoom(camera.zoom * 1.1)
-                elif event.button == 5:  # Molette vers le bas
-                    camera.set_zoom(camera.zoom / 1.1)
-                else:
-                    # Gérer la sélection du joueur avec clic
-                    mouse_x, mouse_y = event.pos
-                    for i, player in enumerate(players):
-                        rect_y = minimap_rect.y - (i + 1) * (30 + 5)
-                        rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
-                        if rect.collidepoint(mouse_x, mouse_y):
-                            selected_player = player
-                            for building in selected_player.buildings:
-                                if isinstance(building, TownCentre):
-                                    camera.offset_x, camera.offset_y = to_isometric(building.x, building.y, TILE_SIZE, TILE_SIZE)
-                                    camera.offset_x = -camera.offset_x
-                                    camera.offset_y = -camera.offset_y
-                                    break
+            
+                
 
 
         keys = pygame.key.get_pressed()
