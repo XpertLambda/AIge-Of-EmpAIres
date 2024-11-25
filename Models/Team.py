@@ -4,12 +4,15 @@ from Settings.setup import MARINES_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_FOOD
 from Models.Building import TownCentre, Barracks, Stable, ArcheryRange
 from Models.Unit import Villager
 from Models.Resources import Resources
+import webbrowser
+
 
 class Team:
     def __init__(self, difficulty):
         self.resources = None
         self.units = []     
         self.buildings = []
+        self.army=set()
         
         if difficulty == 'lean':
             self.resources = Resources(LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_GOLD)
@@ -25,7 +28,7 @@ class Team:
                 self.units.append(Villager())
             for _ in range(MEAN_NUMBER_OF_TOWER_CENTRE):
                 self.buildings.append(TownCentre())
-
+                self.army=set()
         elif difficulty == 'marines':
             self.resources = Resources(MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_STARTING_GOLD)
             
@@ -41,3 +44,39 @@ class Team:
                 self.buildings.append(ArcheryRange())
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager())
+                
+
+
+    def write_html(self):
+        template="""
+<html>
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> Données du jeu </title>
+</head>
+<body>
+<h1>Données du jeu </h1>
+    <details>
+            <summary>Armée</summary>
+"""     
+        for u in self.army:
+            template+="""
+<p>
+<b>id</b>:%s 
+<b>acronym</b>: %s 
+<b>tache</b>: %s   
+<b>hp</b>: %d 
+<b>position</b>:(%d,%d) 
+</p>\n        
+            """ %(u.id,u.acronym,u.task,u.hp,u.x,u.y)
+        for b in self.buildings:
+            template+="""
+            """
+        template+="""
+    </details>
+</body>
+</html>
+"""
+        with open("données.html", "w") as file:
+            file.write(template)
