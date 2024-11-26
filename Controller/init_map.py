@@ -7,6 +7,7 @@ from Controller.select_player import draw_player_selection, draw_player_info
 from Controller.init_sprites import draw_terrain, fill_grass
 from Models.Team import Team
 from Models.Building import TownCentre
+from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT
 
 from Settings.setup import (
     TILE_SIZE,
@@ -405,11 +406,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                                 selected_player = player
                                 for building in selected_player.buildings:
                                     if isinstance(building, TownCentre):
-                                        camera.offset_x, camera.offset_y = to_isometric(building.x, building.y, TILE_SIZE, TILE_SIZE)
-                                        camera.offset_x = -camera.offset_x
-                                        camera.offset_y = -camera.offset_y
+                                        iso_x, iso_y = to_isometric(building.x, building.y, TILE_SIZE, TILE_SIZE / 2)
+                                        
+                                        camera.offset_x = -iso_x
+                                        camera.offset_y = -iso_y
                                         break
-                            
+
+                
                 elif event.button == 4:  # Molette vers le haut
                     camera.set_zoom(camera.zoom * 1.1)
                 elif event.button == 5:  # Molette vers le bas
@@ -422,7 +425,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 elif event.button == 5:  # Molette vers le bas
                     camera.set_zoom(camera.zoom / 1.1)
                 
-
+        
         # Mise à jour de la caméra si la minimap est en cours de glissement
         if minimap_dragging:
             mouse_x, mouse_y = pygame.mouse.get_pos()

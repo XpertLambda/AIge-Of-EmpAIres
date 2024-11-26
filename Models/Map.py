@@ -1,7 +1,6 @@
 # Models/Map.py
 
 import random
-from Models.Building import Building
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_MOUNTAIN_TILES, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES
 
 class Tile:
