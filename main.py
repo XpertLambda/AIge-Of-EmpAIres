@@ -15,7 +15,7 @@ def main():
     # Initialiser la carte de jeu
     game_map = GameMap(players)
     game_map.print_map()  
-    
+    ##
     # Lancer la boucle de jeu avec tous les arguments requis
     game_loop(screen, game_map, screen_width, screen_height, players)  
 
