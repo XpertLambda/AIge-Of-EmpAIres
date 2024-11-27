@@ -177,10 +177,12 @@ def draw_map(screen, game_map, camera, players):
             fill_grass(screen, screen_x, screen_y, camera)
             if(game_map.grid[y][x].building == None):
                 draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
+            '''
             # Debugging: Draw a red circle if 'T' is present in the tile
             pygame.draw.circle(screen, (0, 255, 0), (screen_x, screen_y), 3)  # Draw a red circle
             if game_map.grid[y][x].building != None :
                 pygame.draw.circle(screen, (255, 0, 0), (screen_x, screen_y), 20)  # Draw a red circle
+            '''
     for index, player in enumerate(players):
         for building in player.buildings:
             corners_building = [
@@ -561,6 +563,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         draw_player_info(screen, selected_player, screen_width, screen_height)
 
         display_fps(screen, clock)
+        
+        #!DEBUG
+        if int(clock.get_fps()) in [18,19,20,21,22] :
+            running = False
+
 
         # Mettre à jour l'affichage
         pygame.display.flip()

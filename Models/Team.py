@@ -20,7 +20,7 @@ class Team:
         
             for _ in range(LEAN_STARTING_VILLAGERS):
                 self.units.append(Villager())           
-            for _ in range(1):
+            for _ in range(2):
                 self.buildings.append(TownCentre())
                 self.buildings.append(ArcheryRange())
                 self.buildings.append(Stable())
