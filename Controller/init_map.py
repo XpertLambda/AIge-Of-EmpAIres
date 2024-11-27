@@ -33,13 +33,10 @@ def get_color_for_terrain(terrain_type):
     """
     Retourne la couleur associée à un type de terrain.
     """
-    terrain_colors = {
-        'grass': (34, 139, 34),        
-        'gold': (255, 215, 0),
-        'wood': (139, 69, 19),
-        'food': (255, 0, 0)
-    }
-    return terrain_colors.get(terrain_type, (128, 128, 128))  # Gris neutre par défaut
+    if terrain_type == 'gold':
+        return (255, 215, 0)  # Couleur pour 'gold'
+    else:
+        return (34, 139, 34)  # Couleur de l'herbe pour tous les autres terrains
 
 # --- Classe Camera ---
 class Camera:
@@ -279,32 +276,38 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     for y in range(num_tiles_y):
         for x in range(num_tiles_x):
             tile = game_map.grid[y][x]
-            color = get_color_for_terrain(tile.terrain_type)
-
-            # Convertir en coordonnées isométriques
+            # Dessiner toutes les tuiles sans filtrage
+            # Convert to isometric coordinates
             iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
 
-            # Adapter les coordonnées à la minimap
+            # Adjust coordinates to minimap
             minimap_x = (iso_x - min_iso_x) * scale + offset_x
             minimap_y = (iso_y - min_iso_y) * scale + offset_y
 
-            # Définir les dimensions des tuiles sur la minimap
+            # Define the size of the tiles on the minimap
             half_tile_width = (tile_width / 2) * scale
             half_tile_height = (tile_height / 2) * scale
 
-            # Définir les points du losange isométrique sur la minimap
+            # Increase size for gold tiles
+            if tile.terrain_type == 'gold':
+                size_factor = 1.5  # Adjust as needed
+                half_tile_width *= size_factor
+                half_tile_height *= size_factor
+
+            # Define the points of the isometric diamond on the minimap
             points = [
-                (minimap_x, minimap_y - half_tile_height),  # Haut
-                (minimap_x + half_tile_width, minimap_y),   # Droite
-                (minimap_x, minimap_y + half_tile_height),  # Bas
-                (minimap_x - half_tile_width, minimap_y)    # Gauche
+                (minimap_x, minimap_y - half_tile_height),  # Top
+                (minimap_x + half_tile_width, minimap_y),   # Right
+                (minimap_x, minimap_y + half_tile_height),  # Bottom
+                (minimap_x - half_tile_width, minimap_y)    # Left
             ]
 
-            # Dessiner le losange sur la minimap
+            # Draw the diamond on the minimap
+            color = get_color_for_terrain(tile.terrain_type)
             pygame.draw.polygon(minimap_surface, color, points)
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
-def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, offset_y, min_iso_x, min_iso_y):
+def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, offset_y, min_iso_x, min_iso_y, minimap_rect):
     """
     Dessine la minimap à l'écran, avec le rectangle représentant la zone visible par le joueur.
     """
@@ -317,7 +320,7 @@ def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, 
     minimap_y = screen.get_height() - minimap_height - minimap_margin
 
     # Dessiner le fond de la minimap
-    screen.blit(minimap_background, (minimap_x, minimap_y))
+    screen.blit(minimap_background, minimap_rect.topleft)
 
     # Calculer le rectangle de la zone visible
     tile_width = HALF_TILE_SIZE
@@ -338,10 +341,10 @@ def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, 
     bottom_right_iso_y = center_iso_y + half_screen_height
 
     # Adapter les coordonnées à la minimap
-    rect_left = (top_left_iso_x - min_iso_x) * scale + minimap_x + offset_x
-    rect_top = (top_left_iso_y - min_iso_y) * scale + minimap_y + offset_y
-    rect_right = (bottom_right_iso_x - min_iso_x) * scale + minimap_x + offset_x
-    rect_bottom = (bottom_right_iso_y - min_iso_y) * scale + minimap_y + offset_y
+    rect_left = (top_left_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
+    rect_top = (top_left_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
+    rect_right = (bottom_right_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
+    rect_bottom = (bottom_right_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
 
     # Créer le rectangle
     rect_x = rect_left
@@ -351,6 +354,40 @@ def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, 
 
     # Dessiner le rectangle blanc sur la minimap
     pygame.draw.rect(screen, (255, 255, 255), (rect_x, rect_y, rect_width, rect_height), 2)
+
+    # Overlay player-specific colors where players have buildings
+    for y in range(game_map.num_tiles_y):
+        for x in range(game_map.num_tiles_x):
+            tile = game_map.grid[y][x]
+            if tile.player is not None:
+                # Get minimap coordinates of the tile
+                iso_x, iso_y = to_isometric(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2)
+                minimap_x = (iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
+                minimap_y = (iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
+
+                # Define the size of the tiles on the minimap
+                half_tile_width = (HALF_TILE_SIZE / 2) * scale
+                half_tile_height = (HALF_TILE_SIZE / 4) * scale
+
+                # Define the points of the isometric diamond on the minimap
+                points = [
+                    (minimap_x, minimap_y - half_tile_height),  # Top
+                    (minimap_x + half_tile_width, minimap_y),   # Right
+                    (minimap_x, minimap_y + half_tile_height),  # Bottom
+                    (minimap_x - half_tile_width, minimap_y)    # Left
+                ]
+
+                # Set color based on player number
+                player_colors = [
+                    (255, 0, 0),   # Red for player 1
+                    (0, 0, 255),   # Blue for player 2
+                    # Add more colors for additional players if needed
+                ]
+                player_index = tile.player.nb - 1  # Assuming player numbers start from 1
+                color = player_colors[player_index % len(player_colors)]
+
+                # Draw semi-transparent overlay
+                pygame.draw.polygon(screen, (*color, 100), points)
 
 def init_pygame():
     pygame.init()
@@ -383,18 +420,28 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
-    # Créer la minimap et récupérer les paramètres nécessaires
-    minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(game_map, MINIMAP_WIDTH, MINIMAP_HEIGHT)
-    
-    selected_player = players[0]  # Joueur par défaut
-    minimap_rect = pygame.Rect(screen_width - MINIMAP_WIDTH - MINIMAP_MARGIN, screen_height - MINIMAP_HEIGHT - MINIMAP_MARGIN, MINIMAP_WIDTH, MINIMAP_HEIGHT)
-    
-    # Variable pour suivre si la minimap est en cours de glissement
-    minimap_dragging = False
+    # Initialize local minimap dimensions
+    minimap_margin = MINIMAP_MARGIN
+    minimap_width = int(screen_width * 0.25)  # 25% of screen width
+    minimap_height = int(screen_height * 0.25)  # 25% of screen height
+    minimap_rect = pygame.Rect(
+        screen_width - minimap_width - minimap_margin,
+        screen_height - minimap_height - minimap_margin,
+        minimap_width,
+        minimap_height
+    )
 
+    # Create the minimap background with initial dimensions
+    minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
+    minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
+        game_map, minimap_width, minimap_height
+    )
+
+    selected_player = players[0]
+    minimap_dragging = False
     running = True
     while running:
-        dt = clock.tick(120) / 1000  # Temps écoulé en secondes
+        dt = clock.tick(120) / 1000  # Time elapsed in seconds
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -437,9 +484,29 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     camera.set_zoom(camera.zoom * 1.1)
                 elif event.button == 5:  # Molette vers le bas
                     camera.set_zoom(camera.zoom / 1.1)
-                
+            elif event.type == pygame.VIDEORESIZE:
+                screen_width, screen_height = event.size
+                screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
+                camera.width = screen_width
+                camera.height = screen_height
 
-        # Mise à jour de la caméra si la minimap est en cours de glissement
+                # Update minimap dimensions on window resize
+                minimap_width = int(screen_width * 0.25)
+                minimap_height = int(screen_height * 0.25)
+                minimap_rect = pygame.Rect(
+                    screen_width - minimap_width - minimap_margin,
+                    screen_height - minimap_height - minimap_margin,
+                    minimap_width,
+                    minimap_height
+                )
+
+                # Recreate minimap background with new size
+                minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
+                minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
+                    game_map, minimap_width, minimap_height
+                )
+
+        # Update the minimap dragging position calculations
         if minimap_dragging:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             # Calculer la position correspondante sur la carte
@@ -482,11 +549,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         draw_map(screen, game_map, camera, players)
 
         # Dessiner la minimap
-        draw_minimap(screen, minimap_background, camera, game_map, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y)
+        draw_minimap(screen, minimap_background, camera, game_map, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y, minimap_rect)
 
         # Dessiner la sélection des joueurs au-dessus de la minimap
-        draw_player_selection(screen, players, selected_player, minimap_rect)
-        
+        draw_player_selection(screen, players, selected_player, minimap_rect, minimap_height)
+
         # Afficher les informations du joueur sélectionné en bas de l'écran
         draw_player_info(screen, selected_player, screen_width, screen_height)
 
@@ -498,3 +565,22 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     # Quitter Pygame proprement
     pygame.quit()
     sys.exit()
+
+def draw_player_selection(screen, players, selected_player, minimap_rect, minimap_height):
+    """
+    Dessine la sélection des joueurs fixée en haut de la minimap.
+    """
+    num_players = len(players)
+    button_height = int(minimap_height * 0.1)  # 10% of minimap height
+    button_margin = 5
+    font_size = int(button_height * 0.6)
+    font = pygame.font.SysFont(None, font_size)
+
+    for i, player in enumerate(players):
+        rect_y = minimap_rect.top - (button_height + button_margin) * (num_players - i)
+        rect = pygame.Rect(minimap_rect.left, rect_y, minimap_rect.width, button_height)
+        color = (100, 100, 255) if player == selected_player else (100, 100, 100)
+        pygame.draw.rect(screen, color, rect)
+        text = font.render(f'Bot {i+1}', True, pygame.Color('white'))
+        text_rect = text.get_rect(center=rect.center)
+        screen.blit(text, text_rect)

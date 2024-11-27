@@ -10,6 +10,7 @@ class Tile:
         self.terrain_type = terrain_type  # 'grass', 'mountain', 'gold', 'wood', 'food'
         self.building = None  # Pas de bâtiment
         self.unit = None      # Pas d'unité
+        self.player = None  # Add this line to store the owning player
 
     def is_walkable(self):
         return self.building is None
@@ -74,6 +75,7 @@ class GameMap:
                     for j in range(building.size2):
                         grid[y + j][x + i].building = building
                         grid[y + j][x + i].terrain_type = building.acronym
+                        grid[y + j][x + i].player = player  # Assign the player to the tile
                         building.x = x
                         building.y = y
 
