@@ -4,12 +4,12 @@ import sys
 import math
 from Models.Map import GameMap
 from Controller.select_player import draw_player_selection, draw_player_info
-from Controller.init_sprites import draw_terrain, fill_grass
+from Controller.init_sprites import draw_terrain, fill_grass, draw_building
 from Models.Team import Team
 from Models.Building import TownCentre
 
 from Settings.setup import (
-    TILE_SIZE,
+    HALF_TILE_SIZE,
     WINDOW_WIDTH,
     WINDOW_HEIGHT,
     MINIMAP_MARGIN
@@ -100,9 +100,9 @@ class Camera:
         self.offset_y = max(min_offset_y, min(self.offset_y, max_offset_y))
 
 # Fonction pour convertir les coordonnées écran en coordonnées du monde (isométriques)
-def screen_to_world(sx, sy, screen_width_half, screen_height_half, zoom, offset_x, offset_y):
-    iso_x = (sx - screen_width_half) / zoom - offset_x
-    iso_y = (sy - screen_height_half) / zoom - offset_y
+def screen_to_world(sx, sy, screen_width, screen_height,camera):
+    iso_x = (sx - screen_width/2) / camera.zoom - camera.offset_x
+    iso_y = (sy - screen_height/2) / camera.zoom - camera.offset_y
     return iso_x, iso_y
 
 # Fonction pour convertir les coordonnées isométriques en indices de tuiles
@@ -111,30 +111,20 @@ def iso_to_tile(iso_x, iso_y, a, b):
     y = ((iso_y / b) - (iso_x / a)) / 2
     return x, y
 
-def draw_map(screen, game_map, camera):
+def camera_to_screen(iso_x, iso_y, camera, screen_width,screen_height):
+    screen_x = (iso_x + camera.offset_x) * camera.zoom + screen_width/2
+    screen_y = (iso_y + camera.offset_y) * camera.zoom + screen_height/2
+    return screen_x , screen_y
+
+def draw_map(screen, game_map, camera, players):
     """
     Dessine uniquement les sprites sur la carte isométrique visible à l'écran.
     """
-    tile_width = TILE_SIZE
-    tile_height = TILE_SIZE / 2
-    half_tile_width = tile_width / 2
-    half_tile_height = tile_height / 2
-
     screen_width = screen.get_width()
     screen_height = screen.get_height()
-    screen_width_half = screen_width / 2
-    screen_height_half = screen_height / 2
-    zoom = camera.zoom
-
     # Pré-calcul des constantes
-    a = half_tile_width
-    b = half_tile_height
-    a_zoom = a * zoom
-    b_zoom = b * zoom
-
-    # Décalages de la caméra
-    offset_x = camera.offset_x
-    offset_y = camera.offset_y
+    a_zoom = HALF_TILE_SIZE/2 * camera.zoom
+    b_zoom = HALF_TILE_SIZE/4 * camera.zoom
 
     # Coins de l'écran
     corners_screen = [
@@ -146,13 +136,13 @@ def draw_map(screen, game_map, camera):
 
     # Convertir les coins de l'écran en coordonnées du monde (isométriques)
     corners_world = [
-        screen_to_world(sx, sy, screen_width_half, screen_height_half, zoom, offset_x, offset_y)
+        screen_to_world(sx, sy, screen_width, screen_height, camera)
         for sx, sy in corners_screen
     ]
 
     # Convertir les coordonnées isométriques en indices de tuiles
     tile_indices = [
-        iso_to_tile(iso_x, iso_y, a, b)
+        iso_to_tile(iso_x, iso_y, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
         for iso_x, iso_y in corners_world
     ]
 
@@ -172,24 +162,50 @@ def draw_map(screen, game_map, camera):
     for y in range(min_tile_y, max_tile_y + 1):
         for x in range(min_tile_x, max_tile_x + 1):
             # Convertir les indices de tuiles en coordonnées isométriques
-            iso_x = (x - y) * a
-            iso_y = (x + y) * b
+            iso_x, iso_y  = to_isometric(x,y,HALF_TILE_SIZE,HALF_TILE_SIZE/2) 
 
             # Appliquer les transformations de la caméra pour obtenir les coordonnées écran
-            screen_x = (iso_x + offset_x) * zoom + screen_width_half
-            screen_y = (iso_y + offset_y) * zoom + screen_height_half
-
+            screen_x, screen_y = camera_to_screen(iso_x, iso_y, camera, screen_width , screen_height)
+            
             # Vérification rapide si la tuile est en dehors des limites de l'écran
             if (screen_x + a_zoom < 0 or screen_x - a_zoom > screen_width or
-                screen_y + b_zoom < 0 or screen_y - b_zoom > screen_height):
+                screen_y + b_zoom < 0 or screen_y - b_zoom > screen_height) :
                 continue  # Ignorer les tuiles non visibles à l'écran
-
+            
             # Récupérer la tuile de la carte du jeu
             tile = game_map.grid[y][x]
 
             # Dessiner les sprites (herbe, terrains)
             fill_grass(screen, screen_x, screen_y, camera)
-            draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
+            if(game_map.grid[y][x].building == None):
+                draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
+            # Debugging: Draw a red circle if 'T' is present in the tile
+            pygame.draw.circle(screen, (0, 255, 0), (screen_x, screen_y), 3)  # Draw a red circle
+            if game_map.grid[y][x].building != None :
+                pygame.draw.circle(screen, (255, 0, 0), (screen_x, screen_y), 20)  # Draw a red circle
+    for index, player in enumerate(players):
+        for building in player.buildings:
+            corners_building = [
+                (building.x, building.y),  # Top-left
+                (building.x + building.size1, building.y),  # Top-right
+                (building.x + building.size1, building.y + building.size2),  # Bottom-right
+                (building.x, building.y + building.size2)  # Bottom-left
+            ]
+
+            center_x = building.x + (building.size1 - 1) / 2
+            center_y = building.y + (building.size2 - 1) / 2
+            iso_x, iso_y = to_isometric(center_x, center_y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2)
+
+            screen_x, screen_y = camera_to_screen(iso_x, iso_y, camera, screen_width, screen_height)
+
+            if (screen_x + building.size1 * a_zoom < 0 or 
+                screen_x - building.size1 * a_zoom > screen_width or
+                screen_y + building.size2 * b_zoom < 0 or 
+                screen_y - building.size2 * b_zoom > screen_height):
+                continue  # Skip buildings not visible on the screen
+
+            draw_building(building, screen, screen_x, screen_y, camera, player.nb)
+
 
 MAP_PADDING = 650
 
@@ -197,8 +213,8 @@ def compute_map_bounds(game_map):
     """
     Calcule les limites de la carte en coordonnées isométriques.
     """
-    tile_width = TILE_SIZE
-    tile_height = TILE_SIZE / 2
+    tile_width = HALF_TILE_SIZE
+    tile_height = HALF_TILE_SIZE / 2
 
     num_tiles_x = game_map.num_tiles_x
     num_tiles_y = game_map.num_tiles_y
@@ -226,8 +242,8 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     minimap_surface = pygame.Surface((minimap_width, minimap_height))
     minimap_surface.fill((0, 0, 0))  # Fond noir de la minimap
 
-    tile_width = TILE_SIZE
-    tile_height = TILE_SIZE / 2
+    tile_width = HALF_TILE_SIZE
+    tile_height = HALF_TILE_SIZE / 2
 
     num_tiles_x = game_map.num_tiles_x
     num_tiles_y = game_map.num_tiles_y
@@ -248,8 +264,8 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     scale = min(minimap_width / iso_map_width, minimap_height / iso_map_height)
     
     # Assurer que les tuiles ont une taille minimale sur la minimap
-    min_tile_size = 4  # Taille minimale des tuiles en pixels
-    min_scale = min_tile_size / tile_width
+    min_HALF_TILE_SIZE = 4  # Taille minimale des tuiles en pixels
+    min_scale = min_HALF_TILE_SIZE / tile_width
     scale = max(scale, min_scale)
 
     # Recalculer les dimensions de la minimap pour s'adapter à la nouvelle échelle
@@ -304,8 +320,8 @@ def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, 
     screen.blit(minimap_background, (minimap_x, minimap_y))
 
     # Calculer le rectangle de la zone visible
-    tile_width = TILE_SIZE
-    tile_height = TILE_SIZE / 2
+    tile_width = HALF_TILE_SIZE
+    tile_height = HALF_TILE_SIZE / 2
 
     # Calcul des dimensions de la vue de la caméra en coordonnées isométriques
     half_screen_width = camera.width / (2 * camera.zoom)
@@ -405,7 +421,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                                 selected_player = player
                                 for building in selected_player.buildings:
                                     if isinstance(building, TownCentre):
-                                        camera.offset_x, camera.offset_y = to_isometric(building.x, building.y, TILE_SIZE, TILE_SIZE)
+                                        camera.offset_x, camera.offset_y = to_isometric(building.x, building.y, HALF_TILE_SIZE, HALF_TILE_SIZE)
                                         camera.offset_x = -camera.offset_x
                                         camera.offset_y = -camera.offset_y
                                         break
@@ -463,7 +479,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             camera.move(dx, dy)
 
         screen.fill((0, 0, 0))
-        draw_map(screen, game_map, camera)
+        draw_map(screen, game_map, camera, players)
 
         # Dessiner la minimap
         draw_minimap(screen, minimap_background, camera, game_map, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y)
