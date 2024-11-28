@@ -7,7 +7,7 @@ from Controller.select_player import draw_player_selection, draw_player_info
 from Controller.init_sprites import draw_terrain, fill_grass, draw_building
 from Models.Team import Team
 from Models.Building import TownCentre
-from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT
+from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT, TILE_SIZE
 
 from Settings.setup import (
     HALF_TILE_SIZE,
@@ -462,16 +462,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     else:
                         # Gérer la sélection du joueur avec clic
                         mouse_x, mouse_y = event.pos
-                        for i, player in enumerate(players):
+                        for i, player in enumerate(reversed(players)):
                             rect_y = minimap_rect.y - (i + 1) * (30 + 5)
                             rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
                             if rect.collidepoint(mouse_x, mouse_y):
                                 selected_player = player
                                 for building in selected_player.buildings:
                                     if isinstance(building, TownCentre):
-                                        camera.offset_x, camera.offset_y = to_isometric(building.x, building.y, HALF_TILE_SIZE, HALF_TILE_SIZE)
-                                        camera.offset_x = -camera.offset_x
-                                        camera.offset_y = -camera.offset_y
+                                        iso_x, iso_y = to_isometric(building.x, building.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2)
+                                        
+                                        camera.offset_x = -iso_x
+                                        camera.offset_y = -iso_y
                                         break
 
                 
@@ -488,7 +489,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     camera.set_zoom(camera.zoom / 1.1)
             elif event.type == pygame.VIDEORESIZE:
                 screen_width, screen_height = event.size
-                screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
+                screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE )
                 camera.width = screen_width
                 camera.height = screen_height
 
@@ -554,7 +555,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         draw_minimap(screen, minimap_background, camera, game_map, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y, minimap_rect)
 
         # Dessiner la sélection des joueurs au-dessus de la minimap
-        draw_player_selection(screen, players, selected_player, minimap_rect, minimap_height)
+        draw_player_selection(screen, players, selected_player, minimap_rect)
 
         # Afficher les informations du joueur sélectionné en bas de l'écran
         draw_player_info(screen, selected_player, screen_width, screen_height)
@@ -568,21 +569,4 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     pygame.quit()
     sys.exit()
 
-def draw_player_selection(screen, players, selected_player, minimap_rect, minimap_height):
-    """
-    Dessine la sélection des joueurs fixée en haut de la minimap.
-    """
-    num_players = len(players)
-    button_height = int(minimap_height * 0.1)  # 10% of minimap height
-    button_margin = 5
-    font_size = int(button_height * 0.6)
-    font = pygame.font.SysFont(None, font_size)
 
-    for i, player in enumerate(players):
-        rect_y = minimap_rect.top - (button_height + button_margin) * (num_players - i)
-        rect = pygame.Rect(minimap_rect.left, rect_y, minimap_rect.width, button_height)
-        color = (100, 100, 255) if player == selected_player else (100, 100, 100)
-        pygame.draw.rect(screen, color, rect)
-        text = font.render(f'Bot {i+1}', True, pygame.Color('white'))
-        text_rect = text.get_rect(center=rect.center)
-        screen.blit(text, text_rect)

@@ -3,11 +3,15 @@ from collections import Counter
 
 def draw_player_selection(screen, players, selected_player, minimap_rect):
     """
-    Dessine les zones de sélection des joueurs au-dessus de la minimap.
+    Dessine les zones de sélection des joueurs au-dessus de la minimap, 
+    le premier joueur en haut et le dernier en bas.
     """
     selection_height = 30  # Hauteur de chaque zone de sélection
     padding = 5            # Espacement entre les zones
-    for i, player in enumerate(players):
+    
+    for i, player in enumerate(reversed(list(enumerate(players)))):
+        index, player_item = player
+        
         # Calcul des coordonnées de chaque zone de sélection
         rect_x = minimap_rect.x
         rect_y = minimap_rect.y - (i + 1) * (selection_height + padding)
@@ -15,12 +19,12 @@ def draw_player_selection(screen, players, selected_player, minimap_rect):
         rect = pygame.Rect(rect_x, rect_y, rect_width, selection_height)
         
         # Couleur de sélection ou de fond
-        color = (0, 100, 255) if player == selected_player else (150, 150, 150)
+        color = (0, 100, 255) if player_item == selected_player else (150, 150, 150)
         pygame.draw.rect(screen, color, rect)
         
         # Texte du joueur (utilisez pygame.font pour le rendu du texte)
         font = pygame.font.Font(None, 24)
-        text = font.render(f"Bot {i+1}", True, (255, 255, 255))
+        text = font.render(f"Bot {index+1}", True, (255, 255, 255))
         text_rect = text.get_rect(center=rect.center)
         screen.blit(text, text_rect)
 
