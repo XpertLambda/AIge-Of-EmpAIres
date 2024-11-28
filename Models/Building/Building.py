@@ -16,8 +16,8 @@ class Building:
         self.range = range
         self.x = x
         self.y = y
-        self.state = state  # Current animation type
         #DEBUG : maybe we remove it if we don't want building animation
+        self.state = state  # Current animation type
         self.current_frame = 0  # Current frame in the animation
         self.frame_counter = 0  # Counter to control animation speed
         self.frame_duration = 2  # Duration each frame is displayed

@@ -22,6 +22,11 @@ buildings_acronym = {
     'T': 'towncenter'
 }
 
+teams_acronym = {
+    0 : 'blue',
+    1 : 'red' 
+}
+
 # Configuration for sprites
 sprite_config = {
     'buildings': {
@@ -38,7 +43,7 @@ sprite_config = {
         'stable': {
             'directory': 'assets/buildings/stable/',
             'adjust_scale': TILE_SIZE / 400,
-            'animation_types': 3  # Animated sprite with 3 animation types
+            #'animation_types': 3  # Animated sprite with 3 animation types
         },
         'archeryrange': {
             'directory': 'assets/buildings/archeryrange/',
@@ -79,10 +84,9 @@ sprite_config = {
         }
     },
     'units': {
-        'archer': {
-            'directory': 'assets/units/archer/',
-            'scale': (60, 60),
-            'animation_types': 3  # Example for an animated unit
+        'swordsman': {
+            'directory': 'assets/units/swordsman/',
+            'animation_types': 3
         },
         'knight': {
             'directory': 'assets/units/knight/',
@@ -96,20 +100,6 @@ sprite_config = {
 sprites = {}
 # Cache for scaled sprites at different zoom levels
 zoom_cache = {}
-
-# Function to parse sprite filenames according to the pattern
-def parse_sprite_filename(filename):
-    # Regex pattern to match the filename structure
-    pattern = r'(\d+)_(\d+)x(\d+)_(\w+)\.(png|jpeg|jpg)'
-    match = re.match(pattern, filename)
-    if match:
-        team_number = int(match.group(1))
-        animation_type = int(match.group(2))
-        frame_id = int(match.group(3))
-        object_name = match.group(4)
-        return team_number, animation_type, frame_id, object_name
-    else:
-        return None
 
 # Function to load a sprite with conditional scaling
 def load_sprite(filepath, scale=None, adjust=None):
@@ -127,84 +117,81 @@ def load_sprite(filepath, scale=None, adjust=None):
 def load_sprites(sprite_config=sprite_config):
     for category in sprite_config:
         sprites[category] = {}
-        for key, value in sprite_config[category].items():
+        for sprite_name, value in sprite_config[category].items():
             directory = value['directory']
             scale = value.get('scale')
             adjust = value.get('adjust_scale')
-            # Check if 'animation_types' is specified
-            if 'animation_types' in value:
-                # Animated sprite
-                sprites[category][key] = {}
+
+            if category == 'terrain':
+                # Initialize terrain category
+                sprites[category][sprite_name] = []
+
                 try:
-                    filenames = os.listdir(directory)
+                    dir_content = os.listdir(directory)
                 except FileNotFoundError:
                     print(f"Directory not found: {directory}")
                     continue
 
-                for filename in filenames:
-                    if filename.lower().endswith((".jpeg", ".jpg", ".png")):
-                        parsed = parse_sprite_filename(filename)
-                        if parsed:
-                            team_number, animation_type, frame_id, object_name = parsed
-                            # Ensure the object name matches the key
-                            if object_name != key:
-                                continue
-
-                            # Load the sprite
-                            filepath = os.path.join(directory, filename)
-                            sprite = load_sprite(filepath, scale, adjust)
-
-                            # Organize the sprite in the nested dictionary
-                            team_dict = sprites[category][key].setdefault(team_number, {})
-                            animation_dict = team_dict.setdefault(animation_type, [])
-
-                            # Insert the sprite at the correct frame index
-                            if frame_id >= len(animation_dict):
-                                # Extend the list to accommodate the new frame index
-                                animation_dict.extend([None] * (frame_id - len(animation_dict) + 1))
-                            animation_dict[frame_id] = sprite
-                        else:
-                            print(f"Filename does not match the expected pattern: {filename}")
-            else:
-                # Static sprite
-                sprites[category][key] = []
-                try:
-                    filenames = os.listdir(directory)
-                except FileNotFoundError:
-                    print(f"Directory not found: {directory}")
-                    continue
-
-                for filename in filenames:
+                for filename in dir_content:
                     if filename.lower().endswith((".jpeg", ".jpg", ".png")):
                         filepath = os.path.join(directory, filename)
                         sprite = load_sprite(filepath, scale, adjust)
-                        sprites[category][key].append(sprite)  # Append sprite to list
+                        sprites[category][sprite_name].append(sprite)  # Append sprite to list
 
+            elif category == 'buildings':
+                # Initialize buildings category
+                sprites[category][sprite_name] = {}
+
+                try:
+                    dir_content = os.listdir(directory)
+                except FileNotFoundError:
+                    print(f"Directory not found: {directory}")
+                    continue
+
+                for team in dir_content:
+                    team_path = os.path.join(directory, team)
+                    if not os.path.isdir(team_path):
+                        print(f"Skipping non-directory: {team_path}")
+                        continue
+
+                    # Initialize team-specific dictionary
+                    if team not in sprites[category][sprite_name]:
+                        sprites[category][sprite_name][team] = []
+
+                    try:
+                        team_content = os.listdir(team_path)
+                    except FileNotFoundError:
+                        print(f"Directory not found: {team_path}")
+                        continue
+
+                    for filename in team_content:
+                        if filename.lower().endswith((".jpeg", ".jpg", ".png")):
+                            filepath = os.path.join(team_path, filename)
+                            sprite = load_sprite(filepath, scale, adjust)
+                            sprites[category][sprite_name][team].append(sprite)  # Append sprite to list
+            else : 
+                ## units loading
+                continue
     print("Sprites loaded successfully.")
 
 # Function to get a scaled sprite, handling both static and animated sprites
-def get_scaled_sprite(sprite_name, zoom, variant=0, team_number=0, animation_type=0, frame_id=0):
-    section, name = sprite_name.split('/')  # Assuming sprite_name format as 'category/name'
-    sprite_data = sprites[section][name]
-
-    # Determine if sprite is animated or static
-    if isinstance(sprite_data, dict):
-        # Animated sprite
-        try:
-            original_image = sprite_data[team_number][animation_type][frame_id]
-        except KeyError:
-            print(f"Sprite not found for {section} '{name}', team {team_number}, animation type {animation_type}, frame {frame_id}")
-            return None
-        cache_key = (zoom, team_number, animation_type, frame_id)
+def get_scaled_sprite(name, category, zoom, variant=0, team=None, animation_type=0, frame_id=0):
+    if category == 'terrain':
+        sprite_data = sprites[category][name]
+    elif category == 'buildings':
+        sprite_data = sprites[category][name][team]
     else:
-        # Static sprite
-        if not sprite_data:
-            print(f"No sprites available for {section} '{name}'")
-            return None
-        original_image = sprite_data[variant % len(sprite_data)]  # Use variant to select sprite
-        cache_key = (zoom, variant)
+        # Handle other categories if necessary
+        return None
 
-    # Use zoom_cache to store scaled images
+    if not sprite_data:
+        print(f"No sprites available for {category} '{name}'")
+        return None
+
+    original_image = sprite_data[variant % len(sprite_data)]  # Use variant to select sprite
+    cache_key = (zoom, variant, team)
+
+    # Use zoom_cache to store scaled images per team
     if name not in zoom_cache:
         zoom_cache[name] = {}
     if cache_key not in zoom_cache[name]:
@@ -212,11 +199,13 @@ def get_scaled_sprite(sprite_name, zoom, variant=0, team_number=0, animation_typ
         scaled_height = int(original_image.get_height() * zoom)
         scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
         zoom_cache[name][cache_key] = scaled_image
+
     return zoom_cache[name][cache_key]
 
+
 # Function to draw a sprite on the screen
-def draw_sprite(screen, sprite_name, screen_x, screen_y, zoom, variant=0, team_number=0, animation_type=0, frame_id=0):
-    scaled_sprite = get_scaled_sprite(sprite_name, zoom, variant, team_number, animation_type, frame_id)
+def draw_sprite(screen, name, category, screen_x, screen_y, zoom, variant=0, team=None, animation_type=0, frame_id=0):
+    scaled_sprite = get_scaled_sprite(name, category, zoom, variant, team, animation_type, frame_id)
     if scaled_sprite is None:
         return  # Unable to get sprite
     scaled_width = scaled_sprite.get_width()
@@ -224,39 +213,19 @@ def draw_sprite(screen, sprite_name, screen_x, screen_y, zoom, variant=0, team_n
     screen.blit(scaled_sprite, (screen_x - scaled_width // 2, screen_y - scaled_height // 2))
 
 # Adjusted function to draw buildings, iterating through animated sprites
-def draw_building(building, screen, screen_x, screen_y, camera, team=0, buildings_acronym=buildings_acronym):
-    building_name = buildings_acronym[building.acronym]
-    sprite_name = f'buildings/{building_name}'
-    building_config = sprite_config['buildings'][building_name]
-
-    if 'animation_types' in building_config:
-        # Animated building
-        animation_type = building.state  # Current animation type
-        team_number = 1
-        sprites_dict = sprites['buildings'][building_name]
-        total_frames = len(sprites_dict[team_number][animation_type])
-
-        # Update frame for animation
-        frame_duration = building.frame_duration  # Duration each frame is displayed
-        building.frame_counter += 1
-        if building.frame_counter >= frame_duration:
-            building.frame_counter = 0
-            building.current_frame = (building.current_frame + 1) % total_frames
-
-        # Draw the current frame of the animation
-        draw_sprite(screen, sprite_name, screen_x, screen_y, camera.zoom,
-                    team_number=team_number, animation_type=animation_type, frame_id=building.current_frame)
-    else:
-        # Static building
-        variant = team  # Optionally use team as variant if you have different sprites per team
-        draw_sprite(screen, sprite_name, screen_x, screen_y, camera.zoom, variant=variant)
+def draw_building(building, screen, screen_x, screen_y, camera, team_number=0, buildings_acronym=buildings_acronym):
+    name = buildings_acronym[building.acronym]
+    team = teams_acronym[team_number]
+    category = 'buildings'
+    building_config = sprite_config[category][name]
+    draw_sprite(screen, name, category, screen_x, screen_y, camera.zoom, team=team)
 
 # Function to fill the background with grass tiles
 def fill_grass(screen, screen_x, screen_y, camera):
-    draw_sprite(screen, 'terrain/grass', screen_x, screen_y, camera.zoom)
+    draw_sprite(screen, 'grass', 'terrain', screen_x, screen_y, camera.zoom)
 
 # Function to draw terrain elements like wood and gold
 def draw_terrain(terrain_type, screen, screen_x, screen_y, camera):
     if terrain_type in ['wood', 'gold']:  # Ensure we only draw known terrain types
-        draw_sprite(screen, f'terrain/{terrain_type}', screen_x, screen_y, camera.zoom)
+        draw_sprite(screen, f'{terrain_type}', 'terrain', screen_x, screen_y, camera.zoom)
 
