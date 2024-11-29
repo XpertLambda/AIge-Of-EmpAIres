@@ -1,6 +1,9 @@
 # Models/Map.py
 
 import random
+import os
+import pickle
+from datetime import datetime
 from Models.Building import Building
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_MOUNTAIN_TILES, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES
 
@@ -10,6 +13,7 @@ class Tile:
         self.terrain_type = terrain_type  # 'grass', 'mountain', 'gold', 'wood', 'food'
         self.building = None  # Pas de bâtiment
         self.unit = None      # Pas d'unité
+        self.player = None  # Add this line to store the owning player
 
     def is_walkable(self):
         return self.building is None
@@ -28,7 +32,34 @@ class GameMap:
 
     def place_unit(self, x, y, unit):
         pass
+    # Sauvegarder la carte dans un fichier JSON 
+    def save_map(self, directory='saves'):
+        # Créer le répertoire de sauvegarde s'il n'existe pas
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = os.path.join(directory, f'save_{timestamp}.pkl')
+        game_state = {
+            'players': self.players,
+            'tiles': self.grid
+        }
+        try:
+            with open(filename, 'wb') as file:
+                pickle.dump(game_state, file)
+            print(f"Game map saved successfully to {filename}.")
+        except Exception as e:
+            print(f"Error saving game map: {e}")
 
+    def load_map(self, filename):
+        try:
+            with open(filename, 'rb') as file:
+                game_state = pickle.load(file)
+            self.players = game_state['players']
+            self.grid = game_state['tiles']
+            print(f"Game map loaded successfully from {filename}.")
+        except Exception as e:
+            print(f"Error loading game map: {e}")
+        
     def building_generation(self, grid, players):
         num_players = len(players)
         zone_width = self.width // (num_players if num_players % 2 == 0 else 1) // TILE_SIZE
@@ -74,6 +105,9 @@ class GameMap:
                     for j in range(building.size2):
                         grid[y + j][x + i].building = building
                         grid[y + j][x + i].terrain_type = building.acronym
+                        grid[y + j][x + i].player = player  # Assign the player to the tile
+                        building.x = x
+                        building.y = y
 
 
 
@@ -82,11 +116,9 @@ class GameMap:
             return False
         for i in range(building.size1):
             for j in range(building.size2):
-                if grid[y + j][x + i].building is not None:
+                if grid[y + j][x + i].building is not None or grid[y + j][x + i].terrain_type in ['gold', 'wood', 'food']:
                     return False
         return True
-                
-                
 
     def random_map(self, width, height, players):
         # Créer une grille vide initiale
@@ -97,7 +129,6 @@ class GameMap:
 
         # Liste des types de terrain à placer
         tiles = (
-            ['mountain'] * NUM_MOUNTAIN_TILES +
             ['gold'] * NUM_GOLD_TILES +
             ['wood'] * NUM_WOOD_TILES +
             ['food'] * NUM_FOOD_TILES
@@ -125,7 +156,6 @@ class GameMap:
     def print_map(self):
         terrain_acronyms = {
             'grass': ' ',
-            'mountain': 'M',
             'gold': 'G',
             'wood': 'W',
             'food': 'F',

@@ -52,11 +52,12 @@ MARINES_NUMBER_OF_ARCHERY_RANGES = 2  # Nombre de champs de tir à l'arc
 # -------------------
 
 # Dimensions des tuiles
-TILE_SIZE = 16  # Taille d'une tuile en pixels
-
+TILE_SIZE = 600 # Taille d'une tuile en pixels 
+#NE PAS MODIFIER TILE SIZE!!
+HALF_TILE_SIZE = TILE_SIZE/2
 # Dimensions de la carte en pixels
-MAP_WIDTH = 120 * TILE_SIZE  # 1920 pixels
-MAP_HEIGHT = 120 * TILE_SIZE # 1920 pixels
+MAP_WIDTH = 120 * TILE_SIZE  
+MAP_HEIGHT = 120 * TILE_SIZE 
 
 # Nombre de tuiles visibles en largeur et hauteur
 TILES_IN_VIEW = 75  # Nombre de tuiles visibles
@@ -72,7 +73,7 @@ NUM_WOOD_TILES = 1000
 NUM_FOOD_TILES = 1000
 
 # Difficulté du jeu
-DIFFICULTY = 'lean'
+DIFFICULTY = 'DEBUG'
 
 
 # Minimap settings

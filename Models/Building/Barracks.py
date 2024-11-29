@@ -19,5 +19,6 @@ class Barracks(Building):
         if(t.resources.food>s.cost_food):
             #time.sleep(s.training_time)
             t.army.append(s)
+
     def build_time(self,num_villagers):
         return (3 *Barracks.build_time ) / (num_villagers + 2)
