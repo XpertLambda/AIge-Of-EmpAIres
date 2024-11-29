@@ -85,7 +85,7 @@ class GameMap:
             return False
         for i in range(building.size1):
             for j in range(building.size2):
-                if grid[y + j][x + i].building is not None:
+                if grid[y + j][x + i].building is not None or grid[y + j][x + i].terrain_type in ['gold', 'wood', 'food']:
                     return False
         return True
 
