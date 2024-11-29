@@ -389,7 +389,6 @@ if not os.path.exists(SAVE_DIRECTORY):
 
 # --- Fonction de la Boucle de Jeu ---
 def game_loop(screen, game_map, screen_width, screen_height, players):
-    global player_informations_visibility
     """
     Boucle principale du jeu qui gère les événements, le déplacement et le zoom de la caméra,
     ainsi que le dessin de la carte.
@@ -497,7 +496,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                                 for building in selected_player.buildings:
                                     if isinstance(building, TownCentre):
                                         iso_x, iso_y = to_isometric(building.x, building.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2)
-                                        
                                         camera.offset_x = -iso_x
                                         camera.offset_y = -iso_y
                                         break
@@ -529,8 +527,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     minimap_width,
                     minimap_height
                 )
-                #debug for the minimap
-                
 
                 # Recreate minimap background with new size
                 minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
@@ -554,9 +550,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             camera.offset_y = -iso_y
             camera.limit_camera()
             
-                
-
-
         keys = pygame.key.get_pressed()
         move_speed = 300 * dt  # Vitesse en pixels par seconde
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
