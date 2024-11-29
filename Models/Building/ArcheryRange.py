@@ -13,7 +13,3 @@ class ArcheryRange(Building):
             size2=3,
             spawnsUnits=True
         )
-    def entraine(self):
-        a.Archer()
-        time.sleep(h.training_time)
-        return a

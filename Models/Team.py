@@ -1,22 +1,39 @@
 from Settings.setup import LEAN_NUMBER_OF_TOWER_CENTRE, LEAN_STARTING_FOOD, LEAN_STARTING_GOLD, LEAN_STARTING_VILLAGERS, LEAN_STARTING_WOOD
 from Settings.setup import MEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_FOOD, MEAN_STARTING_GOLD, MEAN_STARTING_VILLAGERS, MEAN_STARTING_WOOD
 from Settings.setup import MARINES_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_FOOD, MARINES_STARTING_GOLD, MARINES_STARTING_VILLAGERS, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_STARTING_WOOD
-from Models.Building import TownCentre, Barracks, Stable, ArcheryRange
+from Models.Building import TownCentre, Barracks, Stable, ArcheryRange, Keep, Camp, House
 from Models.Unit import Villager
 from Models.Resources import Resources
 import webbrowser
 
 
 class Team:
-    def __init__(self, difficulty):
+    def __init__(self, difficulty, nb):
         self.resources = None
         self.units = []     
         self.buildings = []
+        self.nb = nb
         self.army=set()
         
+        if difficulty == 'DEBUG':
+            self.resources = Resources(LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_GOLD)
+        
+            for _ in range(LEAN_STARTING_VILLAGERS):
+                self.units.append(Villager())           
+            for _ in range(2):
+                self.buildings.append(TownCentre())
+                self.buildings.append(ArcheryRange())
+                self.buildings.append(Stable())
+                self.buildings.append(Barracks())
+                self.buildings.append(Keep())
+                self.buildings.append(Camp())
+                self.buildings.append(House())
+
+
+
         if difficulty == 'lean':
             self.resources = Resources(LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_GOLD)
-           
+        
             for _ in range(LEAN_STARTING_VILLAGERS):
                 self.units.append(Villager())           
             for _ in range(LEAN_NUMBER_OF_TOWER_CENTRE):
@@ -29,6 +46,7 @@ class Team:
             for _ in range(MEAN_NUMBER_OF_TOWER_CENTRE):
                 self.buildings.append(TownCentre())
                 self.army=set()
+
         elif difficulty == 'marines':
             self.resources = Resources(MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_STARTING_GOLD)
             

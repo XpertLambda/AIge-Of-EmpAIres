@@ -13,6 +13,7 @@ class Tile:
         self.terrain_type = terrain_type  # 'grass', 'mountain', 'gold', 'wood', 'food'
         self.building = None  # Pas de bâtiment
         self.unit = None      # Pas d'unité
+        self.player = None  # Add this line to store the owning player
 
     def is_walkable(self):
         return self.building is None
@@ -104,6 +105,9 @@ class GameMap:
                     for j in range(building.size2):
                         grid[y + j][x + i].building = building
                         grid[y + j][x + i].terrain_type = building.acronym
+                        grid[y + j][x + i].player = player  # Assign the player to the tile
+                        building.x = x
+                        building.y = y
 
 
 
@@ -112,7 +116,7 @@ class GameMap:
             return False
         for i in range(building.size1):
             for j in range(building.size2):
-                if grid[y + j][x + i].building is not None:
+                if grid[y + j][x + i].building is not None or grid[y + j][x + i].terrain_type in ['gold', 'wood', 'food']:
                     return False
         return True
 
@@ -125,7 +129,6 @@ class GameMap:
 
         # Liste des types de terrain à placer
         tiles = (
-            ['mountain'] * NUM_MOUNTAIN_TILES +
             ['gold'] * NUM_GOLD_TILES +
             ['wood'] * NUM_WOOD_TILES +
             ['food'] * NUM_FOOD_TILES
@@ -153,7 +156,6 @@ class GameMap:
     def print_map(self):
         terrain_acronyms = {
             'grass': ' ',
-            'mountain': 'M',
             'gold': 'G',
             'wood': 'W',
             'food': 'F',
