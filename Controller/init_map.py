@@ -379,6 +379,7 @@ def display_fps(screen, clock):
 
 # --- Fonction de la Boucle de Jeu ---
 def game_loop(screen, game_map, screen_width, screen_height, players):
+    global player_informations_visibility
     """
     Boucle principale du jeu qui gère les événements, le déplacement et le zoom de la caméra,
     ainsi que le dessin de la carte.
@@ -387,6 +388,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     camera = Camera(screen_width, screen_height)
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
+    player_informations_visibility = True
+    last_time = -2000
 
     # Initialize local minimap dimensions
     minimap_margin = MINIMAP_MARGIN
@@ -546,7 +549,16 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             dy -= move_speed
         if keys[pygame.K_TAB]:
             Team.write_html(selected_player)
-
+            
+        if keys[pygame.K_F4]:
+            elapsed_time = pygame.time.get_ticks()
+            if elapsed_time - last_time > 50:
+                player_informations_visibility = not player_informations_visibility
+                last_time = elapsed_time
+            else:
+                last_time = elapsed_time
+                
+            
         if dx != 0 or dy != 0:
             camera.move(dx, dy)
 
@@ -559,8 +571,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # Dessiner la sélection des joueurs au-dessus de la minimap
         draw_player_selection(screen, players, selected_player, minimap_rect)
 
-        # Afficher les informations du joueur sélectionné en bas de l'écran
-        draw_player_info(screen, selected_player, screen_width, screen_height)
+        # Afficher les informations du joueur sélectionné en bas de l'écran          
+        if player_informations_visibility:
+            draw_player_info(screen, selected_player, screen_width, screen_height)
 
         display_fps(screen, clock)
         
