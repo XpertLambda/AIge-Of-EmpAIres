@@ -232,11 +232,6 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
     # Calcul du facteur d'échelle pour adapter la carte à la minimap
     scale = min(minimap_width / iso_map_width, minimap_height / iso_map_height)
-    
-    # Assurer que les tuiles ont une taille minimale sur la minimap
-    min_HALF_TILE_SIZE = 4  # Taille minimale des tuiles en pixels
-    min_scale = min_HALF_TILE_SIZE / tile_width
-    scale = max(scale, min_scale)
 
     # Recalculer les dimensions de la minimap pour s'adapter à la nouvelle échelle
     scaled_iso_map_width = iso_map_width * scale
@@ -412,6 +407,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     selected_player = players[0]
     minimap_dragging = False
+
+    # Initialize window mode flag
+    fullscreen = False
+    original_width, original_height = screen_width, screen_height
+
     running = True
     while running:
         dt = clock.tick(120) / 1000  # Time elapsed in seconds
@@ -420,7 +420,35 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                # Toggle window size with 'Y' key for debugging the responsiveness
+                if event.key == pygame.K_y:
+                    fullscreen = not fullscreen
+                    if fullscreen:
+                        # Switch to fullscreen
+                        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                        infoObject = pygame.display.Info()
+                        screen_width, screen_height = infoObject.current_w, infoObject.current_h
+                    else:
+                        # Switch to windowed mode with smaller size
+                        screen_width, screen_height = 800, 600
+                        screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
+                    
+                    # Update camera and minimap with new screen size
+                    camera.width = screen_width
+                    camera.height = screen_height
+                    minimap_width = int(screen_width * 0.25)
+                    minimap_height = int(screen_height * 0.25)
+                    minimap_rect = pygame.Rect(
+                        screen_width - minimap_width - minimap_margin,
+                        screen_height - minimap_height - minimap_margin,
+                        minimap_width,
+                        minimap_height
+                    )
+                    minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
+                    minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
+                        game_map, minimap_width, minimap_height
+                    )
+                elif event.key == pygame.K_ESCAPE:
                     running = False
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS:
                     camera.set_zoom(camera.zoom * 1.1)
@@ -474,6 +502,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     minimap_width,
                     minimap_height
                 )
+                #debug for the minimap
+                
 
                 # Recreate minimap background with new size
                 minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
@@ -536,7 +566,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         
         #!DEBUG
         #if int(clock.get_fps()) in [18,19,20,21,22] :
-         #   running = False
+        #   running = False
 
 
         # Mettre à jour l'affichage
@@ -545,5 +575,3 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     # Quitter Pygame proprement
     pygame.quit()
     sys.exit()
-
-
