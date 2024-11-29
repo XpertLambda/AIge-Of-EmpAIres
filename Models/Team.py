@@ -3,15 +3,17 @@ from Settings.setup import MEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_FOOD, MEAN
 from Settings.setup import MARINES_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_FOOD, MARINES_STARTING_GOLD, MARINES_STARTING_VILLAGERS, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_STARTING_WOOD
 from Models.Building import TownCentre, Barracks, Stable, ArcheryRange, Farm,Keep,Camp
 from Models.Unit import Villager
+from Models.Unit import Unit
 from Models.Resources import Resources
 from Models.Map import GameMap
 import webbrowser
+import threading
 
 class Team:
     def __init__(self, difficulty):
         self.resources = Resources(0,0,0)
         self.units = []
-        self.soldats=[]
+        self.army=[]
         self.villagers=[]
         self.buildings =[]
         
@@ -50,10 +52,23 @@ class Team:
             for _ in range(MARINES_NUMBER_OF_ARCHERY_RANGES):
                 self.buildings.append(ArcheryRange())
                 
-    def gestion_units(self):
-        for u in self.units:
-            if u.hp==0:
-                units.remove(u)
+    def battle(self,t):
+        threads=[]
+        print(len(self.army)-1)
+        for i in range(0,len(t.army)):
+            s=t.army[i]
+            threads.append(threading.Thread(target=s.search, args=(t,self,map)))
+        
+        for i in range(0,len(self.army)):
+    
+            s=self.army[i]
+            threads.append(threading.Thread(target=s.search,args=(self,t,map)))
+        print("l",len(threads))
+        for i in range(0,len(threads)):
+            threads[i].start()
+        for i in range(0,len(threads)):
+         threads[i].join()
+       
 
 
     def builds(self,priority,acronym):
@@ -120,13 +135,6 @@ class Team:
 
         return reussi
 
-    def attack_army(self,t,map):
-        for s in self.soldats:
-            s.tache="attack"
-        for s in range(0,len(t.soldats)):
-            self.soldats[s].SeDeplacer(t.soldats[s].x,soldats[s].y,map)
-            self.soldats[s].attack(t.soldats[s])
-        #a finir
 
 
     def write_html(self):
@@ -144,7 +152,7 @@ class Team:
             <summary>Armée</summary>
 
 """     
-        for u in self.units:
+        for u in self.army:
             template+="""
 
 <p>

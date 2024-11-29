@@ -1,5 +1,6 @@
 import pygame
 from collections import Counter
+from Models import Unit
 
 def draw_player_selection(screen, players, selected_player, minimap_rect):
     """
@@ -44,7 +45,7 @@ def draw_player_info(screen, selected_player, screen_width, screen_height):
     screen.blit(resources_surface, (padding, info_y))
 
     # Afficher les unités (types et nombre)
-    unit_counts = Counter(unit.acronym for unit in selected_player.units)
+    unit_counts = Counter(Unit.acronym for unit in selected_player.units)
     units_text = "Units - " + ", ".join([f"{acronym}: {count}" for acronym, count in unit_counts.items()])
     units_surface = font.render(units_text, True, (255, 255, 255))
     screen.blit(units_surface, (padding, info_y + 30))

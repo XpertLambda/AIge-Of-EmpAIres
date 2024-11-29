@@ -14,7 +14,8 @@ class ArcheryRange(Building):
             size2=3,
             spawnsUnits=True
         )
-    def entraine(self):
+    def entraine(self,t):
         a.Archer()
-        time.sleep(h.training_time)
-
+        if(t.ressources.food>=a.cost_food):
+            time.sleep(h.training_time)
+            t.army.append(a)

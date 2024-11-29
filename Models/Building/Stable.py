@@ -17,5 +17,7 @@ class Stable(Building):
         )
     def entraine(self):
         h=Horseman()
-        time.sleep(h.training_time)
-        return h
+        if(t.resources.food>h.cost_food):
+            time.sleep(h.training_time)
+            t.army.append(h)
+        
