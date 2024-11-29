@@ -461,9 +461,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 elif event.key == pygame.K_ESCAPE:
                     running = False
                     #   Ajout de la sauvegarde et du chargement de la carte
-                if event.key == pygame.K_F11:  # Appuyer sur 'k' pour sauvegarder
+                if event.key == pygame.K_F11:  # Appuyer sur 'F11' pour sauvegarder
                     game_map.save_map()
-                elif event.key == pygame.K_F12:  # Appuyer sur 'l' pour charger
+                elif event.key == pygame.K_F12:  # Appuyer sur 'F12' pour charger
                     root = Tk()
                     root.withdraw()  # Cacher la fenêtre principale
                     filename = filedialog.askopenfilename(  # Ouvrir une boîte de dialogue pour choisir un fichier
