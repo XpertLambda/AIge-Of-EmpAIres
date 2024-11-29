@@ -11,7 +11,7 @@ class Team:
     def __init__(self, difficulty):
         self.resources = Resources(0,0,0)
         self.units = []
-        self.soldats=[]
+        self.army=[]
         self.villagers=[]
         self.buildings = []
         
