@@ -560,7 +560,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             camera.offset_y = -iso_y
             camera.limit_camera()
             
-                
+            
 
 
         keys = pygame.key.get_pressed()
