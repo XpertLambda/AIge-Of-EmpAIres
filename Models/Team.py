@@ -2,7 +2,7 @@ from Settings.setup import LEAN_NUMBER_OF_TOWER_CENTRE, LEAN_STARTING_FOOD, LEAN
 from Settings.setup import MEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_FOOD, MEAN_STARTING_GOLD, MEAN_STARTING_VILLAGERS, MEAN_STARTING_WOOD
 from Settings.setup import MARINES_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_FOOD, MARINES_STARTING_GOLD, MARINES_STARTING_VILLAGERS, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_STARTING_WOOD
 from Models.Building import TownCentre, Barracks, Stable, ArcheryRange, Keep, Camp, House
-from Models.Unit import Villager
+from Models.Unit import Villager, Swordsman, Archer
 from Models.Resources import Resources
 import webbrowser
 
@@ -18,9 +18,11 @@ class Team:
         if difficulty == 'DEBUG':
             self.resources = Resources(LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_GOLD)
         
-            for _ in range(LEAN_STARTING_VILLAGERS):
+            for _ in range(90):
+                self.units.append(Swordsman())           
                 self.units.append(Villager())           
-            for _ in range(2):
+                self.units.append(Archer())           
+            for _ in range(1):
                 self.buildings.append(TownCentre())
                 self.buildings.append(ArcheryRange())
                 self.buildings.append(Stable())

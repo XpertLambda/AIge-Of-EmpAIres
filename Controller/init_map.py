@@ -7,10 +7,10 @@ import os
 from tkinter import Tk, filedialog
 from Models.Map import GameMap
 from Controller.select_player import draw_player_selection, draw_player_info
-from Controller.init_sprites import draw_terrain, fill_grass, draw_building
+from Controller.init_sprites import draw_terrain, fill_grass, draw_building, draw_unit
 from Models.Team import Team
 from Models.Building import TownCentre
-from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT, TILE_SIZE
+from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT, TILE_SIZE, MIN_ZOOM, MAX_ZOOM
 
 from Settings.setup import (
     HALF_TILE_SIZE,
@@ -73,8 +73,8 @@ class Camera:
 
     def set_zoom(self, zoom_factor):
         # Limiter le zoom entre un minimum et un maximum
-        min_zoom = 0.1
-        max_zoom = 3.0
+        min_zoom = MIN_ZOOM
+        max_zoom = MAX_ZOOM
         self.zoom = max(min_zoom, min(zoom_factor, max_zoom))
         self.limit_camera()
 
@@ -169,7 +169,9 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
             if tile.terrain_type != 'grass' and tile.building is None:  
                 print_set.append((tile, screen_x, screen_y))
             if tile.building is not None:
-                pygame.draw.circle(screen, (255, 0, 0), (screen_x, screen_y), 20)
+                pygame.draw.circle(screen, (255, 0, 0), (screen_x, screen_y), 20 * camera.zoom)
+    
+    # This will later be re-adjusted to respect printing order !
     for (tile, screen_x, screen_y) in print_set:
         building = tile.building
         if building is None:
@@ -180,6 +182,13 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
             screen_x, screen_y = tile_to_screen(center_x,center_y, HALF_TILE_SIZE, HALF_TILE_SIZE/2, camera, screen_width, screen_height)
             draw_building(building, screen, screen_x, screen_y, camera, tile.player.nb)
     
+    #Comment this to hide players :
+    #'''
+    for player in players :
+        for unit in player.units:
+            screen_x,screen_y = tile_to_screen(unit.x, unit.y, HALF_TILE_SIZE, HALF_TILE_SIZE/2, camera, screen_width, screen_height)
+            draw_unit(unit, screen, screen_x, screen_y, camera, team_number=player.nb)
+    #'''
 MAP_PADDING = 650
 
 def compute_map_bounds(game_map):
@@ -424,7 +433,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     running = True
     while running:
-        dt = clock.tick(120) / 1000  # Time elapsed in seconds
+        dt = clock.tick(1000) / 1000  # Time elapsed in seconds
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -573,29 +582,23 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         if dx != 0 or dy != 0:
             camera.move(dx, dy)
-
         screen.fill((0, 0, 0))
         draw_map(screen, screen_width, screen_height, game_map, camera, players)
 
+       
         # Dessiner la minimap
-        draw_minimap(screen, minimap_background, camera, game_map, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y, minimap_rect)
+        #draw_minimap(screen, minimap_background, camera, game_map, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y, minimap_rect)
 
         # Dessiner la sélection des joueurs au-dessus de la minimap
-        draw_player_selection(screen, players, selected_player, minimap_rect)
+        #draw_player_selection(screen, players, selected_player, minimap_rect)
 
         # Afficher les informations du joueur sélectionné en bas de l'écran
-        draw_player_info(screen, selected_player, screen_width, screen_height)
+        #draw_player_info(screen, selected_player, screen_width, screen_height)
 
         display_fps(screen, clock)
         
-        #!DEBUG
-        #if int(clock.get_fps()) in [18,19,20,21,22] :
-        #   running = False
-
-
         # Mettre à jour l'affichage
         pygame.display.flip()
-
     # Quitter Pygame proprement
     pygame.quit()
     sys.exit()

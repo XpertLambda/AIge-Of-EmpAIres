@@ -1,6 +1,7 @@
 #from Models.Team import Team
 from Models.Map import *
 from math import sqrt
+import random
 import time
 
 def dist(x1,y1,x2,y2):
@@ -18,11 +19,18 @@ class Unit:
         self.attack = attack      # Attaque
         self.speed = speed        # Vitesse (en tuiles/seconde)
         self.training_time = training_time  # Temps d'entraînement (en secondes)
-        self.x=x
-        self.y=y
+        self.x=random.randint(1, 110)
+        self.y=random.randint(1, 110)
         self.task="nothing"
         self.id=Unit.cpt
         Unit.cpt+=1
+
+        self.state = random.randint(0, 3)# Current animation type
+        #DEBUG : maybe we remove it if we don't want building animation
+        self.current_frame = 0
+        self.frame_counter = 0  
+        self.frame_duration = 3 
+        self.direction = 0
     
 
     def attaquer(self,cible):
