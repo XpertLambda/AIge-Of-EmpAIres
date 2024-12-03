@@ -12,10 +12,10 @@ from Controller.drawing import (
 )
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
-from Controller.select_player import draw_player_selection, draw_player_info  # Import modifié
+from Controller.select_player import create_player_selection_surface, create_player_info_surface  # Import modifié
 from Settings.setup import MINIMAP_MARGIN
 
-def game_loop(screen, game_map, screen_width, screen_height, players):  # Paramètre modifié
+def game_loop(screen, game_map, screen_width, screen_height, players):
     """
     Boucle principale du jeu qui gère les événements, le déplacement et le zoom de la caméra,
     ainsi que le dessin de la carte.
@@ -42,7 +42,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):  # Param�
         game_map, minimap_width, minimap_height
     )
 
-    selected_player = players[0]  # Variable modifiée
+    selected_player = players[0]
     minimap_dragging = False
 
     # Initialiser le drapeau du mode fenêtre
@@ -51,8 +51,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):  # Param�
     # Dictionnaire de l'état du jeu pour contenir toutes les variables partagées
     game_state = {
         'camera': camera,
-        'players': players,  # Clé modifiée
-        'selected_player': selected_player,  # Clé modifiée
+        'players': players,
+        'selected_player': selected_player,
         'minimap_rect': minimap_rect,
         'minimap_dragging': minimap_dragging,
         'minimap_background': minimap_background,
@@ -67,7 +67,12 @@ def game_loop(screen, game_map, screen_width, screen_height, players):  # Param�
         'minimap_margin': minimap_margin,
         'screen': screen,
         'fullscreen': fullscreen,
+        'player_selection_updated': True,
+        'player_info_updated': True,
     }
+
+    player_selection_surface = None
+    player_info_surface = None
 
     running = True
     while running:
@@ -87,23 +92,37 @@ def game_loop(screen, game_map, screen_width, screen_height, players):  # Param�
         screen = game_state['screen']
         screen_width = game_state['screen_width']
         screen_height = game_state['screen_height']
-        selected_player = game_state['selected_player']  # Variable modifiée
-        players = game_state['players']  # Variable modifiée
+        selected_player = game_state['selected_player']
+        players = game_state['players']
+        player_selection_updated = game_state['player_selection_updated']
+        player_info_updated = game_state['player_info_updated']
+
+        # Update surfaces if needed
+        if player_selection_updated:
+            player_selection_surface = create_player_selection_surface(players, selected_player, minimap_rect)
+            game_state['player_selection_updated'] = False
+
+        if player_info_updated:
+            player_info_surface = create_player_info_surface(selected_player, screen_width)
+            game_state['player_info_updated'] = False
 
         # Dessin
         screen.fill((0, 0, 0))
+        # Uncomment and ensure these functions are defined if you wish to draw the map and minimap
         draw_map(screen, screen_width, screen_height, game_map, camera, players)
-
-        # Dessiner la minimap
         draw_minimap(screen, minimap_background, camera, game_map, game_state['minimap_scale'],
-                     game_state['minimap_offset_x'], game_state['minimap_offset_y'],
+                   game_state['minimap_offset_x'], game_state['minimap_offset_y'],
                      game_state['minimap_min_iso_x'], game_state['minimap_min_iso_y'], minimap_rect)
 
-        # Dessiner la sélection des joueurs au-dessus de la minimap
-        draw_player_selection(screen, players, selected_player, minimap_rect)  # Appel modifié
+        # Draw player selection surface
+        if player_selection_surface:
+            selection_surface_height = player_selection_surface.get_height()
+            screen.blit(player_selection_surface, (minimap_rect.x, minimap_rect.y - selection_surface_height))
 
-        # Afficher les informations du joueur sélectionné en bas de l'écran
-        draw_player_info(screen, selected_player, screen_width, screen_height)  # Appel modifié
+        # Draw player info surface
+        if player_info_surface:
+            info_surface_height = player_info_surface.get_height()
+            screen.blit(player_info_surface, (0, screen_height - info_surface_height))
 
         # Afficher les FPS
         display_fps(screen, clock)

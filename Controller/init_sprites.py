@@ -241,7 +241,7 @@ def load_sprites(sprite_config=sprite_config):
                             sprites[category][sprite_name][team].append(sprite)  # Append sprite to list
             elif category == 'units' :
                 #Uncomment this continue to get faster loading
-                #continue
+                continue
 
                 # Initialize buildings category
                 sprites[category][sprite_name] = {}

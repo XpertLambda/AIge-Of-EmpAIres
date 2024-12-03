@@ -20,7 +20,7 @@ class Team:
         if difficulty == 'DEBUG':
             self.resources = Resources(LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_GOLD)
         
-            for _ in range(90):
+            for _ in range(0): #remettre a 90
                 self.units.append(Swordsman())           
                 self.units.append(Villager())           
                 self.units.append(Archer())           
@@ -65,38 +65,5 @@ class Team:
                 self.units.append(Villager())
 
     def write_html(self):
-        template = """
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Données du jeu</title>
-</head>
-<body>
-<h1>Données du jeu</h1>
-<details>
-    <summary>Armée</summary>
-"""     
-        for u in self.army:
-            template += """
-<p>
-<b>id</b>: {id} 
-<b>acronym</b>: {acronym} 
-<b>tâche</b>: {task}   
-<b>hp</b>: {hp} 
-<b>position</b>: ({x}, {y}) 
-</p>
-            """.format(id=u.id, acronym=u.acronym, task=u.task, hp=u.hp, x=u.x, y=u.y)
-        for b in self.buildings:
-            template += """
-<p>
-<b>Bâtiment</b>: {name} 
-<b>Position</b>: ({x}, {y}) 
-</p>
-            """.format(name=type(b).__name__, x=b.x, y=b.y)
-        template += """
-</details>
-</body>
-</html>
-"""
-        with open("donnees.html", "w") as file:
-            file.write(template)
+        from Models.html import write_html
+        write_html(self)

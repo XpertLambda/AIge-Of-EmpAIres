@@ -1,62 +1,70 @@
 import pygame
 from collections import Counter
+# [Controller/select_player.py](Controller/select_player.py)
 
-def draw_player_selection(screen, players, selected_player, minimap_rect):
+from Models.html import write_html
+
+def handle_save_html(selected_player):
     """
-    Dessine les zones de sélection des joueurs au-dessus de la minimap, 
-    le premier joueur en haut et le dernier en bas.
+    Gère la sauvegarde des informations du joueur sélectionné en HTML.
+    
+    Args:
+        selected_player (Team): Le joueur sélectionné dont les données seront sauvegardées.
+    """
+    write_html(selected_player)
+    
+def create_player_selection_surface(players, selected_player, minimap_rect):
+    """
+    Crée une surface contenant les zones de sélection des joueurs.
     """
     selection_height = 30  # Hauteur de chaque zone de sélection
     padding = 5            # Espacement entre les zones
-    
-    for i, player in enumerate(reversed(list(enumerate(players)))):
-        index, player_item = player
-        
+    total_height = selection_height * len(players) + padding * (len(players) - 1)
+
+    surface = pygame.Surface((minimap_rect.width, total_height), pygame.SRCALPHA)
+
+    for i, player in enumerate(reversed(players)):
         # Calcul des coordonnées de chaque zone de sélection
-        rect_x = minimap_rect.x
-        rect_y = minimap_rect.y - (i + 1) * (selection_height + padding)
-        rect_width = minimap_rect.width
-        rect = pygame.Rect(rect_x, rect_y, rect_width, selection_height)
-        
+        rect_y = i * (selection_height + padding)
+        rect = pygame.Rect(0, rect_y, minimap_rect.width, selection_height)
+
         # Couleur de sélection ou de fond
-        color = (0, 100, 255) if player_item == selected_player else (150, 150, 150)
-        pygame.draw.rect(screen, color, rect)
-        
-        # Texte du joueur (utilisez pygame.font pour le rendu du texte)
+        color = (0, 100, 255) if player == selected_player else (150, 150, 150)
+        pygame.draw.rect(surface, color, rect)
+
+        # Texte du joueur
         font = pygame.font.Font(None, 24)
-        text = font.render(f"Bot {index+1}", True, (255, 255, 255))
+        text = font.render(f"Bot {players.index(player)+1}", True, (255, 255, 255))
         text_rect = text.get_rect(center=rect.center)
-        screen.blit(text, text_rect)
+        surface.blit(text, text_rect)
 
-    return selection_height * len(players) + padding * (len(players) - 1)
+    return surface
 
-
-def draw_player_info(screen, selected_player, screen_width, screen_height):
+def create_player_info_surface(selected_player, screen_width):
     """
-    Affiche les informations du joueur sélectionné en bas de l'écran :
-    - Types et nombre d'unités
-    - Nombre de ressources
-    - Types de bâtiments et leur nombre
+    Crée une surface contenant les informations du joueur sélectionné.
     """
     font = pygame.font.Font(None, 24)
     padding = 5
-    info_y = screen_height - 100  # Position de départ en bas de l'écran
+    info_height = 100  # Hauteur de la surface d'information
+    surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
 
     # Afficher les ressources
     resources_text = f"Resources - Food: {selected_player.resources.food}, Wood: {selected_player.resources.wood}, Gold: {selected_player.resources.gold}"
     resources_surface = font.render(resources_text, True, (255, 255, 255))
-    screen.blit(resources_surface, (padding, info_y))
+    surface.blit(resources_surface, (padding, 0))
 
     # Afficher les unités (types et nombre)
     unit_counts = Counter(unit.acronym for unit in selected_player.units)
     units_text = "Units - " + ", ".join([f"{acronym}: {count}" for acronym, count in unit_counts.items()])
     units_surface = font.render(units_text, True, (255, 255, 255))
-    screen.blit(units_surface, (padding, info_y + 30))
+    surface.blit(units_surface, (padding, 30))
 
     # Afficher les bâtiments (types et nombre)
     building_counts = Counter(building.acronym for building in selected_player.buildings)
     buildings_text = "Buildings - " + ", ".join([f"{acronym}: {count}" for acronym, count in building_counts.items()])
     buildings_surface = font.render(buildings_text, True, (255, 255, 255))
-    screen.blit(buildings_surface, (padding, info_y + 60))
-    
-    
+    surface.blit(buildings_surface, (padding, 60))
+
+    return surface
+

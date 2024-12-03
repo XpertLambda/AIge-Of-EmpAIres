@@ -18,6 +18,9 @@ def update_game_state(game_state, dt):
     screen_width = game_state['screen_width']
     screen_height = game_state['screen_height']
 
+    # Extract flags
+    player_info_updated = game_state.get('player_info_updated', False)
+
     keys = pygame.key.get_pressed()
     move_speed = 300 * dt  # Vitesse en pixels par seconde
     if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
@@ -33,6 +36,7 @@ def update_game_state(game_state, dt):
     if keys[pygame.K_s] or keys[pygame.K_DOWN]:
         dy -= move_speed
     if keys[pygame.K_TAB]:
+        selected_player = game_state['selected_player']
         selected_player.write_html()  # Variable modifiée
 
     if dx != 0 or dy != 0:
@@ -53,6 +57,19 @@ def update_game_state(game_state, dt):
         camera.offset_x = -iso_x
         camera.offset_y = -iso_y
         camera.limit_camera()
+
+    # Example: If resources have changed, set the flag
+    # This requires tracking previous resource values
+    selected_player = game_state['selected_player']
+    if hasattr(selected_player, 'previous_resources'):
+        if selected_player.resources != selected_player.previous_resources:
+            player_info_updated = True
+    else:
+        selected_player.previous_resources = selected_player.resources.copy()
+    selected_player.previous_resources = selected_player.resources.copy()
+
+    # Update game_state flag
+    game_state['player_info_updated'] = player_info_updated
 
     # Mettre à jour le game_state
     game_state['camera'] = camera

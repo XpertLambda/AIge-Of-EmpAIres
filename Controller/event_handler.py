@@ -29,6 +29,10 @@ def handle_events(event, game_state):
     screen = game_state['screen']
     fullscreen = game_state['fullscreen']
     
+    # Extract flags
+    player_selection_updated = game_state.get('player_selection_updated', False)
+    player_info_updated = game_state.get('player_info_updated', False)
+
     if event.type == pygame.QUIT:
         pygame.quit()
         sys.exit()
@@ -95,14 +99,17 @@ def handle_events(event, game_state):
                     rect_y = minimap_rect.y - (i + 1) * (30 + 5)
                     rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
                     if rect.collidepoint(mouse_x, mouse_y):
-                        game_state['selected_player'] = player
-                        for building in player.buildings:
-                            if isinstance(building, TownCentre):
-                                iso_x, iso_y = to_isometric(building.x, building.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2)
-                                
-                                camera.offset_x = -iso_x
-                                camera.offset_y = -iso_y
-                                break
+                        if game_state['selected_player'] != player:
+                            game_state['selected_player'] = player
+                            player_selection_updated = True
+                            player_info_updated = True
+                            # Téléportation de la caméra au TownCentre du joueur
+                            for building in player.buildings:
+                                if isinstance(building, TownCentre):
+                                    iso_x, iso_y = to_isometric(building.x, building.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2)
+                                    camera.offset_x = -iso_x
+                                    camera.offset_y = -iso_y
+                                    break
         
         elif event.button == 4:  # Molette vers le haut
             camera.set_zoom(camera.zoom * 1.1)
@@ -137,6 +144,10 @@ def handle_events(event, game_state):
         minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
             game_map, minimap_width, minimap_height
         )
+
+    # Update game_state flags
+    game_state['player_selection_updated'] = player_selection_updated
+    game_state['player_info_updated'] = player_info_updated
 
     # Mettre à jour le game_state avec les nouvelles valeurs
     game_state['camera'] = camera
