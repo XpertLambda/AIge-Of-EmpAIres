@@ -78,6 +78,7 @@ def handle_events(event, game_state):
             )
             if filename:
                 game_map.load_map(filename)
+                players = game_map.players  # Mettre à jour les joueurs avec ceux chargés
             root.destroy()
         elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS:
             camera.set_zoom(camera.zoom * 1.1)
