@@ -172,7 +172,7 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
                 frame = sheet.subsurface(pygame.Rect(x, y, frame_width, frame_height))
                 
                 # Resize frame to the new dimensions
-                frame = pygame.transform.smoothscale(frame, (target_width, target_height))
+                frame = pygame.transform.scale(frame, (target_width, target_height))
                 frames.append(frame)
             else :
                 continue
@@ -308,7 +308,7 @@ def get_scaled_sprite(name, category, zoom, team=None, state=None, frame_id=0):
     original_image = sprite_data[frame_id]
     scaled_width = int(original_image.get_width() * zoom)
     scaled_height = int(original_image.get_height() * zoom)
-    scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
+    scaled_image = pygame.transform.scale(original_image, (scaled_width, scaled_height))
     
     # Add to cache
     zoom_cache[name][cache_key] = scaled_image

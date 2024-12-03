@@ -42,7 +42,6 @@ class Unit:
     def SeDeplacer(self,x,y,map):
         while(self.x!=x and self.y!=y):
 
-            time.sleep(self.speed)
             if self.x<x:
                 if self.y<y and map.grid[y+1][x+1].is_walkable:
                     self.x+=1
@@ -57,4 +56,13 @@ class Unit:
                 if self.y>y and map.grid[y-1][x+1].is_walkable:
                     self.x-=1
                     self.y-=1
-       
+            if self.x==x:
+                if self.y<y and map.grid[y+1][x].is_walkable:
+                    self.y+=1
+                if self.y>y and map.grid[y-1][x].is_walkable:
+                    self.y-=1
+            if self.y==y:
+                if self.x<x and map.grid[y][x+1].is_walkable:
+                    self.x+=1
+                if self.x>x and map.grid[y][x-1].is_walkable:
+                    self.x-=1
