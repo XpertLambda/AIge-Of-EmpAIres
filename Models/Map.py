@@ -1,5 +1,4 @@
-# Models/Map.py
-
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/Projet_python\Models\Map.py
 import random
 import os
 import pickle
@@ -10,13 +9,21 @@ from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM
 class Tile:
     def __init__(self, terrain_type, tile_size=TILE_SIZE):
         self.tile_size = tile_size
-        self.terrain_type = terrain_type  # 'grass', 'gold', 'wood', 'food'
-        self.building = None  # Pas de bâtiment
-        self.unit = None      # Pas d'unité
-        self.player = None    # Propriétaire du terrain
+        self.terrain_type = terrain_type
+        self.building = None
+        self.unit = None
+        self.player = None
+        self.dirty = True
 
     def is_walkable(self):
         return self.building is None
+
+    def mark_dirty(self):
+        self.dirty = True
+
+# Tile global pour l'herbe, jamais dirty, utilisé par défaut
+GLOBAL_GRASS_TILE = Tile('grass')
+GLOBAL_GRASS_TILE.dirty = False
 
 class GameMap:
     def __init__(self, players, width=MAP_WIDTH, height=MAP_HEIGHT):
@@ -25,13 +32,32 @@ class GameMap:
         self.num_tiles_x = width // TILE_SIZE
         self.num_tiles_y = height // TILE_SIZE
         self.players = players
-        self.grid = self.random_map(width, height, players)
+
+        self.grid = {}
+
+        self.random_map(width, height, players)
 
     def place_building(self, x, y, building):
-        pass
+        for i in range(building.size1):
+            for j in range(building.size2):
+                pos = (x + i, y + j)
+                t = self.grid.get(pos)
+                if t is None:
+                    t = Tile('grass')
+                t.building = building
+                t.terrain_type = building.acronym
+                t.player = getattr(building, 'player', None)
+                t.mark_dirty()
+                self.grid[pos] = t
 
     def place_unit(self, x, y, unit):
-        pass
+        pos = (x, y)
+        t = self.grid.get(pos)
+        if t is None:
+            t = Tile('grass')
+        t.unit = unit
+        t.mark_dirty()
+        self.grid[pos] = t
 
     def save_map(self, directory='saves'):
         if not os.path.exists(directory):
@@ -55,6 +81,8 @@ class GameMap:
                 game_state = pickle.load(file)
             self.players = game_state['players']
             self.grid = game_state['tiles']
+            for tile in self.grid.values():
+                tile.mark_dirty()
             print(f"Game map loaded successfully from {filename}.")
         except Exception as e:
             print(f"Error loading game map: {e}")
@@ -65,19 +93,19 @@ class GameMap:
         zone_height = self.num_tiles_y // (num_players if num_players % 2 == 0 else 1)
 
         for index, player in enumerate(players):
-            x_start = (index % (num_players // 2)) * zone_width
-            y_start = (index // (num_players // 2)) * zone_height
-            x_end = x_start + zone_width
-            y_end = y_start + zone_height
+            x_start = (index % (num_players // 2)) * zone_width if num_players > 1 else 0
+            y_start = (index // (num_players // 2)) * zone_height if num_players > 1 else 0
+            x_end = x_start + zone_width if num_players > 1 else self.num_tiles_x
+            y_end = y_start + zone_height if num_players > 1 else self.num_tiles_y
 
             for building in player.buildings:
-                max_attempts = zone_width * zone_height
+                max_attempts = zone_width * zone_height if num_players > 1 else (self.num_tiles_x * self.num_tiles_y)
                 attempts = 0
                 placed = False
 
                 while attempts < max_attempts:
-                    x = random.randint(x_start, x_end - building.size1)
-                    y = random.randint(y_start, y_end - building.size2)
+                    x = random.randint(x_start, max(x_end - building.size1, x_start))
+                    y = random.randint(y_start, max(y_end - building.size2, y_start))
                     if self.can_place_building(grid, x, y, building):
                         placed = True
                         break
@@ -99,11 +127,14 @@ class GameMap:
                 for i in range(building.size1):
                     for j in range(building.size2):
                         pos = (x + i, y + j)
-                        if pos not in grid:
-                            grid[pos] = Tile('grass')
-                        grid[pos].building = building
-                        grid[pos].terrain_type = building.acronym
-                        grid[pos].player = player
+                        t = grid.get(pos)
+                        if t is None:
+                            t = Tile('grass')
+                        t.building = building
+                        t.terrain_type = building.acronym
+                        t.player = player
+                        t.mark_dirty()
+                        grid[pos] = t
                         building.x = x
                         building.y = y
 
@@ -114,13 +145,12 @@ class GameMap:
             for j in range(building.size2):
                 pos = (x + i, y + j)
                 tile = grid.get(pos)
-                if tile is not None and (tile.building is not None or tile.terrain_type in ['gold', 'wood', 'food']):
+                if tile and (tile.building is not None or tile.terrain_type in ['gold', 'wood', 'food']):
                     return False
         return True
 
     def random_map(self, width, height, players):
-        grid = {}
-        self.building_generation(grid, players)
+        self.building_generation(self.grid, players)
 
         tiles = (
             ['gold'] * NUM_GOLD_TILES +
@@ -136,22 +166,22 @@ class GameMap:
                 x = random.randint(0, self.num_tiles_x - 1)
                 y = random.randint(0, self.num_tiles_y - 1)
                 pos = (x, y)
-                tile = grid.get(pos)
+                tile = self.grid.get(pos)
                 if tile is None:
-                    grid[pos] = Tile(terrain_type)
+                    tile = Tile(terrain_type)
+                    tile.mark_dirty()
+                    self.grid[pos] = tile
                     placed = True
-                elif tile.terrain_type == 'grass' and tile.building is None:
-                    tile.terrain_type = terrain_type
-                    placed = True
-
-        return grid
+                else:
+                    if tile.terrain_type == 'grass' and tile.building is None:
+                        tile.terrain_type = terrain_type
+                        tile.mark_dirty()
+                        placed = True
 
     def get_tile(self, x, y):
         pos = (x, y)
-        tile = self.grid.get(pos)
-        if tile is None:
-            tile = Tile('grass')
-        return tile
+        # Retourne le tile global d'herbe si non trouvé
+        return self.grid.get(pos, GLOBAL_GRASS_TILE)
 
     def print_map(self):
         terrain_acronyms = {
