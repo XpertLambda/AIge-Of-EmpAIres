@@ -1,16 +1,18 @@
-from Models.Building.Building import Building
-from Models.Unit.Horseman import Horseman
+from Entity.Building import Building
+from Entity.Unit.Horseman import Horseman
 import time
 
 class Stable(Building):
-    def __init__(self):
+    def __init__(self, team, x=0, y=0):
         super().__init__(
+            x=x,
+            y=y,
+            team=team,
             acronym='S',
             woodCost=175,
             goldCost=0,
             buildTime=50,
             hp=500,
-            size1=3,
-            size2=3,
+            size=3,
             spawnsUnits=True
         )

@@ -9,13 +9,15 @@ from Settings.setup import (
     MINIMAP_HEIGHT,
     MAP_PADDING,
 )
+from Entity.Unit import Unit
+from Entity.Building import Building
 from Controller.isometric_utils import (
     to_isometric,
     get_color_for_terrain,
     screen_to_tile,
     tile_to_screen,
 )
-from Controller.init_sprites import draw_terrain, fill_grass, draw_building, draw_unit
+from Controller.init_sprites import *
 
 def draw_map(screen, screen_width, screen_height, game_map, camera, players):
     """
@@ -36,40 +38,28 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
     x_indices = [tile_x for tile_x, _ in tile_indices]
     y_indices = [tile_y for _, tile_y in tile_indices]
 
-    margin = 0  # Ajuster si nécessaire
+    margin = 5  # Ajuster si nécessaire
 
-    min_tile_x = max(0, int(math.floor(min(x_indices))) - margin)
-    max_tile_x = min(game_map.num_tiles_x - 1, int(math.ceil(max(x_indices))) + margin)
-    min_tile_y = max(0, int(math.floor(min(y_indices))) - margin)
-    max_tile_y = min(game_map.num_tiles_y - 1, int(math.ceil(max(y_indices))) + margin)
+    min_tile_x = max(0, min(x_indices) - margin)
+    max_tile_x = min(game_map.num_tiles_x - 1, max(x_indices) + margin)
+    min_tile_y = max(0, min(y_indices) - margin)
+    max_tile_y = min(game_map.num_tiles_y - 1, max(y_indices) + margin)
+    visible_entites = set()
 
-    print_set = []
     for y in range(min_tile_y, max_tile_y):
-        for x in range(min_tile_x, max_tile_x + 1):
-            screen_x, screen_y = tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        for x in range(min_tile_x, max_tile_x):
+            if x % 10 == 0 and y %10 == 0:   
+                screen_x, screen_y = tile_to_screen(x+4.5, y+4.5, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+                fill_grass(screen, screen_x, screen_y, camera)
+                #pygame.draw.circle(screen, (255,0,255), (screen_x, screen_y), 20*camera.zoom, 0)
 
-            tile = game_map.get_tile(x, y)
-
-            fill_grass(screen, screen_x, screen_y, camera)
-            if tile.building is not None and tile.building.x == x and tile.building.y == y:
-                print_set.append((tile, screen_x, screen_y))
-            if tile.terrain_type != 'grass' and tile.building is None:
-                print_set.append((tile, screen_x, screen_y))
-
-    for (tile, screen_x, screen_y) in print_set:
-        building = tile.building
-        if building is None:
-            draw_terrain(tile.terrain_type, screen, screen_x, screen_y, camera)
-        else:
-            center_x = building.x + (building.size1 - 1) / 2
-            center_y = building.y + (building.size2 - 1) / 2
-            screen_x, screen_y = tile_to_screen(center_x, center_y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-            draw_building(building, screen, screen_x, screen_y, camera, tile.player.nb)
-
-    for player in players:
-        for unit in player.units:
-            screen_x, screen_y = tile_to_screen(unit.x, unit.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-            draw_unit(unit, screen, screen_x, screen_y, camera, team_number=player.nb)
+            entities = game_map.grid.get((x, y), None)
+            if entities:
+                for entity in entities:
+                    visible_entites.add(entity)
+   
+    for entity in sorted(visible_entites, key=lambda entity: (entity.x + entity.y)):
+        entity.display(screen, screen_width, screen_height, camera)
 
 def compute_map_bounds(game_map):
     """
@@ -97,6 +87,8 @@ def compute_map_bounds(game_map):
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
 
 def create_minimap_background(game_map, minimap_width, minimap_height):
+    return
+''' Needs to be modified
     """
     Crée la surface de la minimap représentant l'ensemble de la carte.
     """
@@ -157,8 +149,10 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
             color = get_color_for_terrain(terrain_type)
             pygame.draw.polygon(minimap_surface, color, points)
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
-
+'''
 def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, offset_y, min_iso_x, min_iso_y, minimap_rect):
+    return
+'''Needs to be modified 
     """
     Dessine la minimap à l'écran, avec le rectangle représentant la zone visible par le joueur.
     """
@@ -215,7 +209,7 @@ def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, 
             color = player_colors[player_index % len(player_colors)]
 
             pygame.draw.polygon(screen, (*color, 100), points)
-
+'''
 def display_fps(screen, clock):
     font = pygame.font.SysFont(None, 24)
     fps = int(clock.get_fps())

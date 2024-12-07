@@ -1,15 +1,17 @@
-from Models.Building.Building import Building
-from Models.Unit.Archer import Archer
+from Entity.Building import Building
+from Entity.Unit.Archer import Archer
 import time
 class ArcheryRange(Building):
-    def __init__(self):
+    def __init__(self, x=0, y=0, team=0):
         super().__init__(
+            x=x,
+            y=y,
+            team=team,
             acronym='A',
             woodCost=175,
             goldCost=0,
             buildTime=50,
             hp=500,
-            size1=3,
-            size2=3,
+            size=3,
             spawnsUnits=True
         )

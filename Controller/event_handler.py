@@ -3,7 +3,7 @@
 import pygame
 import sys
 from tkinter import Tk, filedialog
-from Models.Building import TownCentre
+from Entity.Building import *
 from Controller.isometric_utils import to_isometric
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY
 
@@ -15,13 +15,13 @@ def handle_events(event, game_state):
     players = game_state['players']  # Variable modifiée
     selected_player = game_state['selected_player']  # Variable modifiée
     minimap_rect = game_state['minimap_rect']
-    minimap_dragging = game_state['minimap_dragging']
-    minimap_background = game_state['minimap_background']
-    minimap_scale = game_state['minimap_scale']
-    minimap_offset_x = game_state['minimap_offset_x']
-    minimap_offset_y = game_state['minimap_offset_y']
-    minimap_min_iso_x = game_state['minimap_min_iso_x']
-    minimap_min_iso_y = game_state['minimap_min_iso_y']
+    #minimap_dragging = game_state['minimap_dragging']
+    #minimap_background = game_state['minimap_background']
+    #minimap_scale = game_state['minimap_scale']
+    #minimap_offset_x = game_state['minimap_offset_x']
+    #minimap_offset_y = game_state['minimap_offset_y']
+    #minimap_min_iso_x = game_state['minimap_min_iso_x']
+    #minimap_min_iso_y = game_state['minimap_min_iso_y']
     game_map = game_state['game_map']
     screen_width = game_state['screen_width']
     screen_height = game_state['screen_height']
@@ -139,12 +139,13 @@ def handle_events(event, game_state):
         )
 
         # Recréer le fond de la minimap avec la nouvelle taille
+        '''
         from Controller.drawing import create_minimap_background
         minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
         minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
             game_map, minimap_width, minimap_height
         )
-
+        '''
     # Update game_state flags
     game_state['player_selection_updated'] = player_selection_updated
     game_state['player_info_updated'] = player_info_updated
@@ -155,12 +156,12 @@ def handle_events(event, game_state):
     game_state['selected_player'] = game_state['selected_player']  # Clé modifiée
     game_state['minimap_rect'] = minimap_rect
     game_state['minimap_dragging'] = game_state['minimap_dragging']
-    game_state['minimap_background'] = minimap_background
-    game_state['minimap_scale'] = minimap_scale
-    game_state['minimap_offset_x'] = minimap_offset_x
-    game_state['minimap_offset_y'] = minimap_offset_y
-    game_state['minimap_min_iso_x'] = minimap_min_iso_x
-    game_state['minimap_min_iso_y'] = minimap_min_iso_y
+    #game_state['minimap_background'] = minimap_background
+    #game_state['minimap_scale'] = minimap_scale
+    #game_state['minimap_offset_x'] = minimap_offset_x
+    #game_state['minimap_offset_y'] = minimap_offset_y
+    #game_state['minimap_min_iso_x'] = minimap_min_iso_x
+    #game_state['minimap_min_iso_y'] = minimap_min_iso_y
     game_state['screen_width'] = screen_width
     game_state['screen_height'] = screen_height
     game_state['screen'] = screen

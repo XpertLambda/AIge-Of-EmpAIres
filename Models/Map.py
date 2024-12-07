@@ -1,22 +1,16 @@
 # Models/Map.py
-
 import random
 import os
 import pickle
+from collections import defaultdict
 from datetime import datetime
-from Models.Building import Building
+from Entity.Building import Building
+from Entity.Unit import Unit
+from Entity.Resource.Resource import *
+from Entity.Resource.Gold import Gold
+from Entity.Resource.Wood import Wood
+from Entity.Resource.Food import Food
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES
-
-class Tile:
-    def __init__(self, terrain_type, tile_size=TILE_SIZE):
-        self.tile_size = tile_size
-        self.terrain_type = terrain_type  # 'grass', 'gold', 'wood', 'food'
-        self.building = None  # Pas de bâtiment
-        self.unit = None      # Pas d'unité
-        self.player = None    # Propriétaire du terrain
-
-    def is_walkable(self):
-        return self.building is None
 
 class GameMap:
     def __init__(self, players, width=MAP_WIDTH, height=MAP_HEIGHT):
@@ -25,7 +19,7 @@ class GameMap:
         self.num_tiles_x = width // TILE_SIZE
         self.num_tiles_y = height // TILE_SIZE
         self.players = players
-        self.grid = self.random_map(width, height, players)
+        self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y, players)
 
     def place_building(self, x, y, building):
         pass
@@ -76,16 +70,16 @@ class GameMap:
                 placed = False
 
                 while attempts < max_attempts:
-                    x = random.randint(x_start, x_end - building.size1)
-                    y = random.randint(y_start, y_end - building.size2)
+                    x = random.randint(x_start, x_end - building.size)
+                    y = random.randint(y_start, y_end - building.size)
                     if self.can_place_building(grid, x, y, building):
                         placed = True
                         break
                     attempts += 1
 
                 if not placed:
-                    for y_pos in range(y_start, y_end - building.size2 + 1):
-                        for x_pos in range(x_start, x_end - building.size1 + 1):
+                    for y_pos in range(y_start, y_end - building.size + 1):
+                        for x_pos in range(x_start, x_end - building.size + 1):
                             if self.can_place_building(grid, x_pos, y_pos, building):
                                 x, y = x_pos, y_pos
                                 placed = True
@@ -96,80 +90,103 @@ class GameMap:
                 if not placed:
                     raise ValueError("Unable to place building in player zone; zone might be fully occupied.")
 
-                for i in range(building.size1):
-                    for j in range(building.size2):
+                for i in range(building.size):
+                    for j in range(building.size):
                         pos = (x + i, y + j)
                         if pos not in grid:
-                            grid[pos] = Tile('grass')
-                        grid[pos].building = building
-                        grid[pos].terrain_type = building.acronym
-                        grid[pos].player = player
-                        building.x = x
-                        building.y = y
+                            grid[pos] = set()
+                        grid[pos].add(building)
+                building.x = x
+                building.y = y
 
     def can_place_building(self, grid, x, y, building):
-        if x + building.size1 > self.num_tiles_x or y + building.size2 > self.num_tiles_y:
+        if x + building.size > self.num_tiles_x or y + building.size > self.num_tiles_y:
             return False
-        for i in range(building.size1):
-            for j in range(building.size2):
-                pos = (x + i, y + j)
-                tile = grid.get(pos)
-                if tile is not None and (tile.building is not None or tile.terrain_type in ['gold', 'wood', 'food']):
-                    return False
+
+        for dx in range(building.size):
+            for dy in range(building.size):
+                position = (x + dx, y + dy)
+                if position in grid:
+                    for entity in grid[position]:
+                        # Conflict if the cell contains a non-walkable entity
+                        if isinstance(entity, (Unit, Resource, Building)):
+                            if not building.is_walkable or isinstance(entity, Building):
+                                return False
         return True
 
-    def random_map(self, width, height, players):
+    def random_map(self, num_tiles_x, num_tiles_y, players):
         grid = {}
+
+        # Generate buildings for all players
         self.building_generation(grid, players)
 
-        tiles = (
+        # Map resource types to their respective classes
+        resource_classes = {
+            'gold': Gold,
+            'wood': Wood,
+            'food': Food,
+        }
+
+        # Create a list of resources to place
+        resources = (
             ['gold'] * NUM_GOLD_TILES +
             ['wood'] * NUM_WOOD_TILES +
             ['food'] * NUM_FOOD_TILES
         )
+        random.shuffle(resources)
 
-        random.shuffle(tiles)
-
-        for terrain_type in tiles:
+        # Place resources on the grid
+        for resource_type in resources:
             placed = False
-            while not placed:
-                x = random.randint(0, self.num_tiles_x - 1)
-                y = random.randint(0, self.num_tiles_y - 1)
+            attempts = 0
+
+            while not placed and attempts < 1000:
+                # Random position within the map bounds
+                x = random.randint(0, num_tiles_x - 1)
+                y = random.randint(0, num_tiles_y - 1)
                 pos = (x, y)
-                tile = grid.get(pos)
-                if tile is None:
-                    grid[pos] = Tile(terrain_type)
+
+                # Check if the position is valid
+                if pos not in grid:
+                    grid[pos] = set()
+                if all(not isinstance(entity, Building) for entity in grid[pos]):
+                    # Create a new resource and place it
+                    resource_class = resource_classes[resource_type]
+                    resource = resource_class(x, y)
+                    grid[pos].add(resource)
                     placed = True
-                elif tile.terrain_type == 'grass' and tile.building is None:
-                    tile.terrain_type = terrain_type
-                    placed = True
+
+                attempts += 1
+
+            if not placed:
+                print(f"Warning: Failed to place {resource_type} after 1000 attempts.")
 
         return grid
 
     def get_tile(self, x, y):
         pos = (x, y)
         tile = self.grid.get(pos)
-        if tile is None:
-            tile = Tile('grass')
         return tile
 
     def print_map(self):
-        terrain_acronyms = {
-            'grass': ' ',
-            'gold': 'G',
-            'wood': 'W',
-            'food': 'F',
-        }
 
+        # Iterate over the grid by rows and columns
         for y in range(self.num_tiles_y):
             row_display = []
             for x in range(self.num_tiles_x):
-                tile = self.grid.get((x, y))
-                if tile is not None:
-                    if tile.building is not None:
-                        row_display.append(tile.building.acronym)
-                    else:
-                        row_display.append(terrain_acronyms.get(tile.terrain_type, '??'))
+                pos = (x, y)
+
+                # Check if the position exists in the grid
+                if pos in self.grid:
+                    # Retrieve the entities at this position
+                    entities = self.grid[pos]
+
+                    for entity in entities :
+                        row_display.append(entity.acronym)
                 else:
+                    # Default for uninitialized tiles
                     row_display.append(' ')
+
+            # Print the row as a string
             print(''.join(row_display))
+

@@ -10,11 +10,11 @@ def update_game_state(game_state, dt):
     selected_player = game_state['selected_player']  # Variable modifiée
     minimap_dragging = game_state['minimap_dragging']
     minimap_rect = game_state['minimap_rect']
-    minimap_offset_x = game_state['minimap_offset_x']
-    minimap_offset_y = game_state['minimap_offset_y']
-    minimap_min_iso_x = game_state['minimap_min_iso_x']
-    minimap_min_iso_y = game_state['minimap_min_iso_y']
-    minimap_scale = game_state['minimap_scale']
+    #minimap_offset_x = game_state['minimap_offset_x']
+    #minimap_offset_y = game_state['minimap_offset_y']
+    #minimap_min_iso_x = game_state['minimap_min_iso_x']
+    #minimap_min_iso_y = game_state['minimap_min_iso_y']
+    #minimap_scale = game_state['minimap_scale']
     screen_width = game_state['screen_width']
     screen_height = game_state['screen_height']
 
@@ -57,7 +57,7 @@ def update_game_state(game_state, dt):
         camera.offset_x = -iso_x
         camera.offset_y = -iso_y
         camera.limit_camera()
-
+    '''
     # Example: If resources have changed, set the flag
     # This requires tracking previous resource values
     selected_player = game_state['selected_player']
@@ -67,7 +67,7 @@ def update_game_state(game_state, dt):
     else:
         selected_player.previous_resources = selected_player.resources.copy()
     selected_player.previous_resources = selected_player.resources.copy()
-
+    '''
     # Update game_state flag
     game_state['player_info_updated'] = player_info_updated
 

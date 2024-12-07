@@ -1,7 +1,8 @@
 # Chemin de Controller/game_loop.py
-
+import time
 import pygame
 import sys
+import random
 from Controller.camera import Camera
 from Controller.drawing import (
     draw_map,
@@ -35,16 +36,16 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         minimap_width,
         minimap_height
     )
-
+    ''' Waiting for modifications
     # Créer le fond de la minimap avec des dimensions initiales
     minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
     minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
         game_map, minimap_width, minimap_height
     )
 
+    '''
     selected_player = players[0]
     minimap_dragging = False
-
     # Initialiser le drapeau du mode fenêtre
     fullscreen = False
 
@@ -55,12 +56,12 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'selected_player': selected_player,
         'minimap_rect': minimap_rect,
         'minimap_dragging': minimap_dragging,
-        'minimap_background': minimap_background,
-        'minimap_scale': minimap_scale,
-        'minimap_offset_x': minimap_offset_x,
-        'minimap_offset_y': minimap_offset_y,
-        'minimap_min_iso_x': minimap_min_iso_x,
-        'minimap_min_iso_y': minimap_min_iso_y,
+        #'minimap_background': minimap_background,
+        #'minimap_scale': minimap_scale,
+        #'minimap_offset_x': minimap_offset_x,
+        #'minimap_offset_y': minimap_offset_y,
+        #'minimap_min_iso_x': minimap_min_iso_x,
+        #'minimap_min_iso_y': minimap_min_iso_y,
         'game_map': game_map,
         'screen_width': screen_width,
         'screen_height': screen_height,
@@ -73,10 +74,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     player_selection_surface = None
     player_info_surface = None
-
+    #DEBUG, CHANGE IT WITH A METHOD
+    for player in players:
+        for unit in player.units:
+            unit.x = random.randint(0, 100)
+            unit.y = random.randint(0, 100)
+            if (unit.x, unit.y) not in game_map.grid:
+                game_map.grid[(unit.x, unit.y)] = set()
+            game_map.grid[(unit.x,unit.y)].add(unit)
     running = True
     while running:
-        dt = clock.tick(1000) / 1000  # Temps écoulé en secondes
+        frame_start = time.time()
+        dt = clock.tick(120) / 1000  # Temps écoulé en secondes
 
         for event in pygame.event.get():
             handle_events(event, game_state)
@@ -87,7 +96,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         # Extraire les variables mises à jour
         camera = game_state['camera']
-        minimap_background = game_state['minimap_background']
+        #minimap_background = game_state['minimap_background']
         minimap_rect = game_state['minimap_rect']
         screen = game_state['screen']
         screen_width = game_state['screen_width']
@@ -110,9 +119,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         screen.fill((0, 0, 0))
         # Uncomment and ensure these functions are defined if you wish to draw the map and minimap
         draw_map(screen, screen_width, screen_height, game_map, camera, players)
+        '''
         draw_minimap(screen, minimap_background, camera, game_map, game_state['minimap_scale'],
                    game_state['minimap_offset_x'], game_state['minimap_offset_y'],
-                     game_state['minimap_min_iso_x'], game_state['minimap_min_iso_y'], minimap_rect)
+                    game_state['minimap_min_iso_x'], game_state['minimap_min_iso_y'], minimap_rect)
 
         # Draw player selection surface
         if player_selection_surface:
@@ -123,7 +133,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         if player_info_surface:
             info_surface_height = player_info_surface.get_height()
             screen.blit(player_info_surface, (0, screen_height - info_surface_height))
-
+        '''
         # Afficher les FPS
         display_fps(screen, clock)
         
