@@ -50,7 +50,7 @@ def create_player_info_surface(selected_player, screen_width):
     surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
 
     # Afficher les ressources
-    resources_text = f"Resources - Food: {selected_player.resources.food}, Wood: {selected_player.resources.wood}, Gold: {selected_player.resources.gold}"
+    resources_text = f"Resources - Food: {selected_player.resources['food']}, Wood: {selected_player.resources['wood']}, Gold: {selected_player.resources['gold']}"
     resources_surface = font.render(resources_text, True, (255, 255, 255))
     surface.blit(resources_surface, (padding, 0))
 

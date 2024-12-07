@@ -14,7 +14,7 @@ def main():
     load_sprites()
     # Initialiser la carte de jeu
     game_map = GameMap(players)
-    game_map.print_map()  
+    game_map.print_map()
     # Lancer la boucle de jeu avec tous les arguments requis
     game_loop(screen, game_map, screen_width, screen_height, players)  
 

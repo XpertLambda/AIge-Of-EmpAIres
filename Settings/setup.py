@@ -52,7 +52,7 @@ MARINES_NUMBER_OF_ARCHERY_RANGES = 2  # Nombre de champs de tir à l'arc
 # -------------------
 
 # Dimensions des tuiles
-TILE_SIZE = 400  # Taille d'une tuile en pixels 
+TILE_SIZE = 200  # Taille d'une tuile en pixels 
 HALF_TILE_SIZE = TILE_SIZE / 2
 
 # Dimensions de la carte en pixels
@@ -68,10 +68,9 @@ WINDOW_WIDTH = 1200  # Ajustez selon vos besoins
 WINDOW_HEIGHT = 1200  # Ajustez selon vos besoins
 
 # Nombre de tuiles de chaque type
-NUM_MOUNTAIN_TILES = 1000
-NUM_GOLD_TILES = 1000
-NUM_WOOD_TILES = 1000
-NUM_FOOD_TILES = 1000
+NUM_GOLD_TILES = 100
+NUM_WOOD_TILES = 100
+NUM_FOOD_TILES = 100
 
 # Difficulté du jeu
 DIFFICULTY = 'DEBUG'
@@ -95,3 +94,9 @@ import os
 if not os.path.exists(SAVE_DIRECTORY):
     os.makedirs(SAVE_DIRECTORY)
 
+####################
+
+# -------------------
+# Configuration Animation
+# -------------------
+FRAMES_PER_UNIT = 10

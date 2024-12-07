@@ -26,7 +26,7 @@ def screen_to_tile(sx, sy, screen_width, screen_height, camera, a, b):
     x = ((iso_x / a) + (iso_y / b)) / 2
     y = ((iso_y / b) - (iso_x / a)) / 2
     
-    return x, y
+    return int(x), int(y)
 
 def tile_to_screen(x, y, width, height, camera, screen_width, screen_height):
     # Convertit les coordonnées cartésiennes en coordonnées isométriques

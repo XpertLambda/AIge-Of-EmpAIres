@@ -5,32 +5,37 @@ import re
 import pygame
 import os
 from collections import OrderedDict
-from Settings.setup import (
-    TILE_SIZE,
-    WINDOW_WIDTH,
-    WINDOW_HEIGHT,
-    MINIMAP_WIDTH,
-    MINIMAP_HEIGHT,
-    MINIMAP_MARGIN
-)
+from Settings.setup import *
 
-# Mapping of building acronyms to their full names
-buildings_acronym = {
-    'A': 'archeryrange',
-    'B': 'barracks',
-    'C': 'camp',
-    'F': 'farm',
-    'H': 'house',
-    'K': 'keep',
-    'S': 'stable',
-    'T': 'towncenter'
-}
 
-units_acronym = {
-    'A' : 'archer',
-    'H' : 'horseman',
-    'S' : 'swordsman',
-    'V' : 'villager'
+Entity_Acronym = {
+# Mapping of resources acronyms to their full names
+    'resources' : {
+        ' ' : 'grass',
+        'W' : 'wood',
+        'G' : 'gold',
+        'F' : 'food'
+    },
+
+    # Mapping of building acronyms to their full names
+    'buildings' : {
+        'A': 'archeryrange',
+        'B': 'barracks',
+        'C': 'camp',
+        'F': 'farm',
+        'H': 'house',
+        'K': 'keep',
+        'S': 'stable',
+        'T': 'towncenter'
+    },
+
+    # Mapping of unit acronyms to their full names
+    'units' : {
+        'a' : 'archer',
+        'h' : 'horseman',
+        's' : 'swordsman',
+        'v' : 'villager'
+    }
 }
 
 teams = {
@@ -76,18 +81,25 @@ sprite_config = {
             'adjust_scale': TILE_SIZE / 400
         }
     },
-    'terrain': {
+    'resources': {
         'grass': {
-            'directory': 'assets/terrain/grass/',
-            'scale': (TILE_SIZE // 2, TILE_SIZE // 4)
+            'directory': 'assets/resources/grass/',
+            'scale': (10*TILE_SIZE // 2, 10*TILE_SIZE // 4)
+            # Static sprite
         },
         'gold': {
-            'directory': 'assets/terrain/gold/',
+            'directory': 'assets/resources/gold/',
             'scale': (TILE_SIZE, TILE_SIZE)
         },
         'wood': {
-            'directory': 'assets/terrain/tree/',
+            'directory': 'assets/resources/tree/',
             'scale': (TILE_SIZE, TILE_SIZE)
+            # Static sprite
+        },
+        'food': {
+            'directory': 'assets/resources/food/',
+            'scale': (TILE_SIZE, TILE_SIZE)
+            # Static sprite
         }
     },
     'units': {
@@ -125,13 +137,16 @@ sprites = {}
 zoom_cache = {}
 MAX_ZOOM_CACHE_PER_SPRITE = 60
 
+grass_group = pygame.sprite.Group()
+
+# Function to load a sprite with conditional scaling
 def load_sprite(filepath=None, scale=None, adjust=None):
     if filepath:
         sprite = pygame.image.load(filepath).convert_alpha()
     if scale:
-        sprite = pygame.transform.scale(sprite, (int(scale[0]), int(scale[1])))
+        sprite = pygame.transform.smoothscale(sprite, (int(scale[0]), int(scale[1])))
     if adjust:
-        sprite = pygame.transform.scale(sprite, (
+        sprite = pygame.transform.smoothscale(sprite, (
             int(sprite.get_width() * adjust),
             int(sprite.get_height() * adjust)
         ))
@@ -139,6 +154,7 @@ def load_sprite(filepath=None, scale=None, adjust=None):
     sprite = sprite.convert_alpha()
     return sprite
 
+# Extracts frames from a sprite sheet based on rows and columns, and scales them by a factor.
 def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
     frames = []
     sheet_width, sheet_height = sheet.get_size()
@@ -148,14 +164,20 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
 
     target_width = int(frame_width * scale)
     target_height = int(frame_height * scale)
+
+    # Calculate Frame Step
+    frame_step = columns // FRAMES_PER_UNIT
+
     for row in range(rows):
         for col in range(columns):
-            if col%3==0:
+            # Compute the position of the frame in the sprite sheet
+            if col%frame_step==0:
                 x = col * frame_width
                 y = row * frame_height
                 frame = sheet.subsurface(pygame.Rect(x, y, frame_width, frame_height))
-                frame = pygame.transform.scale(frame, (target_width, target_height))
-                frame = frame.convert_alpha()
+                
+                # Resize frame to the new dimensions
+                frame = pygame.transform.smoothscale(frame, (target_width, target_height))
                 frames.append(frame)
     return frames
 
@@ -171,7 +193,8 @@ def load_sprites(sprite_config=sprite_config):
                 sheet_cols = sprite_config[category][sprite_name]['sheet_config'].get('columns', 0)
                 sheet_rows = sprite_config[category][sprite_name]['sheet_config'].get('rows', 0)
 
-            if category == 'terrain':
+            if category == 'resources':
+                # Initialize resources category
                 sprites[category][sprite_name] = []
                 try:
                     dir_content = os.listdir(directory)
@@ -183,8 +206,8 @@ def load_sprites(sprite_config=sprite_config):
                     if filename.lower().endswith("webp"):
                         filepath = os.path.join(directory, filename)
                         sprite = load_sprite(filepath, scale, adjust)
-                        sprites[category][sprite_name].append(sprite)
-
+                        sprites[category][sprite_name].append(sprite)  # Append sprite to list
+                        print(f'--> Loaded {sprite_name} of type : {category}')
             elif category == 'buildings':
                 sprites[category][sprite_name] = {}
                 try:
@@ -208,24 +231,67 @@ def load_sprites(sprite_config=sprite_config):
                         if filename.lower().endswith("webp"):
                             filepath = os.path.join(team_path, filename)
                             sprite = load_sprite(filepath, scale, adjust)
-                            sprites[category][sprite_name][team].append(sprite)
+                            sprites[category][sprite_name][team].append(sprite)  # Append sprite to list
+                    print(f'--> Loaded {sprite_name}, type : {category}')
+            elif category == 'units' :
+                #Uncomment this continue to get faster loading
+                #continue
 
-            elif category == 'units':
-                # Pour le moment, on ne charge pas les unités au complet pour gain de performance.
-                # Laisser en l'état ou décommenter pour tests.
-                continue
+                # Initialize buildings category
+                sprites[category][sprite_name] = {}
+                try:
+                    dir_content = os.listdir(directory)
+                except FileNotFoundError:
+                    print(f"Directory not found: {directory}")
+                    return
+
+                for team in dir_content:
+                    team_path = os.path.join(directory, team)
+                    if not os.path.isdir(team_path):
+                        continue
+                    sprites[category][sprite_name].setdefault(team, {})
+
+                    try:
+                        team_content = os.listdir(team_path)
+                    except FileNotFoundError:
+                        continue
+
+                    for state in team_content:
+                        state_path = os.path.join(team_path, state)
+                        if not os.path.isdir(state_path):
+                            continue
+                        sprites[category][sprite_name][team].setdefault(state, [])
+
+                        try:
+                            state_content = os.listdir(state_path)
+                        except FileNotFoundError:
+                            continue
+
+                        for sheetname in state_content:
+                            if sheetname.lower().endswith("webp"):
+                                filepath = os.path.join(state_path, sheetname)
+                                try:
+                                    sprite_sheet = load_sprite(filepath)
+                                    frames = extract_frames(sprite_sheet, sheet_rows, sheet_cols)
+                                    sprites[category][sprite_name][team][state].extend(frames)
+                                except Exception as e:
+                                    print(f"Error loading sprite sheet {filepath}: {e}")
+                                    print(f"info : category : {category}, sprite_name : {sprite_name}, team : {team}, state : {state}")
+                                    exit() 
+                print(f'--> Loaded {sprite_name}, type : {category}')
 
     print("Sprites loaded successfully.")
 
-def get_scaled_sprite(name, category, zoom, team=None, state=None, frame_id=0):
+# Function to get a scaled sprite, handling both static and animated sprites
+def get_scaled_sprite(name, category, zoom, team, state, frame_id):
     cache_key = (zoom, frame_id, team, state)
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
     if cache_key in zoom_cache[name]:
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
-
-    if category == 'terrain':
+    # Load and scale the sprite
+    if category == 'resources':
         sprite_data = sprites[category][name]
     elif category == 'buildings':
         sprite_data = sprites[category][name][team]
@@ -235,16 +301,26 @@ def get_scaled_sprite(name, category, zoom, team=None, state=None, frame_id=0):
     original_image = sprite_data[frame_id]
     scaled_width = int(original_image.get_width() * zoom)
     scaled_height = int(original_image.get_height() * zoom)
-    scaled_image = pygame.transform.scale(original_image, (scaled_width, scaled_height))
-    scaled_image = scaled_image.convert_alpha()
-
+    scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
+    
+    # Add to cache
     zoom_cache[name][cache_key] = scaled_image
     zoom_cache[name].move_to_end(cache_key)
+    
+    # Evict least recently used if over capacity
+    
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
     return scaled_image
+    
+# Function to draw a sprite on the screen
+def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, team=None, state=None, frame_id=0):
+    name = Entity_Acronym[category][acronym]
+    if team is not None:
+        team = teams[team]
+    if state is not None:
+        state = states[state]
 
-def draw_sprite(screen, name, category, screen_x, screen_y, zoom, team=None, state=None, frame_id=0):
     scaled_sprite = get_scaled_sprite(name, category, zoom, team, state, frame_id)
     if scaled_sprite is None:
         return
@@ -253,33 +329,4 @@ def draw_sprite(screen, name, category, screen_x, screen_y, zoom, team=None, sta
     screen.blit(scaled_sprite, (screen_x - scaled_width // 2, screen_y - scaled_height // 2))
 
 def fill_grass(screen, screen_x, screen_y, camera):
-    draw_sprite(screen, 'grass', 'terrain', screen_x, screen_y, camera.zoom)
-
-def draw_terrain(terrain_type, screen, screen_x, screen_y, camera):
-    if terrain_type in ['wood', 'gold']:
-        draw_sprite(screen, f'{terrain_type}', 'terrain', screen_x, screen_y, camera.zoom)
-
-def draw_building(building, screen, screen_x, screen_y, camera, team_number=0, buildings_acronym=buildings_acronym):
-    name = buildings_acronym[building.acronym]
-    team = teams[team_number]
-    category = 'buildings'
-    # On dessine un seul sprite statique
-    sprite_data = sprites[category][name][team]
-    # On suppose qu'il y a un sprite unique, sprite_data[0]
-    original_image = sprite_data[0]
-    # Pas de scale ici, on scale à l'appelant si nécessaire
-    screen.blit(original_image, (screen_x - original_image.get_width() // 2, screen_y - original_image.get_height() // 2))
-
-def draw_unit(unit, screen, screen_x, screen_y, camera, team_number=0, units_acronym=units_acronym):
-    category = 'units'
-    name = units_acronym[unit.acronym]
-    team = teams[team_number]
-    state = states[unit.state]
-
-    # Cette partie reste non-implémentée pour réduire la charge, comme auparavant
-    # Si vous voulez gérer les unités, vous pouvez implémenter la logique comme avant,
-    # ici on assume un rendu minimal ou statique pour les performances.
-    # Exemple: ne rien dessiner ou dessiner un carré simple.
-    color = (255, 0, 0) if team_number == 0 else (0, 0, 255)
-    pygame.draw.rect(screen, color, (screen_x - 5, screen_y - 5, 10, 10))
-
+    draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)
