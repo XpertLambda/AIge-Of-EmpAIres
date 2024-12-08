@@ -1,5 +1,3 @@
-# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/Projet_python\Controller\drawing.py
-
 import pygame
 import math
 from Settings.setup import (
@@ -8,7 +6,6 @@ from Settings.setup import (
     MINIMAP_WIDTH,
     MINIMAP_HEIGHT,
     MAP_PADDING,
-    TILE_SIZE
 )
 from Entity.Unit import Unit
 from Entity.Building import Building
@@ -18,21 +15,12 @@ from Controller.isometric_utils import (
     screen_to_tile,
     tile_to_screen,
 )
-from Controller.init_sprites import *
+from Controller.init_sprites import fill_grass
 
 def draw_map(screen, screen_width, screen_height, game_map, camera, players):
-    global prev_zoom
-    zoom = camera.zoom
-
-    if zoom != prev_zoom:
-        scaled_tile_cache.clear()
-        scaled_building_cache.clear()
-        prev_zoom = zoom
-
-    if not iso_coords_cache:
-        precompute_iso_coords(game_map)
-    ensure_base_surfaces()
-
+    """
+    Dessine uniquement les sprites sur la carte isométrique visible à l'écran.
+    """
     corners_screen = [
         (0, 0),
         (screen_width, 0),
@@ -45,10 +33,10 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
         for sx, sy in corners_screen
     ]
 
-    x_indices = [tx for tx, _ in tile_indices]
-    y_indices = [ty for _, ty in tile_indices]
+    x_indices = [tile_x for tile_x, _ in tile_indices]
+    y_indices = [tile_y for _, tile_y in tile_indices]
 
-    margin = 5  # Ajuster si nécessaire
+    margin = 5
 
     min_tile_x = max(0, min(x_indices) - margin)
     max_tile_x = min(game_map.num_tiles_x - 1, max(x_indices) + margin)
@@ -58,16 +46,14 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
 
     for y in range(min_tile_y, max_tile_y):
         for x in range(min_tile_x, max_tile_x):
-            if x % 10 == 0 and y %10 == 0:   
+            if x % 10 == 0 and y % 10 == 0:   
                 screen_x, screen_y = tile_to_screen(x+4.5, y+4.5, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
                 fill_grass(screen, screen_x, screen_y, camera)
-                #pygame.draw.circle(screen, (255,0,255), (screen_x, screen_y), 20*camera.zoom, 0)
-
             entities = game_map.grid.get((x, y), None)
             if entities:
                 for entity in entities:
                     visible_entites.add(entity)
-   
+
     for entity in sorted(visible_entites, key=lambda entity: (entity.x + entity.y)):
         entity.display(screen, screen_width, screen_height, camera)
 
@@ -94,23 +80,22 @@ def compute_map_bounds(game_map):
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
 
 def create_minimap_background(game_map, minimap_width, minimap_height):
-    return
-''' Needs to be modified
     """
-    Crée la surface de la minimap représentant l'ensemble de la carte.
+    Crée la surface de la minimap représentant l'ensemble de la carte selon la grille clairsemée.
     """
     minimap_surface = pygame.Surface((minimap_width, minimap_height))
     minimap_surface.fill((0, 0, 0))
 
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
-
     num_tiles_x = game_map.num_tiles_x
     num_tiles_y = game_map.num_tiles_y
 
-    iso_coords_corners = [to_isometric(x, y, tile_width, tile_height) for x in [0, num_tiles_x - 1] for y in [0, num_tiles_y - 1]]
-    iso_x_values = [c[0] for c in iso_coords_corners]
-    iso_y_values = [c[1] for c in iso_coords_corners]
+    iso_coords = [to_isometric(x, y, tile_width, tile_height)
+                  for x in [0, num_tiles_x - 1]
+                  for y in [0, num_tiles_y - 1]]
+    iso_x_values = [coord[0] for coord in iso_coords]
+    iso_y_values = [coord[1] for coord in iso_coords]
     min_iso_x = min(iso_x_values)
     max_iso_x = max(iso_x_values)
     min_iso_y = min(iso_y_values)
@@ -118,22 +103,30 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
     iso_map_width = max_iso_x - min_iso_x
     iso_map_height = max_iso_y - min_iso_y
-
     scale = min(minimap_width / iso_map_width, minimap_height / iso_map_height)
-    offset_x = (minimap_width - iso_map_width * scale) / 2
-    offset_y = (minimap_height - iso_map_height * scale) / 2
+    scaled_iso_map_width = iso_map_width * scale
+    scaled_iso_map_height = iso_map_height * scale
+    offset_x = (minimap_width - scaled_iso_map_width) / 2
+    offset_y = (minimap_height - scaled_iso_map_height) / 2
 
-    # On peut se passer de dessin complexe si lent, mais on garde tel quel
     for y in range(num_tiles_y):
         for x in range(num_tiles_x):
-            tile = game_map.grid.get((x,y))
-            terrain_type = tile.terrain_type if tile else 'grass'
+            entities = game_map.grid.get((x, y), set())
+            terrain_type = 'grass'
+            for e in entities:
+                if e.acronym == 'G':
+                    terrain_type = 'gold'
+                    break
+                elif e.acronym == 'W':
+                    terrain_type = 'wood'
+                    break
+                elif e.acronym == 'F':
+                    terrain_type = 'food'
+                    break
 
-            iso_x, iso_y = iso_coords_cache[(x, y)]
-
+            iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
             minimap_x = (iso_x - min_iso_x) * scale + offset_x
             minimap_y = (iso_y - min_iso_y) * scale + offset_y
-
             half_tile_width = (tile_width / 2) * scale
             half_tile_height = (tile_height / 2) * scale
 
@@ -148,28 +141,102 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
                 (minimap_x, minimap_y + half_tile_height),
                 (minimap_x - half_tile_width, minimap_y)
             ]
-
             color = get_color_for_terrain(terrain_type)
             pygame.draw.polygon(minimap_surface, color, points)
+
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
-'''
-def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, offset_y, min_iso_x, min_iso_y, minimap_rect):
-    return
-'''Needs to be modified 
+
+def update_minimap_entities(game_state):
     """
-    Dessine la minimap à l'écran, avec le rectangle représentant la zone visible par le joueur.
+    Met à jour la surface des entités sur la minimap.
+    Buildings : affichage carré avec taille minimale.
+    Unités / autres entités : affichage en losange avec taille minimale.
+    Couleurs plus vives.
     """
-    screen.blit(minimap_background, minimap_rect.topleft)
+    minimap_rect = game_state['minimap_rect']
+    minimap_scale = game_state['minimap_scale']
+    minimap_offset_x = game_state['minimap_offset_x']
+    minimap_offset_y = game_state['minimap_offset_y']
+    minimap_min_iso_x = game_state['minimap_min_iso_x']
+    minimap_min_iso_y = game_state['minimap_min_iso_y']
+    minimap_entities_surface = game_state['minimap_entities_surface']
+    game_map = game_state['game_map']
+
+    minimap_entities_surface.fill((0,0,0,0))
 
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
+    
+    # Couleurs plus vives pour les joueurs
+    # Joueur 1: rouge vif, Joueur 2: vert vif, (ajuster selon le nombre de joueurs)
+    player_colors = [
+        (255, 0, 0),   # Rouge vif
+        (0, 255, 0),   # Vert vif
+        (0, 0, 255),   # Bleu vif (si plus de joueurs)
+        (255, 255, 0)  # Jaune vif (exemple)
+    ]
 
+    # Taille minimale (en pixels)
+    # On pourra distinguer si on veut des tailles minimales différentes pour buildings et unités
+    min_half_width_building = 6
+    min_half_height_building = 6
+    min_half_width_unit = 5
+    min_half_height_unit = 5
+
+    for pos, entities in game_map.grid.items():
+        x, y = pos
+        entity_team = None
+        entity_is_building = False
+        for e in entities:
+            if hasattr(e, 'team') and e.team is not None:
+                entity_team = e.team
+            # Déterminer si au moins une entité est un bâtiment
+            # Si plusieurs entités, donner la priorité à l'affichage building ?
+            # Ici on considère si un building est présent, on affiche en mode "building".
+            from Entity.Building import Building
+            if isinstance(e, Building):
+                entity_is_building = True
+                break
+
+        if entity_team is not None:
+            iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
+            minimap_x = (iso_x - minimap_min_iso_x) * minimap_scale + minimap_offset_x
+            minimap_y = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
+
+            normal_half_w = (tile_width / 2) * minimap_scale
+            normal_half_h = (tile_height / 2) * minimap_scale
+
+            if entity_is_building:
+                # Pour les buildings, affichage carré réduit de 1/3
+                half_w = max(min_half_width_building, normal_half_w) * 2/3
+                half_h = max(min_half_height_building, normal_half_h) * 2/3
+                color = player_colors[entity_team % len(player_colors)]
+                rect = pygame.Rect(minimap_x - half_w, minimap_y - half_h, half_w*2, half_h*2)
+                pygame.draw.rect(minimap_entities_surface, (*color, 150), rect)
+            else:
+                # Pour les unités et autres entités, affichage en losange réduit de 1/3
+                half_w = max(min_half_width_unit, normal_half_w) * 2/3
+                half_h = max(min_half_height_unit, normal_half_h) * 2/3
+                color = player_colors[entity_team % len(player_colors)]
+                points = [
+                    (minimap_x, minimap_y - half_h),
+                    (minimap_x + half_w, minimap_y),
+                    (minimap_x, minimap_y + half_h),
+                    (minimap_x - half_w, minimap_y)
+                ]
+                pygame.draw.polygon(minimap_entities_surface, (*color, 150), points)
+                pygame.draw.polygon(minimap_entities_surface, (*color, 150), points)
+
+
+def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
+    """
+    Dessine le rectangle représentant la zone visible sur la minimap.
+    """
     half_screen_width = camera.width / (2 * camera.zoom)
     half_screen_height = camera.height / (2 * camera.zoom)
 
     center_iso_x = -camera.offset_x
     center_iso_y = -camera.offset_y
-
     top_left_iso_x = center_iso_x - half_screen_width
     top_left_iso_y = center_iso_y - half_screen_height
     bottom_right_iso_x = center_iso_x + half_screen_width
@@ -187,28 +254,6 @@ def draw_minimap(screen, minimap_background, camera, game_map, scale, offset_x, 
 
     pygame.draw.rect(screen, (255, 255, 255), (rect_x, rect_y, rect_width, rect_height), 2)
 
-    for pos, tile in game_map.grid.items():
-        x, y = pos
-        if tile.player is not None:
-            iso_x, iso_y = iso_coords_cache[(x, y)]
-            minimap_x = (iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
-            minimap_y = (iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
-
-            half_tile_width = (HALF_TILE_SIZE / 2) * scale
-            half_tile_height = (HALF_TILE_SIZE / 4) * scale
-
-            points = [
-                (minimap_x, minimap_y - half_tile_height),
-                (minimap_x + half_tile_width, minimap_y),
-                (minimap_x, minimap_y + half_tile_height),
-                (minimap_x - half_tile_width, minimap_y)
-            ]
-
-            player_colors = [(255, 0, 0),(0, 0, 255)]
-            player_index = tile.player.nb - 1
-            color = player_colors[player_index % len(player_colors)]
-            pygame.draw.polygon(screen, (*color, 100), points)
-'''
 def display_fps(screen, clock):
     font = pygame.font.SysFont(None, 24)
     fps = int(clock.get_fps())

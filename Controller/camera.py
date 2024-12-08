@@ -7,7 +7,7 @@ class Camera:
     def __init__(self, width, height):
         self.offset_x = 0
         self.offset_y = 0
-        self.zoom = 0.25
+        self.zoom = MIN_ZOOM
         self.width = width
         self.height = height
         self.min_x = None

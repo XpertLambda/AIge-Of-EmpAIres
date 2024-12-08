@@ -60,7 +60,7 @@ MAP_WIDTH = 120 * TILE_SIZE
 MAP_HEIGHT = 120 * TILE_SIZE 
 
 # Niveaux de zoom
-MIN_ZOOM = 0.1
+MIN_ZOOM = 0.3
 MAX_ZOOM = 3.0
 
 # Dimensions de la fenêtre en pixels
@@ -76,7 +76,7 @@ NUM_FOOD_TILES = 100
 DIFFICULTY = 'DEBUG'
 
 # Minimap settings
-MINIMAP_WIDTH = 550  # Largeur de la minimap
+MINIMAP_WIDTH = 600  # Largeur de la minimap
 MINIMAP_HEIGHT = 280  # Hauteur de la minimap
 MINIMAP_MARGIN = 20   # Marge de la minimap
 
