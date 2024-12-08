@@ -5,7 +5,7 @@ import pickle
 from collections import defaultdict
 from datetime import datetime
 from Entity.Building import Building
-from Entity.Unit import Unit
+from Entity.Unit import *
 from Entity.Resource.Resource import *
 from Entity.Resource.Gold import Gold
 from Entity.Resource.Wood import Wood
@@ -21,27 +21,18 @@ class GameMap:
         self.players = players
         self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y, players)
 
-    def place_building(self, x, y, building):
-        for i in range(building.size1):
-            for j in range(building.size2):
+    def place_building(self, grid, x, y, building):
+        for i in range(building.size):
+            for j in range(building.size):
                 pos = (x + i, y + j)
-                t = self.grid.get(pos)
-                if t is None:
-                    t = Tile('grass')
-                t.building = building
-                t.terrain_type = building.acronym
-                t.player = getattr(building, 'player', None)
-                t.mark_dirty()
-                self.grid[pos] = t
+                if pos not in grid:
+                    grid[pos] = set()
+                grid[pos].add(building)
 
-    def place_unit(self, x, y, unit):
-        pos = (x, y)
-        t = self.grid.get(pos)
-        if t is None:
-            t = Tile('grass')
-        t.unit = unit
-        t.mark_dirty()
-        self.grid[pos] = t
+    def place_unit(self, grid, x, y, unit):
+        if (x, y) not in grid:
+            grid[(x, y)] = set()
+        grid[(x, y)].add(unit)
 
     def save_map(self, directory='saves'):
         if not os.path.exists(directory):
@@ -117,6 +108,24 @@ class GameMap:
                 building.x = x
                 building.y = y
 
+            num_villagers = sum(1 for unit in player.units if isinstance(unit, Villager))
+
+            for _ in range(num_villagers):
+                placed = False
+                attempts = 0
+
+                while not placed and attempts < 1000:
+                    x_villager = random.randint(x_start, x_end - 1)
+                    y_villager = random.randint(y_start, y_end - 1)
+                    if self.can_place_unit(grid, x_villager, y_villager):
+                        self.place_unit(grid, x_villager, y_villager, Villager(player.teamID))
+                        placed = True
+                    attempts += 1
+
+                if not placed:
+                    print(f"Warning: Failed to place villager for player {player.teamID} after 1000 attempts.")
+
+
     def can_place_building(self, grid, x, y, building):
         if x + building.size > self.num_tiles_x or y + building.size > self.num_tiles_y:
             return False
@@ -187,7 +196,6 @@ class GameMap:
         return tile
 
     def print_map(self):
-
         # Iterate over the grid by rows and columns
         for y in range(self.num_tiles_y):
             row_display = []
@@ -207,4 +215,27 @@ class GameMap:
 
             # Print the row as a string
             print(''.join(row_display))
+                
+    def can_place_unit(self, grid, x, y):
+        if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
+            return False
 
+        # Check the target position
+        if (x, y) in grid:
+            for entity in grid[(x, y)]:
+                if isinstance(entity, (Building, Unit)):
+                    return False
+
+        # Check the surrounding positions
+        surrounding_positions = [
+            (x - 1, y), (x + 1, y),  # Left and right
+            (x, y - 1), (x, y + 1)   # Top and bottom
+        ]
+
+        for pos in surrounding_positions:
+            if pos in grid:
+                for entity in grid[pos]:
+                    if isinstance(entity, (Building, Resource)):
+                        return False
+                    
+        return True

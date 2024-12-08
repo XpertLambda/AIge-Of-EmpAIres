@@ -89,7 +89,7 @@ def handle_events(event, game_state):
                 game_state['minimap_dragging'] = True
             else:
                 # Sélection du joueur via la liste au-dessus de la minimap
-                for i, player in enumerate(reversed(players)):
+                for i, player in enumerate(players):
                     rect_y = minimap_rect.y - (i + 1) * (30 + 5)
                     rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
                     if rect.collidepoint(mouse_x, mouse_y):
