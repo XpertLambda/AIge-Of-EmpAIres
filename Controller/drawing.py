@@ -84,9 +84,6 @@ def compute_map_bounds(game_map):
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
 
 def create_minimap_background(game_map, minimap_width, minimap_height):
-    """
-    Crée la surface de la minimap représentant l'ensemble de la carte selon la grille clairsemée.
-    """
     minimap_surface = pygame.Surface((minimap_width, minimap_height))
     minimap_surface.fill((0, 0, 0))
 
@@ -95,9 +92,14 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     num_tiles_x = game_map.num_tiles_x
     num_tiles_y = game_map.num_tiles_y
 
-    iso_coords = [to_isometric(x, y, tile_width, tile_height)
-                  for x in [0, num_tiles_x - 1]
-                  for y in [0, num_tiles_y - 1]]
+    # Détermination des coordonnées isométriques des coins de la carte
+    iso_coords = [
+        to_isometric(0, 0, tile_width, tile_height),
+        to_isometric(0, num_tiles_y - 1, tile_width, tile_height),
+        to_isometric(num_tiles_x - 1, num_tiles_y - 1, tile_width, tile_height),
+        to_isometric(num_tiles_x - 1, 0, tile_width, tile_height)
+    ]
+
     iso_x_values = [coord[0] for coord in iso_coords]
     iso_y_values = [coord[1] for coord in iso_coords]
     min_iso_x = min(iso_x_values)
@@ -112,55 +114,19 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     scaled_iso_map_height = iso_map_height * scale
     offset_x = (minimap_width - scaled_iso_map_width) / 2
     offset_y = (minimap_height - scaled_iso_map_height) / 2
-    '''
-    for y in range(num_tiles_y):
-        for x in range(num_tiles_x):
-            entities = game_map.grid.get((x, y), set())
-            terrain_type = 'grass'
-            for entity in entities:
-                if isinstance(entity, Gold):
-                    size_factor = 1.5
-                    half_tile_width *= size_factor
-                    half_tile_height *= size_factor
-                if entity.acronym == 'G':
-                    terrain_type = 'gold'
-                    break
-                elif entity.acronym == 'W':
-                    terrain_type = 'wood'
-                    break
-                elif entity.acronym == 'F':
-                    terrain_type = 'food'
-                    break
-            iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
-            minimap_x = (iso_x - min_iso_x) * scale + offset_x
-            minimap_y = (iso_y - min_iso_y) * scale + offset_y
-            half_tile_width = (tile_width / 2) * scale
-            half_tile_height = (tile_height / 2) * scale
 
-            if terrain_type == 'gold':
-                size_factor = 1.5
-                half_tile_width *= size_factor
-                half_tile_height *= size_factor
+    # Dessin d'un seul grand polygone vert représentant l'ensemble de la carte
+    points = []
+    for iso_x, iso_y in iso_coords:
+        minimap_x = (iso_x - min_iso_x) * scale + offset_x
+        minimap_y = (iso_y - min_iso_y) * scale + offset_y
+        points.append((minimap_x, minimap_y))
+    pygame.draw.polygon(minimap_surface, (0, 128, 0), points)
 
-            points = [
-                (minimap_x, minimap_y - half_tile_height),
-                (minimap_x + half_tile_width, minimap_y),
-                (minimap_x, minimap_y + half_tile_height),
-                (minimap_x - half_tile_width, minimap_y)
-            ]
-
-            color = get_color_for_terrain(terrain_type)
-            pygame.draw.polygon(minimap_surface, color, points)
-    '''
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
+
 def update_minimap_entities(game_state):
-    """
-    Met à jour la surface des entités sur la minimap.
-    Buildings : affichage carré avec taille minimale.
-    Unités / autres entités : affichage en losange avec taille minimale.
-    Couleurs plus vives.
-    """
     minimap_scale = game_state['minimap_scale']
     minimap_offset_x = game_state['minimap_offset_x']
     minimap_offset_y = game_state['minimap_offset_y']
@@ -174,13 +140,11 @@ def update_minimap_entities(game_state):
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
     
-    # Couleurs plus vives pour les joueurs
-    # Joueur 1: rouge vif, Joueur 2: vert vif, (ajuster selon le nombre de joueurs)
     player_colors = [
-        (0, 0, 255),   # Bleu vif
-        (255, 0, 0),   # Rouge vif
-        (0, 255, 0),   # Vert vif (si plus de joueurs)
-        (255, 255, 0)  # Jaune vif (exemple)
+        (0, 0, 255),
+        (255, 0, 0),
+        (0, 255, 0),
+        (255, 255, 0)
     ]
 
     entities_to_draw = set()
@@ -189,8 +153,12 @@ def update_minimap_entities(game_state):
         for entity in entities:
             entities_to_draw.add(entity)
 
+    # Taille minimale
+    MIN_BUILDING_SIZE = 4  
+    MIN_UNIT_RADIUS = 3 
+
     for entity in entities_to_draw:
-        x, y  = entity.x, entity.y
+        x, y = entity.x, entity.y
         team = entity.team
         size = entity.size
         iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
@@ -198,21 +166,22 @@ def update_minimap_entities(game_state):
         minimap_y = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
         
         if team is not None:
-            normal_half_w = (tile_width / 2) * minimap_scale
-            normal_half_h = (tile_height / 2) * minimap_scale
-
             color = player_colors[team % len(player_colors)]
             if isinstance(entity, Building):
-                # Pour les building
-                rect = pygame.Rect(minimap_x - size, minimap_y - size, size*2, size*2)
+                # Appliquer une taille minimale au bâtiment
+                half_dim = max(MIN_BUILDING_SIZE, size)
+                rect = pygame.Rect(minimap_x - half_dim, minimap_y - half_dim, half_dim*2, half_dim*2)
                 pygame.draw.rect(minimap_entities_surface, (*color, 150), rect)
             else:
-                # Pour les unités
-                pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), 2)
+                # Appliquer un rayon minimal aux unités
+                radius = max(MIN_UNIT_RADIUS, size)
+                pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), radius)
         elif isinstance(entity, Gold):
-                # Pour les Gold
-                color = get_color_for_terrain('gold')
-                pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), 1)
+            color = get_color_for_terrain('gold')
+            # Appliquer un rayon minimal
+            radius = max(MIN_UNIT_RADIUS, size)
+            pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), radius)
+
                              
 def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
     """
