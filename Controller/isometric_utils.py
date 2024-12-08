@@ -14,8 +14,6 @@ def get_color_for_terrain(terrain_type):
     """
     if terrain_type == 'gold':
         return (255, 215, 0)  # Couleur pour 'gold'
-    else:
-        return (34, 139, 34)  # Couleur de l'herbe pour tous les autres terrains
 
 def screen_to_tile(sx, sy, screen_width, screen_height, camera, a, b):
     # Convertit les coordonnées de l'écran en coordonnées isométriques

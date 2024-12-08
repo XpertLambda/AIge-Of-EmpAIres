@@ -16,6 +16,10 @@ from Controller.isometric_utils import (
     tile_to_screen,
 )
 from Controller.init_sprites import fill_grass
+from Entity.Building import Building
+from Entity.Resource.Gold import Gold
+from Entity.Unit import Unit
+
 
 def draw_map(screen, screen_width, screen_height, game_map, camera, players):
     """
@@ -108,22 +112,25 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     scaled_iso_map_height = iso_map_height * scale
     offset_x = (minimap_width - scaled_iso_map_width) / 2
     offset_y = (minimap_height - scaled_iso_map_height) / 2
-
+    '''
     for y in range(num_tiles_y):
         for x in range(num_tiles_x):
             entities = game_map.grid.get((x, y), set())
             terrain_type = 'grass'
-            for e in entities:
-                if e.acronym == 'G':
+            for entity in entities:
+                if isinstance(entity, Gold):
+                    size_factor = 1.5
+                    half_tile_width *= size_factor
+                    half_tile_height *= size_factor
+                if entity.acronym == 'G':
                     terrain_type = 'gold'
                     break
-                elif e.acronym == 'W':
+                elif entity.acronym == 'W':
                     terrain_type = 'wood'
                     break
-                elif e.acronym == 'F':
+                elif entity.acronym == 'F':
                     terrain_type = 'food'
                     break
-
             iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
             minimap_x = (iso_x - min_iso_x) * scale + offset_x
             minimap_y = (iso_y - min_iso_y) * scale + offset_y
@@ -141,9 +148,10 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
                 (minimap_x, minimap_y + half_tile_height),
                 (minimap_x - half_tile_width, minimap_y)
             ]
+
             color = get_color_for_terrain(terrain_type)
             pygame.draw.polygon(minimap_surface, color, points)
-
+    '''
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
 def update_minimap_entities(game_state):
@@ -153,7 +161,6 @@ def update_minimap_entities(game_state):
     Unités / autres entités : affichage en losange avec taille minimale.
     Couleurs plus vives.
     """
-    minimap_rect = game_state['minimap_rect']
     minimap_scale = game_state['minimap_scale']
     minimap_offset_x = game_state['minimap_offset_x']
     minimap_offset_y = game_state['minimap_offset_y']
@@ -170,64 +177,43 @@ def update_minimap_entities(game_state):
     # Couleurs plus vives pour les joueurs
     # Joueur 1: rouge vif, Joueur 2: vert vif, (ajuster selon le nombre de joueurs)
     player_colors = [
+        (0, 0, 255),   # Bleu vif
         (255, 0, 0),   # Rouge vif
-        (0, 255, 0),   # Vert vif
-        (0, 0, 255),   # Bleu vif (si plus de joueurs)
+        (0, 255, 0),   # Vert vif (si plus de joueurs)
         (255, 255, 0)  # Jaune vif (exemple)
     ]
 
-    # Taille minimale (en pixels)
-    # On pourra distinguer si on veut des tailles minimales différentes pour buildings et unités
-    min_half_width_building = 6
-    min_half_height_building = 6
-    min_half_width_unit = 5
-    min_half_height_unit = 5
+    entities_to_draw = set()
+    matrix = game_map.grid
+    for pos, entities in matrix.items():
+        for entity in entities:
+            entities_to_draw.add(entity)
 
-    for pos, entities in game_map.grid.items():
-        x, y = pos
-        entity_team = None
-        entity_is_building = False
-        for e in entities:
-            if hasattr(e, 'team') and e.team is not None:
-                entity_team = e.team
-            # Déterminer si au moins une entité est un bâtiment
-            # Si plusieurs entités, donner la priorité à l'affichage building ?
-            # Ici on considère si un building est présent, on affiche en mode "building".
-            from Entity.Building import Building
-            if isinstance(e, Building):
-                entity_is_building = True
-                break
-
-        if entity_team is not None:
-            iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
-            minimap_x = (iso_x - minimap_min_iso_x) * minimap_scale + minimap_offset_x
-            minimap_y = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
-
+    for entity in entities_to_draw:
+        x, y  = entity.x, entity.y
+        team = entity.team
+        size = entity.size
+        iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
+        minimap_x = (iso_x - minimap_min_iso_x) * minimap_scale + minimap_offset_x
+        minimap_y = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
+        
+        if team is not None:
             normal_half_w = (tile_width / 2) * minimap_scale
             normal_half_h = (tile_height / 2) * minimap_scale
 
-            if entity_is_building:
-                # Pour les buildings, affichage carré réduit de 1/3
-                half_w = max(min_half_width_building, normal_half_w) * 2/3
-                half_h = max(min_half_height_building, normal_half_h) * 2/3
-                color = player_colors[entity_team % len(player_colors)]
-                rect = pygame.Rect(minimap_x - half_w, minimap_y - half_h, half_w*2, half_h*2)
+            color = player_colors[team % len(player_colors)]
+            if isinstance(entity, Building):
+                # Pour les building
+                rect = pygame.Rect(minimap_x - size, minimap_y - size, size*2, size*2)
                 pygame.draw.rect(minimap_entities_surface, (*color, 150), rect)
             else:
-                # Pour les unités et autres entités, affichage en losange réduit de 1/3
-                half_w = max(min_half_width_unit, normal_half_w) * 2/3
-                half_h = max(min_half_height_unit, normal_half_h) * 2/3
-                color = player_colors[entity_team % len(player_colors)]
-                points = [
-                    (minimap_x, minimap_y - half_h),
-                    (minimap_x + half_w, minimap_y),
-                    (minimap_x, minimap_y + half_h),
-                    (minimap_x - half_w, minimap_y)
-                ]
-                pygame.draw.polygon(minimap_entities_surface, (*color, 150), points)
-                pygame.draw.polygon(minimap_entities_surface, (*color, 150), points)
-
-
+                # Pour les unités
+                pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), 2)
+        elif isinstance(entity, Gold):
+                # Pour les Gold
+                color = get_color_for_terrain('gold')
+                pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), 1)
+                             
 def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
     """
     Dessine le rectangle représentant la zone visible sur la minimap.
