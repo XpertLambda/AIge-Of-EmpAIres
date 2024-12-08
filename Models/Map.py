@@ -28,8 +28,8 @@ class GameMap:
                 if pos not in grid:
                     grid[pos] = set()
                 grid[pos].add(building)
-        building.x = x + building.size - 1
-        building.y = y + building.size - 1
+        building.x = x + (building.size - 1)/2
+        building.y = y + (building.size - 1)/2
 
     def place_unit(self, grid, x, y, unit):
         if (x, y) not in grid:
