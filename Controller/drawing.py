@@ -58,7 +58,7 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
                 for entity in entities:
                     visible_entites.add(entity)
 
-    for entity in sorted(visible_entites, key=lambda entity: (entity.x + entity.y)):
+    for entity in sorted(visible_entites, key=lambda entity: (entity.x + entity.y, entity.y)):
         entity.display(screen, screen_width, screen_height, camera)
 
 def compute_map_bounds(game_map):

@@ -20,8 +20,8 @@ class Building(Entity):
 
     def display(self, screen, screen_width, screen_height, camera):
         category = 'buildings'
-        center_x = self.x + (self.size - 1) / 2
-        center_y = self.y + (self.size - 1) / 2
+        center_x = self.x - (self.size - 1) / 2
+        center_y = self.y - (self.size - 1) / 2
         screen_x, screen_y = tile_to_screen(center_x, center_y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom, team=self.team)
 

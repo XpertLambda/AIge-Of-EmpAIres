@@ -28,6 +28,8 @@ class GameMap:
                 if pos not in grid:
                     grid[pos] = set()
                 grid[pos].add(building)
+        building.x = x + building.size - 1
+        building.y = y + building.size - 1
 
     def place_unit(self, grid, x, y, unit):
         if (x, y) not in grid:
@@ -101,14 +103,7 @@ class GameMap:
                 if not placed:
                     raise ValueError("Unable to place building in player zone; zone might be fully occupied.")
 
-                for i in range(building.size):
-                    for j in range(building.size):
-                        pos = (x + i, y + j)
-                        if pos not in grid:
-                            grid[pos] = set()
-                        grid[pos].add(building)
-                building.x = x
-                building.y = y
+                self.place_building(grid, x, y, building)
 
             for unit in player.units:
                 placed = False
