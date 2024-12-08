@@ -75,6 +75,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     player_info_surface = None
 
     # Pour l'exemple, on place des unités aléatoirement
+    '''
     for player in players:
         for unit in player.units:
             unit.x = random.randint(0, 100)
@@ -82,7 +83,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if (unit.x, unit.y) not in game_map.grid:
                 game_map.grid[(unit.x, unit.y)] = set()
             game_map.grid[(unit.x, unit.y)].add(unit)
-
+    '''
     running = True
     update_interval = 60  # On met à jour les entités minimap toutes les 30 frames
     frame_counter = 0

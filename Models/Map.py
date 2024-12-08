@@ -32,6 +32,8 @@ class GameMap:
     def place_unit(self, grid, x, y, unit):
         if (x, y) not in grid:
             grid[(x, y)] = set()
+        unit.x = x
+        unit.y = y
         grid[(x, y)].add(unit)
 
     def save_map(self, directory='saves'):
@@ -108,17 +110,14 @@ class GameMap:
                 building.x = x
                 building.y = y
 
-            num_villagers = sum(1 for unit in player.units if isinstance(unit, Villager))
-
-            for _ in range(num_villagers):
+            for unit in player.units:
                 placed = False
                 attempts = 0
-
                 while not placed and attempts < 1000:
-                    x_villager = random.randint(x_start, x_end - 1)
-                    y_villager = random.randint(y_start, y_end - 1)
-                    if self.can_place_unit(grid, x_villager, y_villager):
-                        self.place_unit(grid, x_villager, y_villager, Villager(player.teamID))
+                    x_unit = random.randint(x_start, x_end - 1)
+                    y_unit = random.randint(y_start, y_end - 1)
+                    if self.can_place_unit(grid, x_unit, y_unit):
+                        self.place_unit(grid, x_unit, y_unit, unit)
                         placed = True
                     attempts += 1
 
@@ -219,23 +218,9 @@ class GameMap:
     def can_place_unit(self, grid, x, y):
         if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
             return False
-
-        # Check the target position
-        if (x, y) in grid:
-            for entity in grid[(x, y)]:
-                if isinstance(entity, (Building, Unit)):
-                    return False
-
-        # Check the surrounding positions
-        surrounding_positions = [
-            (x - 1, y), (x + 1, y),  # Left and right
-            (x, y - 1), (x, y + 1)   # Top and bottom
-        ]
-
-        for pos in surrounding_positions:
-            if pos in grid:
-                for entity in grid[pos]:
-                    if isinstance(entity, (Building, Resource)):
-                        return False
-                    
+        entities = grid.get((x, y), None)
+        if entities:
+            for entity in entities:
+                if isinstance(entity, Building):
+                    return False    
         return True
