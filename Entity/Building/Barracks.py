@@ -16,6 +16,7 @@ class Barracks(Building):
             size=3,
             spawnsUnits=True
         )
+        self.max_hp = self.hp  # ajout
 
-    def build_time(self,num_villagers):
-        return (3 *Barracks.build_time ) / (num_villagers + 2)
+    def build_time(self, num_villagers):
+        return (3 * Barracks.build_time) / (num_villagers + 2)

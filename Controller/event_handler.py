@@ -2,7 +2,7 @@ import pygame
 import sys
 from tkinter import Tk, filedialog
 from Entity.Building import TownCentre
-from Controller.isometric_utils import to_isometric
+from Controller.isometric_utils import to_isometric, screen_to_tile
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY
 
 def handle_events(event, game_state):
@@ -89,6 +89,7 @@ def handle_events(event, game_state):
                 game_state['minimap_dragging'] = True
             else:
                 # Sélection du joueur via la liste au-dessus de la minimap
+                player_clicked = False
                 for i, player in enumerate(players):
                     rect_y = minimap_rect.y - (i + 1) * (30 + 5)
                     rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
@@ -104,6 +105,21 @@ def handle_events(event, game_state):
                                     camera.offset_x = -iso_x
                                     camera.offset_y = -iso_y
                                     break
+                        player_clicked = True
+                        break
+
+                # Si aucun joueur n'a été sélectionné par le clic,
+                # on tente de sélectionner une entité sur la carte.
+                if not player_clicked:
+                    # Conversion de la position écran en tuile isométrique
+                    tile_x, tile_y = screen_to_tile(mouse_x, mouse_y, screen_width, screen_height, camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
+                    game_map = game_state['game_map']
+                    entities_on_tile = game_map.grid.get((tile_x, tile_y), None)
+                    if entities_on_tile:
+                        # On prend la première entité trouvée
+                        clicked_entity = next(iter(entities_on_tile))
+                        clicked_entity.notify_clicked()
+
         elif event.button == 4:
             camera.set_zoom(camera.zoom * 1.1)
         elif event.button == 5:

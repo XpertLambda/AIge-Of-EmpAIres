@@ -17,11 +17,11 @@ class Team:
             self.resources["food"] = LEAN_STARTING_FOOD
             self.resources["wood"] = LEAN_STARTING_WOOD
         
-            for _ in range(50):
+            for _ in range(10):
                 self.units.append(Swordsman(team = teamID))           
                 self.units.append(Villager(team = teamID))           
                 self.units.append(Archer(team = teamID))           
-            for _ in range(20):
+            for _ in range(5):
                 self.buildings.append(TownCentre(team = teamID))
                 self.buildings.append(ArcheryRange(team = teamID))
                 self.buildings.append(Stable(team = teamID))

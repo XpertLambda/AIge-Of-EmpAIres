@@ -1,6 +1,7 @@
 from Entity.Building import Building
 from Entity.Unit.Archer import Archer
 import time
+
 class ArcheryRange(Building):
     def __init__(self, x=0, y=0, team=0):
         super().__init__(
@@ -15,3 +16,4 @@ class ArcheryRange(Building):
             size=3,
             spawnsUnits=True
         )
+        self.max_hp = self.hp  # ajout

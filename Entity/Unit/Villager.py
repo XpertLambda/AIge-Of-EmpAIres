@@ -16,6 +16,7 @@ class Villager(Unit):
             speed=1, 
             training_time=20, 
         )
+        self.max_hp = self.hp  # ajout
         self.resources = 0
         self.carry_capacity = 20
         self.resource_rate = 25 / 60

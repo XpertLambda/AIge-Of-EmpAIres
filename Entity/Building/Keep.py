@@ -15,3 +15,4 @@ class Keep(Building):
             attack=5,
             range=8
         )
+        self.max_hp = self.hp  # ajout

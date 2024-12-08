@@ -21,6 +21,35 @@ from Entity.Resource.Gold import Gold
 from Entity.Unit import Unit
 
 
+# Couleurs d'équipe pour les barres de vie
+TEAM_COLORS = [
+    (0, 0, 255),
+    (255, 0, 0),
+    (0, 255, 0),
+    (255, 255, 0)
+]
+
+def draw_health_bar(screen, screen_x, screen_y, entity):
+    if not entity.should_draw_health_bar():
+        return
+    ratio = entity.get_health_ratio()
+    if ratio <= 0:
+        return
+
+    bar_width = 40
+    bar_height = 5
+    team_color = (255,255,255)
+    if entity.team is not None:
+        team_color = TEAM_COLORS[entity.team % len(TEAM_COLORS)]
+
+    bg_rect = pygame.Rect(screen_x - bar_width//2, screen_y - 30, bar_width, bar_height)
+    pygame.draw.rect(screen, (50,50,50), bg_rect)
+
+    fill_width = int(bar_width * ratio)
+    fill_rect = pygame.Rect(screen_x - bar_width//2, screen_y - 30, fill_width, bar_height)
+    pygame.draw.rect(screen, team_color, fill_rect)
+    
+
 def draw_map(screen, screen_width, screen_height, game_map, camera, players):
     """
     Dessine uniquement les sprites sur la carte isométrique visible à l'écran.
@@ -60,6 +89,8 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
 
     for entity in sorted(visible_entites, key=lambda entity: (entity.x + entity.y)):
         entity.display(screen, screen_width, screen_height, camera)
+        screen_x, screen_y = tile_to_screen(entity.x, entity.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        draw_health_bar(screen, screen_x, screen_y, entity)
 
 def compute_map_bounds(game_map):
     tile_width = HALF_TILE_SIZE

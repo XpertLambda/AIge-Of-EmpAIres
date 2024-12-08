@@ -16,3 +16,4 @@ class Stable(Building):
             size=3,
             spawnsUnits=True
         )
+        self.max_hp = self.hp  # ajout

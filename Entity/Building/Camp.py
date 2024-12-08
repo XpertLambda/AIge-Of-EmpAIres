@@ -14,3 +14,4 @@ class Camp(Building):
             size=2,
             resourceDropPoint=True
         )
+        self.max_hp = self.hp  # ajout

@@ -1,6 +1,5 @@
 from Entity.Building import Building
 
-
 class House(Building):
     def __init__(self, team, x=0, y=0):
         super().__init__(
@@ -15,3 +14,4 @@ class House(Building):
             size=2,
             population=5
         )
+        self.max_hp = self.hp  # ajout

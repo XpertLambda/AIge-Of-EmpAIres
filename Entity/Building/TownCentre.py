@@ -16,3 +16,4 @@ class TownCentre(Building):
             resourceDropPoint=True,
             spawnsUnits=True
         )
+        self.max_hp = self.hp  # ajout

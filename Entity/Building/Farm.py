@@ -13,5 +13,6 @@ class Farm(Building):
             hp=100,
             size=2,
             containsFood=True,
-            walkable=True  
+            walkable=True
         )
+        self.max_hp = self.hp  # ajout
