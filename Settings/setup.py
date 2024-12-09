@@ -52,36 +52,51 @@ MARINES_NUMBER_OF_ARCHERY_RANGES = 2  # Nombre de champs de tir à l'arc
 # -------------------
 
 # Dimensions des tuiles
-TILE_SIZE = 600 # Taille d'une tuile en pixels 
-#NE PAS MODIFIER TILE SIZE!!
-HALF_TILE_SIZE = TILE_SIZE/2
+TILE_SIZE = 200  # Taille d'une tuile en pixels 
+HALF_TILE_SIZE = TILE_SIZE / 2
+
 # Dimensions de la carte en pixels
 MAP_WIDTH = 120 * TILE_SIZE  
 MAP_HEIGHT = 120 * TILE_SIZE 
 
-# Nombre de tuiles visibles en largeur et hauteur
-TILES_IN_VIEW = 75  # Nombre de tuiles visibles
+# Niveaux de zoom
+MIN_ZOOM = 0.3
+MAX_ZOOM = 3.0
 
 # Dimensions de la fenêtre en pixels
-WINDOW_WIDTH = TILES_IN_VIEW * TILE_SIZE  # 1200 pixels
-WINDOW_HEIGHT = TILES_IN_VIEW * TILE_SIZE # 1200 pixels
+WINDOW_WIDTH = 1200  # Ajustez selon vos besoins
+WINDOW_HEIGHT = 1200  # Ajustez selon vos besoins
 
 # Nombre de tuiles de chaque type
-NUM_MOUNTAIN_TILES = 1000
-NUM_GOLD_TILES = 1000
-NUM_WOOD_TILES = 1000
-NUM_FOOD_TILES = 1000
+NUM_GOLD_TILES = 100
+NUM_WOOD_TILES = 100
+NUM_FOOD_TILES = 100
 
-# Difficulté du jeu
+# Difficulté du jeu
 DIFFICULTY = 'DEBUG'
 
-
 # Minimap settings
-MINIMAP_WIDTH = 200
-MINIMAP_HEIGHT = 100
-MINIMAP_MARGIN = 10
-
-
+MINIMAP_WIDTH = 600  # Largeur de la minimap
+MINIMAP_HEIGHT = 280  # Hauteur de la minimap
+MINIMAP_MARGIN = 20   # Marge de la minimap
 
 # Nombre de joueurs 
-NUMBER_OF_PLAYERS = 2
+NUMBER_OF_PLAYERS = 2 
+
+# Autres constantes
+MAP_PADDING = 650
+
+# Répertoire de sauvegarde
+SAVE_DIRECTORY = 'saves'
+
+# Assurez-vous que le répertoire de sauvegarde existe
+import os
+if not os.path.exists(SAVE_DIRECTORY):
+    os.makedirs(SAVE_DIRECTORY)
+
+####################
+
+# -------------------
+# Configuration Animation
+# -------------------
+FRAMES_PER_UNIT = 10
