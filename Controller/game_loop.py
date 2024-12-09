@@ -1,34 +1,32 @@
-# Chemin de Controller/game_loop.py
-
+import time
 import pygame
 import sys
+import random
 from Controller.camera import Camera
 from Controller.drawing import (
     draw_map,
     compute_map_bounds,
     create_minimap_background,
-    draw_minimap,
     display_fps,
+    update_minimap_entities,
+    draw_minimap_viewport
 )
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
-from Controller.select_player import draw_player_selection, draw_player_info  # Import modifié
-from Settings.setup import MINIMAP_MARGIN
+from Controller.select_player import create_player_selection_surface, create_player_info_surface
+from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
 
-def game_loop(screen, game_map, screen_width, screen_height, players):  # Paramètre modifié
-    """
-    Boucle principale du jeu qui gère les événements, le déplacement et le zoom de la caméra,
-    ainsi que le dessin de la carte.
-    """
+# Dans game_loop.py
+
+def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
     camera = Camera(screen_width, screen_height)
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
-    # Initialiser les dimensions locales de la minimap
     minimap_margin = MINIMAP_MARGIN
-    minimap_width = int(screen_width * 0.25)  # 25% de la largeur de l'écran
-    minimap_height = int(screen_height * 0.25)  # 25% de la hauteur de l'écran
+    minimap_width = int(screen_width * 0.25)
+    minimap_height = int(screen_height * 0.25)
     minimap_rect = pygame.Rect(
         screen_width - minimap_width - minimap_margin,
         screen_height - minimap_height - minimap_margin,
@@ -36,26 +34,26 @@ def game_loop(screen, game_map, screen_width, screen_height, players):  # Param�
         minimap_height
     )
 
-    # Créer le fond de la minimap avec des dimensions initiales
+    # Création de la minimap de fond une seule fois au démarrage
     minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
     minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
         game_map, minimap_width, minimap_height
     )
 
-    selected_player = players[0]  # Variable modifiée
-    minimap_dragging = False
+    minimap_entities_surface = pygame.Surface((minimap_width, minimap_height), pygame.SRCALPHA)
+    minimap_entities_surface.fill((0,0,0,0))
 
-    # Initialiser le drapeau du mode fenêtre
+    selected_player = players[0]
+    minimap_dragging = False
     fullscreen = False
 
-    # Dictionnaire de l'état du jeu pour contenir toutes les variables partagées
     game_state = {
         'camera': camera,
-        'players': players,  # Clé modifiée
-        'selected_player': selected_player,  # Clé modifiée
+        'players': players,
+        'selected_player': selected_player,
         'minimap_rect': minimap_rect,
         'minimap_dragging': minimap_dragging,
-        'minimap_background': minimap_background,
+        'minimap_background': minimap_background,   # On réutilise cette minimap de fond
         'minimap_scale': minimap_scale,
         'minimap_offset_x': minimap_offset_x,
         'minimap_offset_y': minimap_offset_y,
@@ -67,12 +65,21 @@ def game_loop(screen, game_map, screen_width, screen_height, players):  # Param�
         'minimap_margin': minimap_margin,
         'screen': screen,
         'fullscreen': fullscreen,
+        'player_selection_updated': True,
+        'player_info_updated': True,
+        'minimap_entities_surface': minimap_entities_surface
     }
 
-    running = True
-    while running:
-        dt = clock.tick(1000) / 1000  # Temps écoulé en secondes
+    player_selection_surface = None
+    player_info_surface = None
 
+    running = True
+    update_interval = 60
+    frame_counter = 0
+
+    while running:
+        dt = clock.tick(120) / 1000
+        frame_counter += 1
         for event in pygame.event.get():
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
@@ -80,33 +87,49 @@ def game_loop(screen, game_map, screen_width, screen_height, players):  # Param�
 
         update_game_state(game_state, dt)
 
-        # Extraire les variables mises à jour
         camera = game_state['camera']
-        minimap_background = game_state['minimap_background']
         minimap_rect = game_state['minimap_rect']
         screen = game_state['screen']
         screen_width = game_state['screen_width']
         screen_height = game_state['screen_height']
-        selected_player = game_state['selected_player']  # Variable modifiée
-        players = game_state['players']  # Variable modifiée
+        selected_player = game_state['selected_player']
+        players = game_state['players']
+        player_selection_updated = game_state['player_selection_updated']
+        player_info_updated = game_state['player_info_updated']
+        minimap_background = game_state['minimap_background']  # On réutilise la même surface
+        minimap_scale = game_state['minimap_scale']
+        minimap_offset_x = game_state['minimap_offset_x']
+        minimap_offset_y = game_state['minimap_offset_y']
+        minimap_min_iso_x = game_state['minimap_min_iso_x']
+        minimap_min_iso_y = game_state['minimap_min_iso_y']
+        minimap_entities_surface = game_state['minimap_entities_surface']
 
-        # Dessin
+        if frame_counter % update_interval == 0:
+            update_minimap_entities(game_state)
+
+        if player_selection_updated:
+            player_selection_surface = create_player_selection_surface(players, selected_player, minimap_rect)
+            game_state['player_selection_updated'] = False
+
+        if player_info_updated:
+            player_info_surface = create_player_info_surface(selected_player, screen_width)
+            game_state['player_info_updated'] = False
+
         screen.fill((0, 0, 0))
         draw_map(screen, screen_width, screen_height, game_map, camera, players)
 
-        # Dessiner la minimap
-        draw_minimap(screen, minimap_background, camera, game_map, game_state['minimap_scale'],
-                     game_state['minimap_offset_x'], game_state['minimap_offset_y'],
-                     game_state['minimap_min_iso_x'], game_state['minimap_min_iso_y'], minimap_rect)
+        # Au lieu de recréer la minimap de fond, on la blitte seulement :
+        screen.blit(minimap_background, minimap_rect.topleft)
+        screen.blit(minimap_entities_surface, minimap_rect.topleft)
+        draw_minimap_viewport(screen, camera, minimap_rect, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y)
 
-        # Dessiner la sélection des joueurs au-dessus de la minimap
-        draw_player_selection(screen, players, selected_player, minimap_rect)  # Appel modifié
+        if player_selection_surface:
+            selection_surface_height = player_selection_surface.get_height()
+            screen.blit(player_selection_surface, (minimap_rect.x, minimap_rect.y - selection_surface_height))
 
-        # Afficher les informations du joueur sélectionné en bas de l'écran
-        draw_player_info(screen, selected_player, screen_width, screen_height)  # Appel modifié
+        if player_info_surface:
+            info_surface_height = player_info_surface.get_height()
+            screen.blit(player_info_surface, (0, screen_height - info_surface_height))
 
-        # Afficher les FPS
         display_fps(screen, clock)
-        
-        # Mettre à jour l'affichage
         pygame.display.flip()

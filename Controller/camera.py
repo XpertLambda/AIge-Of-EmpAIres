@@ -1,12 +1,13 @@
 # Controller/camera.py
 
-from Settings.setup import MIN_ZOOM, MAX_ZOOM
+from Settings.setup import *
+from Controller.isometric_utils import *
 
 class Camera:
     def __init__(self, width, height):
         self.offset_x = 0
         self.offset_y = 0
-        self.zoom = 0.25
+        self.zoom = MIN_ZOOM
         self.width = width
         self.height = height
         self.min_x = None
@@ -56,3 +57,4 @@ class Camera:
 
         self.offset_x = max(min_offset_x, min(self.offset_x, max_offset_x))
         self.offset_y = max(min_offset_y, min(self.offset_y, max_offset_y))
+

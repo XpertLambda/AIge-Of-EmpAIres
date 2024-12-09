@@ -1,9 +1,22 @@
-from Models.Unit import *  # Unit already imports Map
-from Models.Building import *  # Import all from Building
+from Entity.Unit import *  # Unit already imports Map
+from Entity.Building import *  # Import all from Building
 
 class Villager(Unit):
-    def __init__(self, acronym="V", cost_food=50, cost_gold=0, cost_wood=25, hp=40, attack=0, speed=1, training_time=20, x=0, y=0):
-        super().__init__(acronym, cost_food, cost_gold, cost_wood, hp, attack, speed, training_time, x, y)
+    def __init__(self, team, x=0, y=0):
+        super().__init__(
+            x=x,
+            y=y,
+            team=team,
+            acronym="v", 
+            cost_food=50, 
+            cost_gold=0, 
+            cost_wood=25, 
+            hp=40, 
+            attack=0, 
+            speed=1, 
+            training_time=20, 
+        )
+        self.max_hp = self.hp  # ajout
         self.resources = 0
         self.carry_capacity = 20
         self.resource_rate = 25 / 60
