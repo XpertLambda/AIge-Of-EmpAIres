@@ -1,5 +1,5 @@
 import pygame
-
+from Models.html import write_full_html
 def update_game_state(game_state, dt):
     """
     Met à jour l'état du jeu en fonction des entrées utilisateur.
@@ -12,7 +12,6 @@ def update_game_state(game_state, dt):
     minimap_offset_x = game_state.get('minimap_offset_x', 0)
     minimap_offset_y = game_state.get('minimap_offset_y', 0)
     minimap_min_iso_x = game_state.get('minimap_min_iso_x', 0)
-    minimap_min_iso_y = game_state.get('minimap_min_iso_y', 0)
     screen_width = game_state['screen_width']
     screen_height = game_state['screen_height']
 
@@ -33,7 +32,16 @@ def update_game_state(game_state, dt):
     if keys[pygame.K_s] or keys[pygame.K_DOWN]:
         dy -= move_speed
     if keys[pygame.K_TAB]:
-        selected_player.write_html()
+        if not game_state.get('tab_pressed', False):
+            game_state['paused'] = not game_state.get('paused', False)
+            if game_state['paused']:
+                write_full_html(game_state['players'], game_state['game_map'])
+            game_state['tab_pressed'] = True
+    else:
+        game_state['tab_pressed'] = False
+    # If the game is paused, skip updating the game state
+    if game_state.get('paused', False):
+        return
 
     if dx != 0 or dy != 0:
         camera.move(dx, dy)
