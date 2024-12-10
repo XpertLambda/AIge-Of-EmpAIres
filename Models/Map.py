@@ -10,7 +10,7 @@ from Entity.Resource.Resource import *
 from Entity.Resource.Gold import Gold
 from Entity.Resource.Wood import Wood
 from Entity.Resource.Food import Food
-from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES
+from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE
 
 class GameMap:
     def __init__(self, players, width=MAP_WIDTH, height=MAP_HEIGHT):
@@ -19,7 +19,10 @@ class GameMap:
         self.num_tiles_x = width // TILE_SIZE
         self.num_tiles_y = height // TILE_SIZE
         self.players = players
-        self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y, players)
+        if GOLD_SPAWN_MIDDLE:
+            self.grid = self.random_map_gold(self.num_tiles_x, self.num_tiles_y, players)
+        else:
+            self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y, players)
 
     def place_building(self, grid, x, y, building):
         for i in range(building.size):
@@ -131,8 +134,7 @@ class GameMap:
                     for entity in grid[position]:
                         # Conflict if the cell contains a non-walkable entity
                         if isinstance(entity, (Unit, Resource, Building)):
-                            if not building.is_walkable or isinstance(entity, Building):
-                                return False
+                            return False
         return True
 
     def random_map(self, num_tiles_x, num_tiles_y, players):
@@ -170,7 +172,6 @@ class GameMap:
                 # Check if the position is valid
                 if pos not in grid:
                     grid[pos] = set()
-                if all(not isinstance(entity, Building) for entity in grid[pos]):
                     # Create a new resource and place it
                     resource_class = resource_classes[resource_type]
                     resource = resource_class(x, y)
@@ -183,7 +184,7 @@ class GameMap:
                 print(f"Warning: Failed to place {resource_type} after 1000 attempts.")
 
         return grid
-
+    
     def get_tile(self, x, y):
         pos = (x, y)
         tile = self.grid.get(pos)
@@ -219,3 +220,85 @@ class GameMap:
                 if isinstance(entity, Building):
                     return False    
         return True
+    
+    
+    def random_map_gold(self, num_tiles_x, num_tiles_y, players):
+        grid = {}
+
+        # Map resource types to their respective classes
+        resource_classes = {
+            'gold': Gold,
+            'wood': Wood,
+            'food': Food,
+        }
+
+        # Create a list of resources to place
+        resources = (
+            ['gold'] * NUM_GOLD_TILES +
+            ['wood'] * NUM_WOOD_TILES +
+            ['food'] * NUM_FOOD_TILES
+        )
+
+        # Place gold resources in a central square
+        center_x = num_tiles_x // 2
+        center_y = num_tiles_y // 2
+        gold_count = 0
+        layer = 0
+
+        while gold_count < NUM_GOLD_TILES:
+            # Iterate over the current square layer
+            for dx in range(-layer, layer + 1):
+                for dy in range(-layer, layer + 1):
+                    x = center_x + dx
+                    y = center_y + dy
+                    pos = (x, y)
+
+                    # Ensure we don't exceed the map boundaries
+                    if 0 <= x < num_tiles_x and 0 <= y < num_tiles_y:
+                        # Check if the position is valid for placement
+                        if pos not in grid:
+                            grid[pos] = set()
+                            
+                            # Place gold if the maximum count is not reached
+                            if gold_count < NUM_GOLD_TILES:
+                                resource = resource_classes['gold'](x, y)
+                                grid[pos].add(resource)
+                                gold_count += 1
+                                if gold_count >= NUM_GOLD_TILES:
+                                    break
+                if gold_count >= NUM_GOLD_TILES:
+                    break
+            layer += 1
+
+        # Place other resources randomly
+        for resource_type in resources:
+            if resource_type == 'gold':
+                continue  # Skip gold as it is already placed deterministically
+
+            placed = False
+            attempts = 0
+
+            while not placed and attempts < 1000:
+                # Random position within the map bounds
+                x = random.randint(0, num_tiles_x - 1)
+                y = random.randint(0, num_tiles_y - 1)
+                pos = (x, y)
+
+                # Check if the position is valid
+                if pos not in grid:
+                    grid[pos] = set()
+                    # Create a new resource and place it
+                    resource_class = resource_classes[resource_type]
+                    resource = resource_class(x, y)
+                    grid[pos].add(resource)
+                    placed = True
+
+                attempts += 1
+
+            if not placed:
+                print(f"Warning: Failed to place {resource_type} after 1000 attempts.")
+
+        # Generate buildings for all players
+        self.building_generation(grid, players)
+
+        return grid

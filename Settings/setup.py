@@ -68,12 +68,15 @@ WINDOW_WIDTH = 1200  # Ajustez selon vos besoins
 WINDOW_HEIGHT = 1200  # Ajustez selon vos besoins
 
 # Nombre de tuiles de chaque type
-NUM_GOLD_TILES = 100
-NUM_WOOD_TILES = 100
-NUM_FOOD_TILES = 100
+NUM_GOLD_TILES = 500
+NUM_WOOD_TILES = 500
+NUM_FOOD_TILES = 500
 
 # Difficulté du jeu
 DIFFICULTY = 'DEBUG'
+
+# Spawn gold centre
+GOLD_SPAWN_MIDDLE = False
 
 # Minimap settings
 MINIMAP_WIDTH = 600  # Largeur de la minimap
