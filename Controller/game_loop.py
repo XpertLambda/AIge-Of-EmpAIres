@@ -85,8 +85,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if event.type == pygame.QUIT:
                 running = False
 
+        # Always update the game state to handle input, even when paused
         update_game_state(game_state, dt)
 
+        # Update variables from game_state
         camera = game_state['camera']
         minimap_rect = game_state['minimap_rect']
         screen = game_state['screen']
@@ -96,7 +98,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         players = game_state['players']
         player_selection_updated = game_state['player_selection_updated']
         player_info_updated = game_state['player_info_updated']
-        minimap_background = game_state['minimap_background']  # On réutilise la même surface
+        minimap_background = game_state['minimap_background']
         minimap_scale = game_state['minimap_scale']
         minimap_offset_x = game_state['minimap_offset_x']
         minimap_offset_y = game_state['minimap_offset_y']
@@ -104,16 +106,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         minimap_min_iso_y = game_state['minimap_min_iso_y']
         minimap_entities_surface = game_state['minimap_entities_surface']
 
-        if frame_counter % update_interval == 0:
-            update_minimap_entities(game_state)
+        # Only update game logic and entities when not paused
+        if not game_state.get('paused', False):
+            if frame_counter % update_interval == 0:
+                update_minimap_entities(game_state)
 
-        if player_selection_updated:
-            player_selection_surface = create_player_selection_surface(players, selected_player, minimap_rect)
-            game_state['player_selection_updated'] = False
+            if player_selection_updated:
+                player_selection_surface = create_player_selection_surface(players, selected_player, minimap_rect)
+                game_state['player_selection_updated'] = False
 
-        if player_info_updated:
-            player_info_surface = create_player_info_surface(selected_player, screen_width)
-            game_state['player_info_updated'] = False
+            if player_info_updated:
+                player_info_surface = create_player_info_surface(selected_player, screen_width)
+                game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
         draw_map(screen, screen_width, screen_height, game_map, camera, players)
