@@ -36,40 +36,74 @@ class Unit(Entity):
     def dist(x1,y1,x2,y2):
         return sqrt((x1-x2)**2 + (y1-y2)**2)
 
-    def attaquer(self,cible):
-        if self.dist(self.x,self.y,cible.x,cible.y)<2:
-            cible.hp-=self.attack
-            cible.notify_damage()  # éventuellement notifier les dommages ici
-            return True
-        return False
-
+    def attaquer(self,att,t,map):
+        b=True
+        if(self.cible == None or self.cible.hp==0):
+            b=self.search(t,att)
+        if b:
+            if dist(self.x,self.y,self.cible.x,self.cible.y)<100:
+                self.current_frame=0
+                self.frame_counter=0
+                self.cible.hp-=self.attack
+                cible.notify_damage()  # éventuellement notifier les dommages ici
+            else:
+                self.SeDeplacer(self.cible.x,self.cible.y,map)
+        return b
+    
+    def search(self,t,att):
+        min=300000
+        e=None
+        for u in t.army:
+            distance=dist(u.x,u.y,self.x,self.y)
+            if(att or distance<100):
+                if(distance<min):
+                    min=distance
+                    e=u         
+        if att:
+            for b in t.buildings:
+                print("b=",b)
+                distance=dist(b.x,b.y,self.x,self.y)
+                if(distance<min):
+                    min=distance
+                    e=b
+ 
+        self.cible=e
+    
     def SeDeplacer(self,x,y,map):
-        while(self.x!=x and self.y!=y):
-            # La logique de déplacement reste inchangée
+        #deplacement seulement d'une tile
+        self.frame_counter=0
+        self.current_frame=0
+        if(self.x!=x and self.y!=y):
             if self.x<x:
-                if self.y<y and map.grid[(x+1, y+1)].is_walkable():
+                if self.y<y and map.grid[y+1][x+1].is_walkable:
                     self.x+=1
                     self.y+=1
-                elif self.y>y and map.grid[(x+1, y-1)].is_walkable():
+                    self.direction=270
+                if self.y>y and map.grid[y-1][x+1].is_walkable:
                     self.x+=1
                     self.y-=1
+                    self.direction=90
+                if map.grid[y][x+1].is_walkable:
+                    self.x+=1
+                    self.direction=135
             if self.x>x:
-                if self.y<y and map.grid[(x-1, y+1)].is_walkable():
+                if self.y<y and map.grid[y+1][x+1].is_walkable:
                     self.x-=1
                     self.y+=1
-                elif self.y>y and map.grid[(x-1, y-1)].is_walkable():
+                if self.y>y and map.grid[y-1][x+1].is_walkable:
                     self.x-=1
                     self.y-=1
-            if self.x==x:
-                if self.y<y and map.grid[(x, y+1)].is_walkable():
-                    self.y+=1
-                elif self.y>y and map.grid[(x, y-1)].is_walkable():
-                    self.y-=1
-            if self.y==y:
-                if self.x<x and map.grid[(x+1, y)].is_walkable():
-                    self.x+=1
-                elif self.x>x and map.grid[(x-1, y)].is_walkable():
+                    self.direction=90
+                if map.grid[y][x+1].is_walkable:
                     self.x-=1
+                    self.direction=315
+            if self.y<y and map.grid[y+1][x].is_walkable:
+                self.y+=y
+                self.direction=225
+            if self.y>y and map.grid[y-1][x].is_walkable:
+                self.y-=y
+                self.direction=45
+       
 
     def display(self, screen, screen_width, screen_height, camera):
         category = 'units'

@@ -66,6 +66,30 @@ class Team:
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team = teamID))
 
+    
+    def gestion(self):
+        for u in self.army:
+            if u.hp==0:
+                self.army.remove(u)
+        for b in self.buildings:
+            if b.hp==0:
+                self.army.remove(b)
+
+
+    def battle(self,t,map,nb):
+        for i in range(0,len(t.army)):
+            s=t.army[i]
+            print("ok")
+            if not(s.task):
+                print("ok")
+                s.task=True
+                s.attaquer(False,self,map)
+  
+        for i in range(0,min(nb,len(self.army))):
+            s=self.army[i]
+            s.task=True
+            s.attaquer(True,t,map)
+
     def write_html(self):
         from Models.html import write_html
         write_html(self)
