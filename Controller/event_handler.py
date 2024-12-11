@@ -1,5 +1,6 @@
 import pygame
 import sys
+import os
 from tkinter import Tk, filedialog
 from Entity.Building import TownCentre
 from Controller.isometric_utils import to_isometric, screen_to_tile
@@ -33,6 +34,10 @@ def handle_events(event, game_state):
     player_info_updated = game_state.get('player_info_updated', False)
 
     if event.type == pygame.QUIT:
+        try:
+            os.remove('full_snapshot.html')
+        except FileNotFoundError:
+            pass
         pygame.quit()
         sys.exit()
     elif event.type == pygame.KEYDOWN:
@@ -62,6 +67,10 @@ def handle_events(event, game_state):
                 game_state['game_map'], minimap_width, minimap_height
             )
         elif event.key == pygame.K_ESCAPE:
+            try:
+                os.remove('full_snapshot.html')
+            except FileNotFoundError:
+                pass
             pygame.quit()
             sys.exit()
         if event.key == pygame.K_k:
