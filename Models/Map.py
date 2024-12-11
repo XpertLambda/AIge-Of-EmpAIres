@@ -24,52 +24,26 @@ class GameMap:
         else:
             self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y, players)
 
-    def place_building(self, grid, x, y, building):
-        for i in range(building.size):
-            for j in range(building.size):
+    def add_entity(self, grid, x,  y,  entity):
+        if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
+            return False
+        for i in range(entity.size):
+            for j in range(entity.size):
                 pos = (x + i, y + j)
-                if pos not in grid:
-                    grid[pos] = set()
-                grid[pos].add(building)
-        building.x = x + (building.size - 1)/2
-        building.y = y + (building.size - 1)/2
+                grid_entities = grid.get(pos, None)
+                if grid_entities:
+                    return False
 
-    def place_unit(self, grid, x, y, unit):
-        if (x, y) not in grid:
-            grid[(x, y)] = set()
-        unit.x = x
-        unit.y = y
-        grid[(x, y)].add(unit)
+        for i in range(entity.size):
+            for j in range(entity.size):
+                pos = (x + i, y + j)
+                grid[pos] = set()
+                grid[pos].add(entity)
+        entity.x = x + (entity.size - 1)/2
+        entity.y = y + (entity.size - 1)/2
+        return True
 
-    def save_map(self, directory='saves'):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = os.path.join(directory, f'save_{timestamp}.pkl')
-        game_state = {
-            'players': self.players,
-            'tiles': self.grid
-        }
-        try:
-            with open(filename, 'wb') as file:
-                pickle.dump(game_state, file)
-            print(f"Game map saved successfully to {filename}.")
-        except Exception as e:
-            print(f"Error saving game map: {e}")
-
-    def load_map(self, filename):
-        try:
-            with open(filename, 'rb') as file:
-                game_state = pickle.load(file)
-            self.players = game_state['players']
-            self.grid = game_state['tiles']
-            for tile in self.grid.values():
-                tile.mark_dirty()
-            print(f"Game map loaded successfully from {filename}.")
-        except Exception as e:
-            print(f"Error loading game map: {e}")
-
-    def building_generation(self, grid, players):
+    def generate_buildings(self, grid, players):
         num_players = len(players)
         zone_width = self.num_tiles_x // (num_players if num_players % 2 == 0 else 1)
         zone_height = self.num_tiles_y // (num_players if num_players % 2 == 0 else 1)
@@ -88,60 +62,51 @@ class GameMap:
                 while attempts < max_attempts:
                     x = random.randint(x_start, x_end - building.size)
                     y = random.randint(y_start, y_end - building.size)
-                    if self.can_place_building(grid, x, y, building):
-                        placed = True
+                    placed = self.add_entity(grid, x, y, building)
+                    if placed:
                         break
                     attempts += 1
 
                 if not placed:
                     for y_pos in range(y_start, y_end - building.size + 1):
                         for x_pos in range(x_start, x_end - building.size + 1):
-                            if self.can_place_building(grid, x_pos, y_pos, building):
-                                x, y = x_pos, y_pos
-                                placed = True
+                            placed = self.self.add_entity(grid, x_pos, y_pos, building)
+                            if placed:
                                 break
-                        if placed:
-                            break
-
                 if not placed:
-                    raise ValueError("Unable to place building in player zone; zone might be fully occupied.")
-
-                self.place_building(grid, x, y, building)
-
+                    raise ValueError("Unable to deploy building in player zone; zone might be fully occupied.")
+    
+    def generate_units(self, grid, players):
+        num_players = len(players)
+        zone_width = self.num_tiles_x // (num_players if num_players % 2 == 0 else 1)
+        zone_height = self.num_tiles_y // (num_players if num_players % 2 == 0 else 1)
+        
+        for index, player in enumerate(players):
+            x_start = (index % (num_players // 2)) * zone_width if num_players > 1 else 0
+            y_start = (index // (num_players // 2)) * zone_height if num_players > 1 else 0
+            x_end = x_start + zone_width if num_players > 1 else self.num_tiles_x
+            y_end = y_start + zone_height if num_players > 1 else self.num_tiles_y
+            
             for unit in player.units:
                 placed = False
                 attempts = 0
                 while not placed and attempts < 1000:
                     x_unit = random.randint(x_start, x_end - 1)
                     y_unit = random.randint(y_start, y_end - 1)
-                    if self.can_place_unit(grid, x_unit, y_unit):
-                        self.place_unit(grid, x_unit, y_unit, unit)
-                        placed = True
+                    placed = self.add_entity(grid, x_unit, y_unit, unit)
+                    if placed:
+                        break
                     attempts += 1
 
                 if not placed:
-                    print(f"Warning: Failed to place villager for player {player.teamID} after 1000 attempts.")
-
-
-    def can_place_building(self, grid, x, y, building):
-        if x + building.size > self.num_tiles_x or y + building.size > self.num_tiles_y:
-            return False
-
-        for dx in range(building.size):
-            for dy in range(building.size):
-                position = (x + dx, y + dy)
-                if position in grid:
-                    for entity in grid[position]:
-                        # Conflict if the cell contains a non-walkable entity
-                        if isinstance(entity, (Unit, Resource, Building)):
-                            return False
-        return True
+                    print(f"Warning: Failed to deploy villager for player {player.teamID} after 1000 attempts.")
 
     def random_map(self, num_tiles_x, num_tiles_y, players):
         grid = {}
 
         # Generate buildings for all players
-        self.building_generation(grid, players)
+        self.generate_buildings(grid, players)
+        self.generate_units(grid, players)
 
         # Map resource types to their respective classes
         resource_classes = {
@@ -168,27 +133,16 @@ class GameMap:
                 x = random.randint(0, num_tiles_x - 1)
                 y = random.randint(0, num_tiles_y - 1)
                 pos = (x, y)
-
-                # Check if the position is valid
-                if pos not in grid:
-                    grid[pos] = set()
-                    # Create a new resource and place it
-                    resource_class = resource_classes[resource_type]
-                    resource = resource_class(x, y)
-                    grid[pos].add(resource)
-                    placed = True
-
+                resource_class = resource_classes[resource_type]
+                resource = resource_class(x, y)
+                placed = self.add_entity(grid, x, y, resource)
+                if placed:
+                    break
                 attempts += 1
 
             if not placed:
-                print(f"Warning: Failed to place {resource_type} after 1000 attempts.")
-
+                print(f"Warning: Failed to deploy {resource_type} after 1000 attempts.")
         return grid
-    
-    def get_tile(self, x, y):
-        pos = (x, y)
-        tile = self.grid.get(pos)
-        return tile
 
     def print_map(self):
         # Iterate over the grid by rows and columns
@@ -210,17 +164,6 @@ class GameMap:
 
             # Print the row as a string
             print(''.join(row_display))
-                
-    def can_place_unit(self, grid, x, y):
-        if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
-            return False
-        entities = grid.get((x, y), None)
-        if entities:
-            for entity in entities:
-                if isinstance(entity, Building):
-                    return False    
-        return True
-    
     
     def random_map_gold(self, num_tiles_x, num_tiles_y, players):
         grid = {}
@@ -302,3 +245,31 @@ class GameMap:
         self.building_generation(grid, players)
 
         return grid
+
+    def save_map(self, directory='saves'):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = os.path.join(directory, f'save_{timestamp}.pkl')
+        game_state = {
+            'players': self.players,
+            'tiles': self.grid
+        }
+        try:
+            with open(filename, 'wb') as file:
+                pickle.dump(game_state, file)
+            print(f"Game map saved successfully to {filename}.")
+        except Exception as e:
+            print(f"Error saving game map: {e}")
+
+    def load_map(self, filename):
+        try:
+            with open(filename, 'rb') as file:
+                game_state = pickle.load(file)
+            self.players = game_state['players']
+            self.grid = game_state['tiles']
+            for tile in self.grid.values():
+                tile.mark_dirty()
+            print(f"Game map loaded successfully from {filename}.")
+        except Exception as e:
+            print(f"Error loading game map: {e}")

@@ -39,8 +39,9 @@ def handle_events(event, game_state):
         if event.key == pygame.K_y:
             fullscreen = not fullscreen
             if fullscreen:
-                screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)
                 infoObject = pygame.display.Info()
+                print(infoObject)
                 screen_width, screen_height = infoObject.current_w, infoObject.current_h
             else:
                 screen_width, screen_height = 800, 600
@@ -133,7 +134,6 @@ def handle_events(event, game_state):
             camera.set_zoom(camera.zoom / 1.1)
     elif event.type == pygame.VIDEORESIZE:
         screen_width, screen_height = event.size
-        screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
         camera.width = screen_width
         camera.height = screen_height
 
