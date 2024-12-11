@@ -1,3 +1,7 @@
+# 4) Controller/drawing.py
+# On génère dynamiquement les couleurs d'équipe en fonction de NUMBER_OF_PLAYERS.
+# On n'utilise plus la liste statique. On utilise un simple nuancier.
+
 import pygame
 import math
 from Settings.setup import (
@@ -6,6 +10,7 @@ from Settings.setup import (
     MINIMAP_WIDTH,
     MINIMAP_HEIGHT,
     MAP_PADDING,
+    NUMBER_OF_PLAYERS
 )
 from Entity.Unit import Unit
 from Entity.Building import Building
@@ -18,16 +23,19 @@ from Controller.isometric_utils import (
 from Controller.init_sprites import fill_grass
 from Entity.Building import Building
 from Entity.Resource.Gold import Gold
-from Entity.Unit import Unit
 
+def generate_team_colors(nb_players):
+    # Génère des couleurs distinctes en répartissant des teintes sur le cercle colorimétrique
+    colors = []
+    for i in range(nb_players):
+        hue = i / nb_players
+        r = int(255 * abs(math.sin(math.pi * hue)))
+        g = int(255 * abs(math.sin(math.pi * hue + 2 * math.pi / 3)))
+        b = int(255 * abs(math.sin(math.pi * hue + 4 * math.pi / 3)))
+        colors.append((r, g, b))
+    return colors
 
-# Couleurs d'équipe pour les barres de vie
-TEAM_COLORS = [
-    (0, 0, 255),
-    (255, 0, 0),
-    (0, 255, 0),
-    (255, 255, 0)
-]
+TEAM_COLORS = generate_team_colors(NUMBER_OF_PLAYERS)
 
 def draw_health_bar(screen, screen_x, screen_y, entity):
     if not entity.should_draw_health_bar():
@@ -38,7 +46,7 @@ def draw_health_bar(screen, screen_x, screen_y, entity):
 
     bar_width = 40
     bar_height = 5
-    team_color = (255,255,255)
+    team_color = (255, 255, 255)
     if entity.team is not None:
         team_color = TEAM_COLORS[entity.team % len(TEAM_COLORS)]
 
@@ -51,9 +59,6 @@ def draw_health_bar(screen, screen_x, screen_y, entity):
     
 
 def draw_map(screen, screen_width, screen_height, game_map, camera, players):
-    """
-    Dessine uniquement les sprites sur la carte isométrique visible à l'écran.
-    """
     corners_screen = [
         (0, 0),
         (screen_width, 0),
@@ -123,7 +128,6 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     num_tiles_x = game_map.num_tiles_x
     num_tiles_y = game_map.num_tiles_y
 
-    # Détermination des coordonnées isométriques des coins de la carte
     iso_coords = [
         to_isometric(0, 0, tile_width, tile_height),
         to_isometric(0, num_tiles_y - 1, tile_width, tile_height),
@@ -146,7 +150,6 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     offset_x = (minimap_width - scaled_iso_map_width) / 2
     offset_y = (minimap_height - scaled_iso_map_height) / 2
 
-    # Dessin d'un seul grand polygone vert représentant l'ensemble de la carte
     points = []
     for iso_x, iso_y in iso_coords:
         minimap_x = (iso_x - min_iso_x) * scale + offset_x
@@ -170,13 +173,6 @@ def update_minimap_entities(game_state):
 
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
-    
-    player_colors = [
-        (0, 0, 255),
-        (255, 0, 0),
-        (0, 255, 0),
-        (255, 255, 0)
-    ]
 
     entities_to_draw = set()
     matrix = game_map.grid
@@ -184,7 +180,6 @@ def update_minimap_entities(game_state):
         for entity in entities:
             entities_to_draw.add(entity)
 
-    # Taille minimale
     MIN_BUILDING_SIZE = 4  
     MIN_UNIT_RADIUS = 3 
 
@@ -197,27 +192,21 @@ def update_minimap_entities(game_state):
         minimap_y = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
         
         if team is not None:
-            color = player_colors[team % len(player_colors)]
+            color = TEAM_COLORS[team % len(TEAM_COLORS)]
             if isinstance(entity, Building):
-                # Appliquer une taille minimale au bâtiment
                 half_dim = max(MIN_BUILDING_SIZE, size)
                 rect = pygame.Rect(minimap_x - half_dim, minimap_y - half_dim, half_dim*2, half_dim*2)
                 pygame.draw.rect(minimap_entities_surface, (*color, 150), rect)
             else:
-                # Appliquer un rayon minimal aux unités
                 radius = max(MIN_UNIT_RADIUS, size)
                 pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), radius)
         elif isinstance(entity, Gold):
             color = get_color_for_terrain('gold')
-            # Appliquer un rayon minimal
             radius = max(MIN_UNIT_RADIUS, size)
             pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), radius)
 
-                             
+
 def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
-    """
-    Dessine le rectangle représentant la zone visible sur la minimap.
-    """
     half_screen_width = camera.width / (2 * camera.zoom)
     half_screen_height = camera.height / (2 * camera.zoom)
 

@@ -1,4 +1,9 @@
 # Models/Map.py
+# On modifie la logique de déploiement des joueurs pour qu'ils occupent
+# chacun une zone carrée (ou rectangulaire) de la carte, en répartissant
+# la carte en grille en fonction du nombre de joueurs.
+
+import math
 import random
 import os
 import pickle
@@ -24,16 +29,16 @@ class GameMap:
         else:
             self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y, players)
 
-    def add_entity(self, grid, x,  y,  entity):
+    def add_entity(self, grid, x, y, entity):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
             return False
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
-                grid_entities = grid.get(pos, None)
-                if grid_entities:
+                if pos in grid:
+                    # Impossible de placer l'entité ici
                     return False
-
+        # Placement effectif
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
@@ -43,79 +48,99 @@ class GameMap:
         entity.y = y + (entity.size - 1)/2
         return True
 
+    def generate_zones(self, num_players):
+        # On veut répartir les joueurs dans une grille la plus carrée possible.
+        # Nombre de colonnes = ceil(sqrt(num_players))
+        # Nombre de lignes = ceil(num_players / cols)
+        cols = int(math.ceil(math.sqrt(num_players)))
+        rows = int(math.ceil(num_players / cols))
+
+        zone_width = self.num_tiles_x // cols
+        zone_height = self.num_tiles_y // rows
+
+        zones = []
+        # On crée une liste de zones (x_start, x_end, y_start, y_end) pour chaque joueur
+        for i in range(num_players):
+            row = i // cols
+            col = i % cols
+            x_start = col * zone_width
+            y_start = row * zone_height
+            x_end = x_start + zone_width
+            y_end = y_start + zone_height
+            # S'il reste de la place non utilisée (division non entière), c'est pas grave.
+            # On se limite au sol de zone_width/zone_height.
+            zones.append((x_start, x_end, y_start, y_end))
+        return zones
+
     def generate_buildings(self, grid, players):
         num_players = len(players)
-        zone_width = self.num_tiles_x // (num_players if num_players % 2 == 0 else 1)
-        zone_height = self.num_tiles_y // (num_players if num_players % 2 == 0 else 1)
+        zones = self.generate_zones(num_players)
 
         for index, player in enumerate(players):
-            x_start = (index % (num_players // 2)) * zone_width if num_players > 1 else 0
-            y_start = (index // (num_players // 2)) * zone_height if num_players > 1 else 0
-            x_end = x_start + zone_width if num_players > 1 else self.num_tiles_x
-            y_end = y_start + zone_height if num_players > 1 else self.num_tiles_y
+            x_start, x_end, y_start, y_end = zones[index]
 
             for building in player.buildings:
-                max_attempts = zone_width * zone_height if num_players > 1 else (self.num_tiles_x * self.num_tiles_y)
+                max_attempts = (x_end - x_start) * (y_end - y_start)
                 attempts = 0
                 placed = False
-
                 while attempts < max_attempts:
-                    x = random.randint(x_start, x_end - building.size)
-                    y = random.randint(y_start, y_end - building.size)
+                    x = random.randint(x_start, max(x_start, x_end - building.size))
+                    y = random.randint(y_start, max(y_start, y_end - building.size))
                     placed = self.add_entity(grid, x, y, building)
                     if placed:
                         break
                     attempts += 1
-
                 if not placed:
-                    for y_pos in range(y_start, y_end - building.size + 1):
-                        for x_pos in range(x_start, x_end - building.size + 1):
-                            placed = self.self.add_entity(grid, x_pos, y_pos, building)
+                    # Si impossible de placer le bâtiment dans cette zone
+                    # On essaie juste sur la carte complète en dernier recours
+                    for ty in range(self.num_tiles_y - building.size):
+                        for tx in range(self.num_tiles_x - building.size):
+                            placed = self.add_entity(grid, tx, ty, building)
                             if placed:
                                 break
-                if not placed:
-                    raise ValueError("Unable to deploy building in player zone; zone might be fully occupied.")
-    
+                        if placed:
+                            break
+                    if not placed:
+                        raise ValueError("Unable to deploy building for a player; map too crowded?")
+
     def generate_units(self, grid, players):
         num_players = len(players)
-        zone_width = self.num_tiles_x // (num_players if num_players % 2 == 0 else 1)
-        zone_height = self.num_tiles_y // (num_players if num_players % 2 == 0 else 1)
-        
+        zones = self.generate_zones(num_players)
+
         for index, player in enumerate(players):
-            x_start = (index % (num_players // 2)) * zone_width if num_players > 1 else 0
-            y_start = (index // (num_players // 2)) * zone_height if num_players > 1 else 0
-            x_end = x_start + zone_width if num_players > 1 else self.num_tiles_x
-            y_end = y_start + zone_height if num_players > 1 else self.num_tiles_y
-            
+            x_start, x_end, y_start, y_end = zones[index]
+
             for unit in player.units:
                 placed = False
                 attempts = 0
+                # On essaie de placer l'unité dans la zone du joueur
                 while not placed and attempts < 1000:
                     x_unit = random.randint(x_start, x_end - 1)
                     y_unit = random.randint(y_start, y_end - 1)
                     placed = self.add_entity(grid, x_unit, y_unit, unit)
-                    if placed:
-                        break
                     attempts += 1
-
                 if not placed:
-                    print(f"Warning: Failed to deploy villager for player {player.teamID} after 1000 attempts.")
+                    # Si non placé dans la zone, on tente globalement
+                    attempts = 0
+                    while not placed and attempts < 1000:
+                        x_unit = random.randint(0, self.num_tiles_x - 1)
+                        y_unit = random.randint(0, self.num_tiles_y - 1)
+                        placed = self.add_entity(grid, x_unit, y_unit, unit)
+                        attempts += 1
+                    if not placed:
+                        print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
     def random_map(self, num_tiles_x, num_tiles_y, players):
         grid = {}
-
-        # Generate buildings for all players
         self.generate_buildings(grid, players)
         self.generate_units(grid, players)
 
-        # Map resource types to their respective classes
         resource_classes = {
             'gold': Gold,
             'wood': Wood,
             'food': Food,
         }
 
-        # Create a list of resources to place
         resources = (
             ['gold'] * NUM_GOLD_TILES +
             ['wood'] * NUM_WOOD_TILES +
@@ -123,89 +148,52 @@ class GameMap:
         )
         random.shuffle(resources)
 
-        # Place resources on the grid
         for resource_type in resources:
             placed = False
             attempts = 0
-
             while not placed and attempts < 1000:
-                # Random position within the map bounds
                 x = random.randint(0, num_tiles_x - 1)
                 y = random.randint(0, num_tiles_y - 1)
-                pos = (x, y)
                 resource_class = resource_classes[resource_type]
                 resource = resource_class(x, y)
                 placed = self.add_entity(grid, x, y, resource)
-                if placed:
-                    break
                 attempts += 1
-
             if not placed:
                 print(f"Warning: Failed to deploy {resource_type} after 1000 attempts.")
         return grid
 
-    def print_map(self):
-        # Iterate over the grid by rows and columns
-        for y in range(self.num_tiles_y):
-            row_display = []
-            for x in range(self.num_tiles_x):
-                pos = (x, y)
-
-                # Check if the position exists in the grid
-                if pos in self.grid:
-                    # Retrieve the entities at this position
-                    entities = self.grid[pos]
-
-                    for entity in entities :
-                        row_display.append(entity.acronym)
-                else:
-                    # Default for uninitialized tiles
-                    row_display.append(' ')
-
-            # Print the row as a string
-            print(''.join(row_display))
-    
     def random_map_gold(self, num_tiles_x, num_tiles_y, players):
+        # On ne modifie pas la logique du spawn gold centré, uniquement l'assignation d'entités joueurs reste inchangée
         grid = {}
 
-        # Map resource types to their respective classes
         resource_classes = {
             'gold': Gold,
             'wood': Wood,
             'food': Food,
         }
 
-        # Create a list of resources to place
+        # Placer l'or au centre
         resources = (
             ['gold'] * NUM_GOLD_TILES +
             ['wood'] * NUM_WOOD_TILES +
             ['food'] * NUM_FOOD_TILES
         )
 
-        # Place gold resources in a central square
         center_x = num_tiles_x // 2
         center_y = num_tiles_y // 2
         gold_count = 0
         layer = 0
-
         while gold_count < NUM_GOLD_TILES:
-            # Iterate over the current square layer
             for dx in range(-layer, layer + 1):
                 for dy in range(-layer, layer + 1):
                     x = center_x + dx
                     y = center_y + dy
-                    pos = (x, y)
-
-                    # Ensure we don't exceed the map boundaries
                     if 0 <= x < num_tiles_x and 0 <= y < num_tiles_y:
-                        # Check if the position is valid for placement
-                        if pos not in grid:
-                            grid[pos] = set()
-                            
-                            # Place gold if the maximum count is not reached
+                        if (x, y) not in grid:
+                            grid[(x, y)] = set()
                             if gold_count < NUM_GOLD_TILES:
                                 resource = resource_classes['gold'](x, y)
-                                grid[pos].add(resource)
+                                grid[(x, y)].add(resource)
                                 gold_count += 1
                                 if gold_count >= NUM_GOLD_TILES:
                                     break
@@ -216,36 +204,42 @@ class GameMap:
         # Place other resources randomly
         for resource_type in resources:
             if resource_type == 'gold':
-                continue  # Skip gold as it is already placed deterministically
-
+                continue
             placed = False
             attempts = 0
-
             while not placed and attempts < 1000:
-                # Random position within the map bounds
                 x = random.randint(0, num_tiles_x - 1)
                 y = random.randint(0, num_tiles_y - 1)
-                pos = (x, y)
-
-                # Check if the position is valid
-                if pos not in grid:
-                    grid[pos] = set()
-                    # Create a new resource and place it
+                if (x, y) not in grid:
+                    grid[(x, y)] = set()
                     resource_class = resource_classes[resource_type]
                     resource = resource_class(x, y)
-                    grid[pos].add(resource)
+                    grid[(x, y)].add(resource)
                     placed = True
-
                 attempts += 1
-
             if not placed:
                 print(f"Warning: Failed to place {resource_type} after 1000 attempts.")
 
-        # Generate buildings for all players
-        self.building_generation(grid, players)
+        # Déploiement des entités joueurs
+        self.generate_buildings(grid, players)
+        self.generate_units(grid, players)
 
         return grid
 
+    def print_map(self):
+        for y in range(self.num_tiles_y):
+            row_display = []
+            for x in range(self.num_tiles_x):
+                pos = (x, y)
+                if pos in self.grid:
+                    entities = self.grid[pos]
+                    # On affiche juste le premier acronyme
+                    acr = list(entities)[0].acronym if entities else ' '
+                    row_display.append(acr)
+                else:
+                    row_display.append(' ')
+            print(''.join(row_display))
+    
     def save_map(self, directory='saves'):
         if not os.path.exists(directory):
             os.makedirs(directory)
