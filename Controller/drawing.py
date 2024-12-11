@@ -4,6 +4,7 @@
 
 import pygame
 import math
+import colorsys
 from Settings.setup import (
     HALF_TILE_SIZE,
     MINIMAP_MARGIN,
@@ -25,13 +26,18 @@ from Entity.Building import Building
 from Entity.Resource.Gold import Gold
 
 def generate_team_colors(nb_players):
-    # Génère des couleurs distinctes en répartissant des teintes sur le cercle colorimétrique
+    # Génère des couleurs avec des teintes espacées en évitant les tons de vert
     colors = []
+    step = 1.0 / nb_players
     for i in range(nb_players):
-        hue = i / nb_players
-        r = int(255 * abs(math.sin(math.pi * hue)))
-        g = int(255 * abs(math.sin(math.pi * hue + 2 * math.pi / 3)))
-        b = int(255 * abs(math.sin(math.pi * hue + 4 * math.pi / 3)))
+        hue = (i * step) % 1.0
+        # Éviter les teintes entre 90° et 150° (verts)
+        if 0.25 <= hue <= 0.4167:
+            hue = (hue + 0.2) % 1.0  # Décale la teinte pour éviter le vert
+        saturation = 1.0
+        value = 0.7  # Luminosité pour contraster avec le fond
+        r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
+        r, g, b = int(r * 255), int(g * 255), int(b * 255)
         colors.append((r, g, b))
     return colors
 
