@@ -58,3 +58,14 @@ class Camera:
         self.offset_x = max(min_offset_x, min(self.offset_x, max_offset_x))
         self.offset_y = max(min_offset_y, min(self.offset_y, max_offset_y))
 
+    def zoom_out_to_global(self):
+        # Center the camera on the entire map
+        self.offset_x = - (self.min_x + self.max_x) / 2
+        self.offset_y = - (self.min_y + self.max_y) / 2
+        # Calculate a zoom level to zoom out more significantly
+        zoom_factor = 0.5  # Adjust this value to zoom out more
+        self.zoom = zoom_factor * MIN_ZOOM
+        # Ensure the zoom level is within allowed limits
+        self.zoom = max(MIN_ZOOM, min(self.zoom, MAX_ZOOM))
+        self.limit_camera()
+

@@ -60,7 +60,7 @@ MAP_WIDTH = 120 * TILE_SIZE
 MAP_HEIGHT = 120 * TILE_SIZE 
 
 # Niveaux de zoom
-MIN_ZOOM = 0.25
+MIN_ZOOM = 0.15
 MAX_ZOOM = 3.0
 
 # Dimensions de la fenêtre en pixels

@@ -82,6 +82,9 @@ def handle_events(event, game_state):
             camera.set_zoom(camera.zoom * 1.1)
         elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
             camera.set_zoom(camera.zoom / 1.1)
+        elif event.key == pygame.K_m:
+            # Reset the camera to the global view on each press
+            camera.zoom_out_to_global()
     elif event.type == pygame.MOUSEBUTTONDOWN:
         mouse_x, mouse_y = event.pos
         if event.button == 1:
