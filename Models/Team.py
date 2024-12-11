@@ -89,7 +89,3 @@ class Team:
             s=self.army[i]
             s.task=True
             s.attaquer(True,t,map)
-
-    def write_html(self):
-        from Models.html import write_html
-        write_html(self)

@@ -2,17 +2,7 @@ import pygame
 from collections import Counter
 # [Controller/select_player.py](Controller/select_player.py)
 
-from Models.html import write_html
 
-def handle_save_html(selected_player):
-    """
-    Gère la sauvegarde des informations du joueur sélectionné en HTML.
-    
-    Args:
-        selected_player (Team): Le joueur sélectionné dont les données seront sauvegardées.
-    """
-    write_html(selected_player)
-    
 def create_player_selection_surface(players, selected_player, minimap_rect):
     """
     Crée une surface contenant les zones de sélection des joueurs.

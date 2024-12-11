@@ -12,6 +12,7 @@ def update_game_state(game_state, dt):
     minimap_offset_x = game_state.get('minimap_offset_x', 0)
     minimap_offset_y = game_state.get('minimap_offset_y', 0)
     minimap_min_iso_x = game_state.get('minimap_min_iso_x', 0)
+    minimap_min_iso_y = game_state.get('minimap_min_iso_y', 0)
     screen_width = game_state['screen_width']
     screen_height = game_state['screen_height']
 
