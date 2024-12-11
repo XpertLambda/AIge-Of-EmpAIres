@@ -22,8 +22,8 @@ class Villager(Unit):
         self.resource_rate = 25 / 60
 
     def isAvailable(self):
-        if self.task != "nothing":
-            print(f"{self.acronym} is currently busy with {self.task}.")
+        if self.task:
+            print(f"{self.acronym} is currently busy.")
             return False
         return True
 
@@ -31,42 +31,38 @@ class Villager(Unit):
         valid_resources = {'G': 'gold', 'W': 'wood', 'F': 'food'}
         if not self.isAvailable() or resource_tile.terrain_type not in valid_resources:
             return
-        self.task = "collecting resources"
-        self.SeDeplacer(resource_tile.x, resource_tile.y, map)  # Using the method from Unit
-        total_collectable = min(self.resource_rate * duration, self.carry_capacity - self.resources)
-        self.resources += total_collectable
-        print(f"{self.acronym}: Collected {total_collectable:.2f} units of {valid_resources[resource_tile.terrain_type]}.")
-        self.task = "nothing"
+        self.task = True
+        self.SeDeplacer(resource_tile.x, resource_tile.y, map)
+        self.resources += min(self.resource_rate * duration, self.carry_capacity - self.resources)
+        print(f"{self.acronym}: Collected resources.")
+        self.task = False
 
     def stockerRessources(self, building, map):
         if not self.isAvailable() or not building.resourceDropPoint:
             return
-        self.task = "storing resources"
-        self.SeDeplacer(building.x, building.y, map)  # Using the method from Unit
-        print(f"{self.acronym}: Storing {self.resources} resources in {building.acronym}.")
+        self.task = True
+        self.SeDeplacer(building.x, building.y, map)
+        print(f"{self.acronym}: Stored resources.")
         building.addResources(self.resources)
         self.resources = 0
-        self.task = "nothing"
+        self.task = False
 
     def buildBatiment(self, building, x, y, map, num_villagers):
         if not self.isAvailable():
             return
-        self.task = "building"
-        self.SeDeplacer(x, y, map)  # Using the method from Unit
+        self.task = True
+        self.SeDeplacer(x, y, map)
         if not map.can_place_building(map.grid, x, y, building):
-            print(f"{self.acronym}: Cannot place {building.acronym} at ({x}, {y}).")
-            self.task = "nothing"
+            print(f"{self.acronym}: Cannot place building.")
+            self.task = False
             return
-        time_needed = self.buildTime(building, num_villagers)
         if self.resources >= building.woodCost:
             self.resources -= building.woodCost
-            print(f"{self.acronym}: Building {building.acronym} at ({x}, {y}). This will take {time_needed:.2f} seconds.")
+            print(f"{self.acronym}: Building...")
             map.place_building(x, y, building)
         else:
-            print(f"{self.acronym}: Not enough resources to build {building.acronym}.")
-        self.task = "nothing"
+            print(f"{self.acronym}: Not enough resources.")
+        self.task = False
 
     def buildTime(self, building, num_villagers):
-        if num_villagers <= 0:
-            return building.buildTime
-        return max(10, (3 * building.buildTime) / (num_villagers + 2))
+        return max(10, (3 * building.buildTime) / (num_villagers + 2)) if num_villagers > 0 else building.buildTime
