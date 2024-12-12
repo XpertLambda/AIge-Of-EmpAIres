@@ -11,7 +11,7 @@ def main():
     # Déballer les retours de init_pygame
     screen, screen_width, screen_height = init_pygame()
     players = init_players(NUMBER_OF_PLAYERS)
-    load_sprites()
+    load_sprites(screen,screen_width,screen_height)
     # Initialiser la carte de jeu
     game_map = GameMap(players)
     game_map.print_map()

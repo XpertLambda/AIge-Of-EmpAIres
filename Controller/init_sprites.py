@@ -4,8 +4,10 @@
 import re
 import pygame
 import os
+import time
 from collections import OrderedDict
 from Settings.setup import *
+
 
 
 Entity_Acronym = {
@@ -48,6 +50,14 @@ states = {
     1 : 'walk',
     2 : 'attack',
     3 : 'death'
+}
+
+
+sprite_loading_screen = {
+    'loading_screen':{
+        'directory': 'assets/launcher/',
+        'scale':None
+    }
 }
 
 sprite_config = {
@@ -181,7 +191,69 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
                 frames.append(frame)
     return frames
 
-def load_sprites(sprite_config=sprite_config):
+def draw_progress_bar(screen, progress, screen_width, screen_height, loading_text):
+    bar_width = screen_width * 0.8
+    bar_height = 30
+    bar_x = (screen_width - bar_width) / 2
+    bar_y = screen_height * 0.9
+
+    # Effacer la zone de la barre de progression
+    pygame.draw.rect(screen, (0, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+
+    # Dessiner la barre de progression
+    pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 2)
+    pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_width * progress, bar_height))
+
+    # Afficher le pourcentage
+    font = pygame.font.Font(None, 36)
+    text = font.render(f"{int(progress * 100)}%", True, (255, 255, 255))
+    text_rect = text.get_rect(center=(bar_x + bar_width / 2, bar_y + bar_height / 2))
+
+    # Déterminer la couleur du texte en fonction de la position de la barre de progression
+    if progress >=0.5:
+        text_color = (0, 0, 0)  # Noir
+    else:
+        text_color = (255, 255, 255)  # Blanc
+
+    text = font.render(f"{int(progress * 100)}%", True, text_color)
+    screen.blit(text, text_rect)
+
+    # Afficher le texte "Loading..."
+    loading_text_surface = font.render(loading_text, True, (0, 0, 0))
+    loading_text_rect = loading_text_surface.get_rect(midleft=(bar_x + 10, bar_y + bar_height / 2))
+    screen.blit(loading_text_surface, loading_text_rect)
+
+    pygame.display.flip()
+
+
+
+def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config, sprite_loading_screen=sprite_loading_screen):
+    total_files = sum(len(files) for _, _, files in os.walk('assets'))
+    loaded_files = 0
+    loading_text = "Loading..."
+    for category, value in sprite_loading_screen.items():
+        directory = value.get('directory')
+        scale = (screen_width, screen_height)
+        try:
+            dir_content = os.listdir(directory)
+        except FileNotFoundError:
+            print(f"Directory not found: {directory}")
+            continue
+
+        for filename in dir_content:
+            if filename.lower().endswith("webp"):
+                filepath = os.path.join(directory, filename)
+                sprite = load_sprite(filepath, scale)
+                print(f'--> Loaded {filename} of type: {category}')
+                # Afficher l'écran de chargement
+                if category == 'loading_screen':
+                    screen.blit(sprite, (0, 0))
+                    pygame.display.flip()
+                loaded_files += 1
+                progress = loaded_files / total_files
+                draw_progress_bar(screen, progress, screen_width, screen_height,loading_text)
+                
+
     for category in sprite_config:
         sprites[category] = {}
         for sprite_name, value in sprite_config[category].items():
@@ -208,6 +280,10 @@ def load_sprites(sprite_config=sprite_config):
                         sprite = load_sprite(filepath, scale, adjust)
                         sprites[category][sprite_name].append(sprite)  # Append sprite to list
                         print(f'--> Loaded {sprite_name} of type : {category}')
+                        loaded_files += 1
+                        progress = loaded_files / total_files
+                        draw_progress_bar(screen, progress, screen_width, screen_height,loading_text)
+                        
             elif category == 'buildings':
                 sprites[category][sprite_name] = {}
                 try:
@@ -232,7 +308,12 @@ def load_sprites(sprite_config=sprite_config):
                             filepath = os.path.join(team_path, filename)
                             sprite = load_sprite(filepath, scale, adjust)
                             sprites[category][sprite_name][team].append(sprite)  # Append sprite to list
+                            loaded_files += 1
+                            progress = loaded_files / total_files
+                            draw_progress_bar(screen, progress, screen_width, screen_height,loading_text)
+                            
                     print(f'--> Loaded {sprite_name}, type : {category}')
+                
             elif category == 'units' :
                 #Uncomment this continue to get faster loading
                 #continue
@@ -278,10 +359,16 @@ def load_sprites(sprite_config=sprite_config):
                                     print(f"Error loading sprite sheet {filepath}: {e}")
                                     print(f"info : category : {category}, sprite_name : {sprite_name}, team : {team}, state : {state}")
                                     exit() 
+                                loaded_files += 1
+                                progress = loaded_files / total_files
+                                draw_progress_bar(screen, progress, screen_width, screen_height,loading_text)
+                                
+                loaded_files += 1
+                progress = loaded_files / total_files
+                draw_progress_bar(screen, progress, screen_width, screen_height,loading_text)
+                
                 print(f'--> Loaded {sprite_name}, type : {category}')
-
     print("Sprites loaded successfully.")
-
 # Function to get a scaled sprite, handling both static and animated sprites
 def get_scaled_sprite(name, category, zoom, team, state, frame_id):
     cache_key = (zoom, frame_id, team, state)
