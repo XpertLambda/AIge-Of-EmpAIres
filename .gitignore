@@ -1,2 +1,33 @@
+# Ignorer les répertoires de cache Python
 __pycache__/
+*.py[cod]
+
+# Ignorer les fichiers système
 .DS_Store
+
+# Ignorer les fichiers de débogage
+deb.debug
+
+# Ignorer les fichiers HTML générés
+full_snapshot.html
+
+# Ignorer les répertoires de cache spécifiques
+Models/__pycache__/
+Settings/__pycache__/
+Controller/__pycache__/
+Entity/__pycache__/
+
+
+# Ignorer les sauvegardes
+#saves/
+
+# Ignorer les configurations d'IDE
+.vscode/
+.idea/
+
+# Ignorer les fichiers logsI
+*.log
+
+# Ignorer les fichiers temporaires
+*.tmp
+*.temp
