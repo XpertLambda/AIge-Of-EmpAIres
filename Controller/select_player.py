@@ -9,14 +9,33 @@ from Controller.drawing import TEAM_COLORS
 def create_player_selection_surface(players, selected_player, minimap_rect):
     selection_height = 30
     padding = 5
-    total_height = selection_height * len(players) + padding * (len(players) - 1)
+
+    # Obtenir la hauteur de l'écran
+    screen = pygame.display.get_surface()
+    screen_height = screen.get_height()
+    max_height = screen_height / 3  # Taille maximale de 1/3 de la fenêtre
+
+    # Déterminer le nombre optimal de colonnes
+    columns = 1
+    while columns <= 4:
+        rows = (len(players) + columns - 1) // columns
+        total_height = selection_height * rows + padding * (rows - 1)
+        if total_height <= max_height or columns == 4:
+            break
+        columns += 1
+
+    button_width = (minimap_rect.width - padding * (columns - 1)) // columns
+    rows = (len(players) + columns - 1) // columns
+    total_height = selection_height * rows + padding * (rows - 1)
 
     surface = pygame.Surface((minimap_rect.width, total_height), pygame.SRCALPHA)
 
-    # On affiche la couleur de l'équipe sur le bouton
-    for i, player in enumerate(reversed(players)):
-        rect_y = i * (selection_height + padding)
-        rect = pygame.Rect(0, rect_y, minimap_rect.width, selection_height)
+    for index, player in enumerate(reversed(players)):
+        col = index % columns
+        row = index // columns
+        rect_x = col * (button_width + padding)
+        rect_y = row * (selection_height + padding)
+        rect = pygame.Rect(rect_x, rect_y, button_width, selection_height)
         player_color = TEAM_COLORS[player.teamID % len(TEAM_COLORS)]
 
         # Si c'est le joueur sélectionné, on accentue la couleur, sinon on l'assombrit

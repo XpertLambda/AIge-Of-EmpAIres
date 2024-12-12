@@ -101,11 +101,38 @@ def handle_events(event, game_state):
             if minimap_rect.collidepoint(mouse_x, mouse_y):
                 game_state['minimap_dragging'] = True
             else:
-                # Sélection du joueur via la liste au-dessus de la minimap
                 player_clicked = False
-                for i, player in enumerate(players):
-                    rect_y = minimap_rect.y - (i + 1) * (30 + 5)
-                    rect = pygame.Rect(minimap_rect.x, rect_y, minimap_rect.width, 30)
+
+                # Obtenir les dimensions des boutons depuis select_player.py
+                selection_height = 30
+                padding = 5
+                players = game_state['players']
+                screen_height = game_state['screen_height']
+                max_height = screen_height / 3
+
+                # Déterminer le nombre de colonnes utilisé
+                columns = 1
+                while columns <= 4:
+                    rows = (len(players) + columns - 1) // columns
+                    total_height = selection_height * rows + padding * (rows - 1)
+                    if total_height <= max_height or columns == 4:
+                        break
+                    columns += 1
+
+                button_width = (minimap_rect.width - padding * (columns - 1)) // columns
+                rows = (len(players) + columns - 1) // columns
+
+                # Calculer l'origine des boutons
+                surface_height = selection_height * rows + padding * (rows - 1)
+                buttons_origin_x = minimap_rect.x
+                buttons_origin_y = minimap_rect.y - surface_height - padding
+
+                for index, player in enumerate(reversed(players)):
+                    col = index % columns
+                    row = index // columns
+                    rect_x = buttons_origin_x + col * (button_width + padding)
+                    rect_y = buttons_origin_y + row * (selection_height + padding)
+                    rect = pygame.Rect(rect_x, rect_y, button_width, selection_height)
                     if rect.collidepoint(mouse_x, mouse_y):
                         if game_state['selected_player'] != player:
                             game_state['selected_player'] = player
