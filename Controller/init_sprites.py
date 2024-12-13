@@ -276,16 +276,12 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                         if filename.lower().endswith("webp"):
                             filepath = os.path.join(team_path, filename)
                             sprite = load_sprite(filepath, scale, adjust)
-                            sprites[category][sprite_name][team].append(sprite)  # Append sprite to list
+                            sprites[category][sprite_name].append(sprite)  # Append sprite to list
                             loaded_files += 1
                             progress = loaded_files / total_files
                             draw_progress_bar(screen, progress, screen_width, screen_height,loading_text)
                             
                     print(f'--> Loaded {sprite_name}, type : {category}')
-                
-            elif category == 'units' :
-                #Uncomment this continue to get faster loading
-                #continue
 
             elif category == 'units':
                 # On ne charge que le dossier "blue"
@@ -309,7 +305,7 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                                     sprites[category][sprite_name][state_dir].extend(frames)
                                 except Exception as e:
                                     print(f"Error loading sprite sheet {filepath}: {e}")
-                                    print(f"info : category : {category}, sprite_name : {sprite_name}, team : {team}, state : {state}")
+                                    print(f"info : category : {category}, sprite_name : {sprite_name}, state : {state}")
                                     exit() 
                                 loaded_files += 1
                                 progress = loaded_files / total_files
@@ -322,8 +318,8 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                 print(f'--> Loaded {sprite_name}, type : {category}')
     print("Sprites loaded successfully.")
 # Function to get a scaled sprite, handling both static and animated sprites
-def get_scaled_sprite(name, category, zoom, team, state, frame_id):
-    cache_key = (zoom, frame_id, team, state)
+def get_scaled_sprite(name, category, zoom, state, frame_id):
+    cache_key = (zoom, frame_id, state)  # Removed 'team' from cache_key
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
 
@@ -353,7 +349,7 @@ def get_scaled_sprite(name, category, zoom, team, state, frame_id):
         zoom_cache[name].popitem(last=False)
     return scaled_image
 
-def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, team=None, state=None, frame_id=0):
+def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame_id=0):
     # On ignore team et on force l'utilisation des sprites "blue".
     # On garde la gestion de l'état si elle est définie, sinon "idle"
     if state is not None:
@@ -362,7 +358,7 @@ def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, team=None, 
         state = fixed_state
 
     name = Entity_Acronym[category][acronym]
-    scaled_sprite = get_scaled_sprite(name, category, zoom, frame_id, state)
+    scaled_sprite = get_scaled_sprite(name, category, zoom, state, frame_id)
     if scaled_sprite is None:
         return
     scaled_width = scaled_sprite.get_width()
