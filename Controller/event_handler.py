@@ -74,9 +74,9 @@ def handle_events(event, game_state):
                 pass
             pygame.quit()
             sys.exit()
-        if event.key == pygame.K_k:
+        if event.key == pygame.K_F11:
             game_state['game_map'].save_map()
-        elif event.key == pygame.K_l:
+        elif event.key == pygame.K_F12:
             root = Tk()
             root.withdraw()
             filename = filedialog.askopenfilename(
