@@ -48,6 +48,23 @@ class GameMap:
         entity.y = y + (entity.size - 1)/2
         return True
 
+    def remove_entity(self, grid, x, y, entity):
+        if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
+            return False  # Position out of bounds
+        for i in range(entity.size):
+            for j in range(entity.size):
+                pos = (x + i, y + j)
+                if pos not in grid or entity not in grid[pos]:
+                    return False  # Entity not present at the position
+        # Remove entity from the grid
+        for i in range(entity.size):
+            for j in range(entity.size):
+                pos = (x + i, y + j)
+                grid[pos].remove(entity)
+                if not grid[pos]:  # clean up the position if there is an empty set
+                    del grid[pos]
+    return True
+
     def generate_zones(self, num_players):
         # On veut répartir les joueurs dans une grille la plus carrée possible.
         # Nombre de colonnes = ceil(sqrt(num_players))
