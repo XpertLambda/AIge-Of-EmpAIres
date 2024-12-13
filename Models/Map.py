@@ -63,7 +63,7 @@ class GameMap:
                 grid[pos].remove(entity)
                 if not grid[pos]:  # clean up the position if there is an empty set
                     del grid[pos]
-    return True
+        return True
 
     def generate_zones(self, num_players):
         # On veut répartir les joueurs dans une grille la plus carrée possible.
