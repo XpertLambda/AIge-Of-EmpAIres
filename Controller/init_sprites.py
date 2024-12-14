@@ -179,7 +179,7 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, loading_tex
     bar_width = screen_width * 0.8
     bar_height = 30
     bar_x = (screen_width - bar_width) / 2
-    bar_y = screen_height * 0.9
+    bar_y = screen_height * 0.6
 
     # Effacer la zone de la barre de progression
     pygame.draw.rect(screen, (0, 0, 0), (bar_x, bar_y, bar_width, bar_height))
