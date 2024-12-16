@@ -9,7 +9,8 @@ from Controller.drawing import (
     create_minimap_background,
     display_fps,
     update_minimap_entities,
-    draw_minimap_viewport
+    draw_minimap_viewport,
+    generate_team_colors  # Import the function
 )
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
@@ -21,6 +22,7 @@ from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
     camera = Camera(screen_width, screen_height)
+    team_colors = generate_team_colors(len(players))
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
@@ -67,7 +69,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'fullscreen': fullscreen,
         'player_selection_updated': True,
         'player_info_updated': True,
-        'minimap_entities_surface': minimap_entities_surface
+        'minimap_entities_surface': minimap_entities_surface,
+        'team_colors': team_colors
     }
 
     player_selection_surface = None
@@ -105,6 +108,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         minimap_min_iso_x = game_state['minimap_min_iso_x']
         minimap_min_iso_y = game_state['minimap_min_iso_y']
         minimap_entities_surface = game_state['minimap_entities_surface']
+        team_colors = game_state['team_colors']
 
         # Only update game logic and entities when not paused
         if not game_state.get('paused', False):
@@ -112,15 +116,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 update_minimap_entities(game_state)
 
             if player_selection_updated:
-                player_selection_surface = create_player_selection_surface(players, selected_player, minimap_rect)
+                player_selection_surface = create_player_selection_surface(
+                    players, selected_player, minimap_rect, team_colors)
                 game_state['player_selection_updated'] = False
 
             if player_info_updated:
-                player_info_surface = create_player_info_surface(selected_player, screen_width)
+                player_info_surface = create_player_info_surface(
+                    selected_player, screen_width, team_colors)
                 game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
-        draw_map(screen, screen_width, screen_height, game_map, camera, players)
+        draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors)
 
         # Au lieu de recréer la minimap de fond, on la blitte seulement :
         screen.blit(minimap_background, minimap_rect.topleft)

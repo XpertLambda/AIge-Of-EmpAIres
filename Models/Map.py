@@ -18,16 +18,15 @@ from Entity.Resource.Food import Food
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE
 
 class GameMap:
-    def __init__(self, players, width=MAP_WIDTH, height=MAP_HEIGHT):
-        self.width = width
-        self.height = height
-        self.num_tiles_x = width // TILE_SIZE
-        self.num_tiles_y = height // TILE_SIZE
-        self.players = players
-        if GOLD_SPAWN_MIDDLE:
+    def __init__(self, grid_size, gold_at_center, players):
+        self.players = players  # Store the players list
+        self.num_tiles_x = grid_size
+        self.num_tiles_y = grid_size
+        self.num_tiles = self.num_tiles_x * self.num_tiles_y
+        if gold_at_center:
             self.grid = self.random_map_gold(self.num_tiles_x, self.num_tiles_y, players)
         else:
-            self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y, players)
+            self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y)
 
     def add_entity(self, grid, x, y, entity):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
@@ -147,10 +146,10 @@ class GameMap:
                     if not placed:
                         print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
-    def random_map(self, num_tiles_x, num_tiles_y, players):
+    def random_map(self, num_tiles_x, num_tiles_y):
         grid = {}
-        self.generate_buildings(grid, players)
-        self.generate_units(grid, players)
+        self.generate_buildings(grid, self.players)  # Use self.players
+        self.generate_units(grid, self.players)
 
         resource_classes = {
             'gold': Gold,

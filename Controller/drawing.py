@@ -11,7 +11,6 @@ from Settings.setup import (
     MINIMAP_WIDTH,
     MINIMAP_HEIGHT,
     MAP_PADDING,
-    NUMBER_OF_PLAYERS
 )
 from Entity.Unit import Unit
 from Entity.Building import Building
@@ -41,9 +40,7 @@ def generate_team_colors(nb_players):
         colors.append((r, g, b))
     return colors
 
-TEAM_COLORS = generate_team_colors(NUMBER_OF_PLAYERS)
-
-def draw_health_bar(screen, screen_x, screen_y, entity):
+def draw_health_bar(screen, screen_x, screen_y, entity, team_colors):
     if not entity.should_draw_health_bar():
         return
     ratio = entity.get_health_ratio()
@@ -54,7 +51,7 @@ def draw_health_bar(screen, screen_x, screen_y, entity):
     bar_height = 5
     team_color = (255, 255, 255)
     if entity.team is not None:
-        team_color = TEAM_COLORS[entity.team % len(TEAM_COLORS)]
+        team_color = team_colors[entity.team % len(team_colors)]
 
     bg_rect = pygame.Rect(screen_x - bar_width//2, screen_y - 30, bar_width, bar_height)
     pygame.draw.rect(screen, (50,50,50), bg_rect)
@@ -64,7 +61,7 @@ def draw_health_bar(screen, screen_x, screen_y, entity):
     pygame.draw.rect(screen, team_color, fill_rect)
     
 
-def draw_map(screen, screen_width, screen_height, game_map, camera, players):
+def draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors):
     corners_screen = [
         (0, 0),
         (screen_width, 0),
@@ -101,7 +98,7 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players):
     for entity in sorted(visible_entites, key=lambda entity: (entity.x + entity.y)):
         entity.display(screen, screen_width, screen_height, camera)
         screen_x, screen_y = tile_to_screen(entity.x, entity.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_health_bar(screen, screen_x, screen_y, entity)
+        draw_health_bar(screen, screen_x, screen_y, entity, team_colors)
 
 def compute_map_bounds(game_map):
     tile_width = HALF_TILE_SIZE
@@ -174,6 +171,7 @@ def update_minimap_entities(game_state):
     minimap_min_iso_y = game_state['minimap_min_iso_y']
     minimap_entities_surface = game_state['minimap_entities_surface']
     game_map = game_state['game_map']
+    team_colors = game_state['team_colors']  # Récupérer team_colors depuis game_state
 
     minimap_entities_surface.fill((0,0,0,0))
 
@@ -198,7 +196,7 @@ def update_minimap_entities(game_state):
         minimap_y = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
         
         if team is not None:
-            color = TEAM_COLORS[team % len(TEAM_COLORS)]
+            color = team_colors[team % len(team_colors)]
             if isinstance(entity, Building):
                 half_dim = max(MIN_BUILDING_SIZE, size)
                 rect = pygame.Rect(minimap_x - half_dim, minimap_y - half_dim, half_dim*2, half_dim*2)
