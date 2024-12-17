@@ -11,6 +11,7 @@ class Team:
         self.units = []     
         self.buildings = []
         self.teamID = teamID
+        self.army = set()
         
         if difficulty == 'DEBUG':
             self.resources["gold"] = LEAN_STARTING_GOLD
