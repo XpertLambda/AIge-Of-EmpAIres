@@ -28,6 +28,10 @@ def main():
                 game_map = GameMap(0, False, [], generate=False)
                 game_map.load_map(full_path)
 
+                # Afficher la carte dans le terminal
+                print("Carte chargée :")
+                game_map.display_map_in_terminal()
+
                 # Récupère les joueurs de la sauvegarde
                 players = game_map.players
 

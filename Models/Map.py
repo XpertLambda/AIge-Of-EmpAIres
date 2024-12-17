@@ -295,3 +295,19 @@ class GameMap:
             print(f"Game map loaded successfully from {filename}.")
         except Exception as e:
             print(f"Error loading game map: {e}")
+
+    def display_map_in_terminal(self):
+        """
+        Affiche une représentation textuelle de la carte dans le terminal.
+        """
+        for y in range(self.num_tiles_y):
+            row = ''
+            for x in range(self.num_tiles_x):
+                entities = self.grid.get((x, y), None)
+                if entities:
+                    # Use the acronym of the first entity on the tile
+                    entity = next(iter(entities))
+                    row += entity.acronym
+                else:
+                    row += ' '
+            print(row)
