@@ -11,7 +11,7 @@ class Team:
         self.units = []     
         self.buildings = []
         self.teamID = teamID
-        
+        self.en_cours=dict()
         if difficulty == 'DEBUG':
             self.resources["gold"] = LEAN_STARTING_GOLD
             self.resources["food"] = LEAN_STARTING_FOOD
@@ -48,7 +48,7 @@ class Team:
                 self.units.append(Villager(team = teamID))
             for _ in range(MEAN_NUMBER_OF_TOWER_CENTRE):
                 self.buildings.append(TownCentre(team = teamID))
-                self.army = set()
+                self.units = set()
 
         elif difficulty == 'marines':
             self.resources["gold"] = MARINES_STARTING_GOLD
@@ -66,26 +66,84 @@ class Team:
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team = teamID))
 
-    
     def gestion(self):
-        for u in self.army:
+        for u in self.units:
             if u.hp==0:
-                self.army.remove(u)
+                self.units.remove(u)
         for b in self.buildings:
             if b.hp==0:
-                self.army.remove(b)
+                self.units.remove(b)
+        for i in range(0,len(self.units)):
+            s=self.units[i]
+            if not(isinstance(s,Villager)):
+                
+                s.task=False
+
+    def gestion_crea(self,clock):
+        for e,t in self.en_cours.items:
+            
+            if isinstance(e,Building):
+                if clock-t==e.build_time:
+                    self.buildings.append(e)
+            else:
+                if clock-t==e.training_time:
+                    self.units.append(e)
+
+        for i in range(0,len(self.units)):
+                if not(isinstance(s,Villager)):
+                    s=self.units[i]
+                    s.task=False
+
+    def bat(building,clock,nb):
+        #building:batiment qu'on veut construire
+        #clock: temps actuel
+        #nb: nombre de villageois maximum qui va construire
+       
+        if not map.can_place_building(map.grid, x, y, building):
+            print(f"{self.acronym}: Cannot place building.")
+            return False
+        if all([e.task for e in self.units if isinstance(e,Villager)]):
+            print("les villageois sont occupés")
+            return False
+        if self.resources >= building.woodCost:
+            self.resources -= building.woodCost
+            print(f"{self.acronym}: Building...")
+
+            map.place_building(x, y, building)
+        else:
+            print(f"{self.acronym}: Not enough resources.")
+            return False
+        i=0
+        while(i<len(self.units and i<nb)):
+            v=self.units[i]
+            if isinstance(v,Villager) and not(v.task):
+                #v.buildBatiment() a finir
+                pass
+
+        building.build_time=v.buildTime(buldingi)
+        t.en_cours[building]=clock
 
 
     def battle(self,t,map,nb):
-        for i in range(0,len(t.army)):
-            s=t.army[i]
-            print("ok")
-            if not(s.task):
+        for i in range(0,len(t.units)):
+            s=t.units[i]
+            if not(s.task) and not(isinstance(s,Villager)):
                 print("ok")
                 s.task=True
                 s.attaquer(False,self,map)
   
-        for i in range(0,min(nb,len(self.army))):
-            s=self.army[i]
-            s.task=True
-            s.attaquer(True,t,map)
+        for i in range(0,min(nb,len(self.units))):
+            s=self.units[i]
+            if not(isinstance(s,Villager)):
+               
+                s.task=True
+                s.attaquer(True,t,map)
+
+    def defense_villageois(self):
+       #sert a faire defendre tout le monde meme les villageois
+       #doit etre utiliser avant battle
+         for i in range(0,len(self.units)):
+                s=self.units[i]
+                s.task=True   
+                s.attaquer(False,self.cible,map)
+ 

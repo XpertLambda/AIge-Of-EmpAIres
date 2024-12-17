@@ -20,3 +20,8 @@ class Barracks(Building):
 
     def build_time(self, num_villagers):
         return (3 * Barracks.build_time) / (num_villagers + 2)
+    def entraine(self,t,clock):
+        s=Swordsman(t)
+        if(t.resources["food"]>s.cost_food):
+            t.en_cours[s]=clock
+           

@@ -24,7 +24,7 @@ class Unit(Entity):
         self.task="nothing"
         self.id=Unit.cpt
         Unit.cpt+=1
-
+        self.cible=None
         self.state = random.randint(0, 3)
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
@@ -41,11 +41,11 @@ class Unit(Entity):
         if(self.cible == None or self.cible.hp==0):
             b=self.search(t,att)
         if b:
-            if dist(self.x,self.y,self.cible.x,self.cible.y)<100:
+            if self.dist(self.x,self.y,self.cible.x,self.cible.y)<100:
                 self.current_frame=0
                 self.frame_counter=0
                 self.cible.hp-=self.attack
-                cible.notify_damage()  # éventuellement notifier les dommages ici
+                self.cible.notify_damage()  # éventuellement notifier les dommages ici
             else:
                 self.SeDeplacer(self.cible.x,self.cible.y,map)
         return b
@@ -53,16 +53,16 @@ class Unit(Entity):
     def search(self,t,att):
         min=300000
         e=None
-        for u in t.army:
-            distance=dist(u.x,u.y,self.x,self.y)
+        for u in t.units:
+            distance=self.dist(u.x,u.y,self.x,self.y)
             if(att or distance<100):
                 if(distance<min):
                     min=distance
                     e=u         
         if att:
             for b in t.buildings:
-                print("b=",b)
-                distance=dist(b.x,b.y,self.x,self.y)
+               
+                distance=self.dist(b.x,b.y,self.x,self.y)
                 if(distance<min):
                     min=distance
                     e=b
