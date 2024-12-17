@@ -3,10 +3,10 @@
 
 import pygame
 from collections import Counter
-from Settings.setup import NUMBER_OF_PLAYERS
-from Controller.drawing import TEAM_COLORS
+# Supprimer l'importation de TEAM_COLORS
+# from Controller.drawing import TEAM_COLORS
 
-def create_player_selection_surface(players, selected_player, minimap_rect):
+def create_player_selection_surface(players, selected_player, minimap_rect, team_colors):
     selection_height = 30
     padding = 5
 
@@ -30,36 +30,36 @@ def create_player_selection_surface(players, selected_player, minimap_rect):
 
     surface = pygame.Surface((minimap_rect.width, total_height), pygame.SRCALPHA)
 
+    font = pygame.font.Font(None, 24)
+
     for index, player in enumerate(reversed(players)):
         col = index % columns
         row = index // columns
         rect_x = col * (button_width + padding)
         rect_y = row * (selection_height + padding)
         rect = pygame.Rect(rect_x, rect_y, button_width, selection_height)
-        player_color = TEAM_COLORS[player.teamID % len(TEAM_COLORS)]
 
-        # Si c'est le joueur sélectionné, on accentue la couleur, sinon on l'assombrit
         if player == selected_player:
-            color = player_color
+            color = (255, 255, 255)
         else:
-            color = tuple(min(255, c+50) for c in player_color)
+            color = team_colors[player.teamID % len(team_colors)]
 
         pygame.draw.rect(surface, color, rect)
 
-        font = pygame.font.Font(None, 24)
-        text = font.render(f"Player {player.teamID}", True, (255, 255, 255))
-        text_rect = text.get_rect(center=rect.center)
-        surface.blit(text, text_rect)
+        player_text = font.render(f'Player {player.teamID}', True, (0, 0, 0))
+        text_rect = player_text.get_rect(center=rect.center)
+        surface.blit(player_text, text_rect)
 
     return surface
 
-def create_player_info_surface(selected_player, screen_width):
+def create_player_info_surface(selected_player, screen_width, team_colors):
     font = pygame.font.Font(None, 24)
     padding = 5
     info_height = 130
     surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
 
-    player_name_surface = font.render(f"Player {selected_player.teamID}", True, (255, 255, 255))
+    team_color = team_colors[selected_player.teamID % len(team_colors)]
+    player_name_surface = font.render(f"Player {selected_player.teamID}", True, team_color)
     surface.blit(player_name_surface, (padding, 0))
 
     resources_text = f"Resources - Food: {selected_player.resources['food']}, Wood: {selected_player.resources['wood']}, Gold: {selected_player.resources['gold']}"

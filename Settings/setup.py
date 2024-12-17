@@ -83,8 +83,8 @@ MINIMAP_WIDTH = 600  # Largeur de la minimap
 MINIMAP_HEIGHT = 280  # Hauteur de la minimap
 MINIMAP_MARGIN = 20   # Marge de la minimap
 
-# Nombre de joueurs 
-NUMBER_OF_PLAYERS = 2
+# Supprimer le paramètre NUMBER_OF_PLAYERS s'il existe
+# NUMBER_OF_PLAYERS = 4
 
 # Autres constantes
 MAP_PADDING = 650

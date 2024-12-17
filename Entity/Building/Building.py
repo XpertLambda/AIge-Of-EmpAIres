@@ -22,7 +22,7 @@ class Building(Entity):
     def display(self, screen, screen_width, screen_height, camera):
         category = 'buildings'
         screen_x, screen_y = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom, team=self.team)
+        draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom)
 
     def is_walkable(self):
         return self.walkable
