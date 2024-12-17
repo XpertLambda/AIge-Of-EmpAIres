@@ -61,7 +61,6 @@ class Unit(Entity):
                     e=u         
         if att:
             for b in t.buildings:
-               
                 distance=self.dist(b.x,b.y,self.x,self.y)
                 if(distance<min):
                     min=distance

@@ -24,4 +24,3 @@ class Barracks(Building):
         s=Swordsman(t)
         if(t.resources["food"]>s.cost_food):
             t.en_cours[s]=clock
-           
