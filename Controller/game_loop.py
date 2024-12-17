@@ -10,14 +10,12 @@ from Controller.drawing import (
     display_fps,
     update_minimap_entities,
     draw_minimap_viewport,
-    generate_team_colors  # Import the function
+    generate_team_colors
 )
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
 from Controller.select_player import create_player_selection_surface, create_player_info_surface
 from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
-
-# Dans game_loop.py
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
@@ -36,7 +34,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         minimap_height
     )
 
-    # Création de la minimap de fond une seule fois au démarrage
     minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
     minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
         game_map, minimap_width, minimap_height
@@ -45,7 +42,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     minimap_entities_surface = pygame.Surface((minimap_width, minimap_height), pygame.SRCALPHA)
     minimap_entities_surface.fill((0,0,0,0))
 
-    selected_player = players[0]
+    selected_player = players[0] if players else None
     minimap_dragging = False
     fullscreen = False
 
@@ -55,7 +52,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'selected_player': selected_player,
         'minimap_rect': minimap_rect,
         'minimap_dragging': minimap_dragging,
-        'minimap_background': minimap_background,   # On réutilise cette minimap de fond
+        'minimap_background': minimap_background,
         'minimap_scale': minimap_scale,
         'minimap_offset_x': minimap_offset_x,
         'minimap_offset_y': minimap_offset_y,
@@ -88,10 +85,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if event.type == pygame.QUIT:
                 running = False
 
-        # Always update the game state to handle input, even when paused
         update_game_state(game_state, dt)
 
-        # Update variables from game_state
         camera = game_state['camera']
         minimap_rect = game_state['minimap_rect']
         screen = game_state['screen']
@@ -99,28 +94,24 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         screen_height = game_state['screen_height']
         selected_player = game_state['selected_player']
         players = game_state['players']
-        player_selection_updated = game_state['player_selection_updated']
-        player_info_updated = game_state['player_info_updated']
-        minimap_background = game_state['minimap_background']
-        minimap_scale = game_state['minimap_scale']
-        minimap_offset_x = game_state['minimap_offset_x']
-        minimap_offset_y = game_state['minimap_offset_y']
-        minimap_min_iso_x = game_state['minimap_min_iso_x']
-        minimap_min_iso_y = game_state['minimap_min_iso_y']
-        minimap_entities_surface = game_state['minimap_entities_surface']
         team_colors = game_state['team_colors']
+        game_map = game_state['game_map']
 
-        # Only update game logic and entities when not paused
+        if game_state.get('recompute_camera', False):
+            min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_state['game_map'])
+            camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
+            game_state['recompute_camera'] = False
+
         if not game_state.get('paused', False):
             if frame_counter % update_interval == 0:
                 update_minimap_entities(game_state)
 
-            if player_selection_updated:
+            if game_state.get('player_selection_updated', False):
                 player_selection_surface = create_player_selection_surface(
                     players, selected_player, minimap_rect, team_colors)
                 game_state['player_selection_updated'] = False
 
-            if player_info_updated:
+            if game_state.get('player_info_updated', False):
                 player_info_surface = create_player_info_surface(
                     selected_player, screen_width, team_colors)
                 game_state['player_info_updated'] = False
@@ -128,10 +119,14 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         screen.fill((0, 0, 0))
         draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors)
 
-        # Au lieu de recréer la minimap de fond, on la blitte seulement :
-        screen.blit(minimap_background, minimap_rect.topleft)
-        screen.blit(minimap_entities_surface, minimap_rect.topleft)
-        draw_minimap_viewport(screen, camera, minimap_rect, minimap_scale, minimap_offset_x, minimap_offset_y, minimap_min_iso_x, minimap_min_iso_y)
+        screen.blit(game_state['minimap_background'], minimap_rect.topleft)
+        screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)
+        draw_minimap_viewport(screen, camera, minimap_rect,
+                              game_state['minimap_scale'], 
+                              game_state['minimap_offset_x'], 
+                              game_state['minimap_offset_y'], 
+                              game_state['minimap_min_iso_x'], 
+                              game_state['minimap_min_iso_y'])
 
         if player_selection_surface:
             selection_surface_height = player_selection_surface.get_height()
@@ -142,4 +137,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             screen.blit(player_info_surface, (0, screen_height - info_surface_height))
 
         display_fps(screen, clock)
-        pygame.display.flip()
+
+        if game_state.get('force_full_redraw', False):
+            pygame.display.flip()
+            game_state['force_full_redraw'] = False
+        else:
+            pygame.display.flip()

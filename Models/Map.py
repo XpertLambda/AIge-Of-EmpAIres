@@ -7,6 +7,7 @@ import math
 import random
 import os
 import pickle
+import time
 from collections import defaultdict
 from datetime import datetime
 from Entity.Building import Building
@@ -18,15 +19,20 @@ from Entity.Resource.Food import Food
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE
 
 class GameMap:
-    def __init__(self, grid_size, gold_at_center, players):
-        self.players = players  # Store the players list
+    def __init__(self, grid_size, gold_at_center, players, generate=True):
+        self.grid_size = grid_size        # Store grid size
+        self.gold_at_center = gold_at_center  # Store gold_at_center flag
+        self.players = players            # Store players list
         self.num_tiles_x = grid_size
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
-        if gold_at_center:
-            self.grid = self.random_map_gold(self.num_tiles_x, self.num_tiles_y, players)
+        if generate:
+            if gold_at_center:
+                self.grid = self.random_map_gold(self.num_tiles_x, self.num_tiles_y, players)
+            else:
+                self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y)
         else:
-            self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y)
+            self.grid = {}  # Initialize an empty grid
 
     def add_entity(self, grid, x, y, entity):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
@@ -256,30 +262,36 @@ class GameMap:
                     row_display.append(' ')
             print(''.join(row_display))
     
-    def save_map(self, directory='saves'):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = os.path.join(directory, f'save_{timestamp}.pkl')
-        game_state = {
-            'players': self.players,
-            'tiles': self.grid
+    def save_map(self, filename=None):
+        if filename is None:
+            # Automatic filename generation with timestamp
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"save_{timestamp}.pkl"
+        else:
+            # Ensure the filename ends with .pkl
+            if not filename.endswith('.pkl'):
+                filename += '.pkl'
+        full_path = os.path.join(SAVE_DIRECTORY, filename)
+
+        data = {
+            'grid': self.grid,
+            'grid_size': self.grid_size,
+            'gold_at_center': self.gold_at_center,
+            'players': self.players
         }
-        try:
-            with open(filename, 'wb') as file:
-                pickle.dump(game_state, file)
-            print(f"Game map saved successfully to {filename}.")
-        except Exception as e:
-            print(f"Error saving game map: {e}")
+        with open(full_path, 'wb') as f:
+            pickle.dump(data, f)
+        print(f"Game map saved successfully to {full_path}.")
 
     def load_map(self, filename):
         try:
-            with open(filename, 'rb') as file:
-                game_state = pickle.load(file)
-            self.players = game_state['players']
-            self.grid = game_state['tiles']
-            for tile in self.grid.values():
-                tile.mark_dirty()
+            with open(filename, 'rb') as f:
+                data = pickle.load(f)
+            self.grid = data['grid']
+            self.grid_size = data['grid_size']
+            self.gold_at_center = data['gold_at_center']
+            self.players = data['players']
+            self.num_tiles_x = self.num_tiles_y = self.grid_size
             print(f"Game map loaded successfully from {filename}.")
         except Exception as e:
             print(f"Error loading game map: {e}")
