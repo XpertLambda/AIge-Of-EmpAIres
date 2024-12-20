@@ -108,7 +108,13 @@ if not os.path.exists(SAVE_DIRECTORY):
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
-# Constants for progress bar dimensions and position
+sprite_loading_screen = {
+    'loading_screen':{
+        'directory': 'assets/launcher/',
+        'scale':None
+    }
+}
+
 BAR_HEIGHT = 30
 BAR_BORDER_RADIUS = 30
 PROGRESS_BAR_WIDTH_RATIO = 0.8
@@ -149,6 +155,100 @@ states = {
     3 : 'death',
     4 : 'decay',
     5 : 'task'
+}
+
+# Entities Dict
+sprite_config = {
+    'buildings': {
+        'towncenter': {
+            'directory': 'assets/buildings/towncenter/',
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+        },
+        'barracks': {
+            'directory': 'assets/buildings/barracks/',
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+        },
+        'stable': {
+            'directory': 'assets/buildings/stable/',
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+        },
+        'archeryrange': {
+            'directory': 'assets/buildings/archeryrange/',
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+        },
+        'keep': {
+            'directory': 'assets/buildings/keep/',
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+        },
+        'camp': {
+            'directory': 'assets/buildings/camp/',
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+        },
+        'house': {
+            'directory': 'assets/buildings/house/',
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'variant' : 4
+        },
+
+        'farm': {
+            'directory': 'assets/buildings/farm/',
+            'adjust_scale': TILE_SIZE / 120
+        },
+    },
+    'resources': {
+        'grass': {
+            'directory': 'assets/resources/grass/',
+            'scale': (10 * TILE_SIZE // 2, 10 * TILE_SIZE // 4)
+        },
+        'gold': {
+            'directory': 'assets/resources/gold/',
+            'scale': (TILE_SIZE, TILE_SIZE),
+            'variant' : 4
+        },
+        'tree': {
+            'directory': 'assets/resources/tree/',
+            'scale': (TILE_SIZE*2, TILE_SIZE*2),
+            'variant' : 4
+        }
+    },
+    'units': {
+        'swordsman': {
+            'directory': 'assets/units/swordsman/',
+            'states': 5,
+            'adjust_scale': TILE_SIZE / UNIT_RATIO,
+            'sheet_config': {
+                'columns': 30,
+                'rows': 16
+            },
+        },
+        'villager': {
+            'directory': 'assets/units/villager/',
+            'states': 6,
+            'adjust_scale': TILE_SIZE / UNIT_RATIO,
+            'sheet_config': {
+                'columns': 30,
+                'rows': 16
+            },
+        },
+        'archer': {
+            'directory': 'assets/units/archer/',
+            'states': 5,
+            'adjust_scale': TILE_SIZE / UNIT_RATIO,
+            'sheet_config': {
+                'columns': 30,
+                'rows': 16
+            },
+        },
+        'horseman': {
+            'directory': 'assets/units/horseman/',
+            'states': 5,
+            'adjust_scale': TILE_SIZE / UNIT_RATIO,
+            'sheet_config': {
+                'columns': 30,
+                'rows': 16
+            },
+        }
+    }
 }
 
 

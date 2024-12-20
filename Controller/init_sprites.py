@@ -6,102 +6,7 @@ import time
 from collections import OrderedDict
 from Settings.setup import *
 
-sprite_loading_screen = {
-    'loading_screen':{
-        'directory': 'assets/launcher/',
-        'scale':None
-    }
-}
 
-sprite_config = {
-    'buildings': {
-        'towncenter': {
-            'directory': 'assets/buildings/towncenter/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
-        },
-        'barracks': {
-            'directory': 'assets/buildings/barracks/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
-        },
-        'stable': {
-            'directory': 'assets/buildings/stable/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
-        },
-        'archeryrange': {
-            'directory': 'assets/buildings/archeryrange/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
-        },
-        'keep': {
-            'directory': 'assets/buildings/keep/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
-        },
-        'camp': {
-            'directory': 'assets/buildings/camp/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
-        },
-        'house': {
-            'directory': 'assets/buildings/house/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
-        },
-
-        'farm': {
-            'directory': 'assets/buildings/farm/',
-            'adjust_scale': TILE_SIZE / 120
-        },
-    },
-    'resources': {
-        'grass': {
-            'directory': 'assets/resources/grass/',
-            'scale': (10 * TILE_SIZE // 2, 10 * TILE_SIZE // 4)
-        },
-        'gold': {
-            'directory': 'assets/resources/gold/',
-            'scale': (TILE_SIZE, TILE_SIZE)
-        },
-        'tree': {
-            'directory': 'assets/resources/tree/',
-            'scale': (TILE_SIZE*2, TILE_SIZE*2)
-        }
-    },
-    'units': {
-        'swordsman': {
-            'directory': 'assets/units/swordsman/',
-            'states': 5,
-            'adjust_scale': TILE_SIZE / UNIT_RATIO,
-            'sheet_config': {
-                'columns': 30,
-                'rows': 16
-            },
-        },
-        'villager': {
-            'directory': 'assets/units/villager/',
-            'states': 6,
-            'adjust_scale': TILE_SIZE / UNIT_RATIO,
-            'sheet_config': {
-                'columns': 30,
-                'rows': 16
-            },
-        },
-        'archer': {
-            'directory': 'assets/units/archer/',
-            'states': 5,
-            'adjust_scale': TILE_SIZE / UNIT_RATIO,
-            'sheet_config': {
-                'columns': 30,
-                'rows': 16
-            },
-        },
-        'horseman': {
-            'directory': 'assets/units/horseman/',
-            'states': 5,
-            'adjust_scale': TILE_SIZE / UNIT_RATIO,
-            'sheet_config': {
-                'columns': 30,
-                'rows': 16
-            },
-        }
-    }
-}
 
 sprites = {}
 zoom_cache = {}
@@ -253,8 +158,8 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
     print("Sprites loaded successfully.")
     
 # Function to get a scaled sprite, handling both static and animated sprites
-def get_scaled_sprite(name, category, zoom, state, frame_id):
-    cache_key = (zoom, frame_id, state)
+def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
+    cache_key = (zoom, state, frame_id, variant)
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
     if cache_key in zoom_cache[name]:
@@ -262,12 +167,10 @@ def get_scaled_sprite(name, category, zoom, state, frame_id):
         return zoom_cache[name][cache_key]
     # Load and scale the sprite
     if category == 'resources' or category == 'buildings':
-        sprite_data = sprites[category][name]
-        sprite_data = sprites[category][name]
+        original_image = sprites[category][name][variant]
     elif category == 'units':
-        sprite_data = sprites[category][name][state]
+        original_image = sprites[category][name][state][frame_id]
 
-    original_image = sprite_data[frame_id]
     scaled_width = int(original_image.get_width() * zoom)
     scaled_height = int(original_image.get_height() * zoom)
     scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
@@ -282,12 +185,12 @@ def get_scaled_sprite(name, category, zoom, state, frame_id):
         zoom_cache[name].popitem(last=False)
     return scaled_image
 
-def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame_id=0):
+def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame_id=0, variant=0):
     name = Entity_Acronym[category][acronym]
     if state is not None:
         state = states[state]
 
-    scaled_sprite = get_scaled_sprite(name, category, zoom, state, frame_id)
+    scaled_sprite = get_scaled_sprite(name, category, zoom, state, frame_id, variant)
     if scaled_sprite is None:
         return
     scaled_width = scaled_sprite.get_width()
