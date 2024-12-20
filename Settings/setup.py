@@ -97,9 +97,62 @@ import os
 if not os.path.exists(SAVE_DIRECTORY):
     os.makedirs(SAVE_DIRECTORY)
 
+
 ####################
 
 # -------------------
-# Configuration Animation
+# Sprites Configuration
 # -------------------
+
+# Loading Screen Setting
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+# Constants for progress bar dimensions and position
+BAR_HEIGHT = 30
+BAR_BORDER_RADIUS = 30
+PROGRESS_BAR_WIDTH_RATIO = 0.8
+PROGRESS_BAR_Y_RATIO = 0.7
+
+# Entites Configs
+BUILDING_RATIO = 200
+UNIT_RATIO = 100
+Entity_Acronym = {
+    'resources': {
+        ' ': 'grass',
+        'W': 'wood',
+        'G': 'gold',
+        'F': 'food'
+    },
+    'buildings': {
+        'A': 'archeryrange',
+        'B': 'barracks',
+        'C': 'camp',
+        'F': 'farm',
+        'H': 'house',
+        'K': 'keep',
+        'S': 'stable',
+        'T': 'towncenter'
+    },
+    'units': {
+        'a': 'archer',
+        'h': 'horseman',
+        's': 'swordsman',
+        'v': 'villager'
+    }
+}
+
+states = {
+    0 : 'idle',
+    1 : 'walk',
+    2 : 'attack',
+    3 : 'death',
+    4 : 'decay',
+    5 : 'task'
+}
+
+
 FRAMES_PER_UNIT = 10
+
+
+

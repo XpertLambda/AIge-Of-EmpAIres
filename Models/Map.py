@@ -159,14 +159,12 @@ class GameMap:
 
         resource_classes = {
             'gold': Gold,
-            'wood': Wood,
-            'food': Food,
+            'wood': Wood
         }
 
         resources = (
             ['gold'] * NUM_GOLD_TILES +
-            ['wood'] * NUM_WOOD_TILES +
-            ['food'] * NUM_FOOD_TILES
+            ['wood'] * NUM_WOOD_TILES
         )
         random.shuffle(resources)
 
@@ -191,14 +189,12 @@ class GameMap:
         resource_classes = {
             'gold': Gold,
             'wood': Wood,
-            'food': Food,
         }
 
         # Placer l'or au centre
         resources = (
             ['gold'] * NUM_GOLD_TILES +
-            ['wood'] * NUM_WOOD_TILES +
-            ['food'] * NUM_FOOD_TILES
+            ['wood'] * NUM_WOOD_TILES
         )
 
         center_x = num_tiles_x // 2

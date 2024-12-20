@@ -20,7 +20,7 @@ class Team:
             for _ in range(10):
                 self.units.append(Swordsman(team = teamID))           
                 self.units.append(Villager(team = teamID))           
-                self.units.append(Archer(team = teamID))           
+                self.units.append(Horseman(team = teamID))           
             for _ in range(5):
                 self.buildings.append(TownCentre(team = teamID))
                 self.buildings.append(ArcheryRange(team = teamID))
@@ -29,6 +29,7 @@ class Team:
                 self.buildings.append(Keep(team = teamID))
                 self.buildings.append(Camp(team = teamID))
                 self.buildings.append(House(team = teamID))
+                self.buildings.append(Farm(team = teamID))
 
         elif difficulty == 'lean':
             self.resources["gold"] = LEAN_STARTING_GOLD
