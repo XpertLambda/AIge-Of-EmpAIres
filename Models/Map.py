@@ -14,8 +14,7 @@ from Entity.Building import Building
 from Entity.Unit import *
 from Entity.Resource.Resource import *
 from Entity.Resource.Gold import Gold
-from Entity.Resource.Wood import Wood
-from Entity.Resource.Food import Food
+from Entity.Resource.Tree import Tree
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE
 
 class GameMap:
@@ -159,7 +158,7 @@ class GameMap:
 
         resource_classes = {
             'gold': Gold,
-            'wood': Wood
+            'wood': Tree
         }
 
         resources = (
@@ -188,7 +187,7 @@ class GameMap:
 
         resource_classes = {
             'gold': Gold,
-            'wood': Wood,
+            'wood': Tree,
         }
 
         # Placer l'or au centre

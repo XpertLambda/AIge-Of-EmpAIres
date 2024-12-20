@@ -58,9 +58,9 @@ sprite_config = {
             'directory': 'assets/resources/gold/',
             'scale': (TILE_SIZE, TILE_SIZE)
         },
-        'wood': {
+        'tree': {
             'directory': 'assets/resources/tree/',
-            'scale': (TILE_SIZE, TILE_SIZE)
+            'scale': (TILE_SIZE*2, TILE_SIZE*2)
         }
     },
     'units': {

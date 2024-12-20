@@ -120,7 +120,7 @@ UNIT_RATIO = 100
 Entity_Acronym = {
     'resources': {
         ' ': 'grass',
-        'W': 'wood',
+        'W': 'tree',
         'G': 'gold',
         'F': 'food'
     },
