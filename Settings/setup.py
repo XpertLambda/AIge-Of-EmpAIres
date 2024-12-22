@@ -1,3 +1,4 @@
+from collections import namedtuple
 # Settings/setup.py
 
 # -------------------
@@ -7,6 +8,13 @@
 BUILDING_TIME_REDUCTION = 0.75  # Facteur de réduction du temps de construction
 RESOURCE_COLLECTION_RATE = 25    # Taux de collecte de ressources (unités par minute)
 RESOURCE_CAPACITY = 20            # Capacité de transport des ressources
+
+# -------------------
+# Classe Entity
+# -------------------
+Resources = namedtuple("Resources", ["food", "gold", "wood"])
+
+
 
 ####################
 

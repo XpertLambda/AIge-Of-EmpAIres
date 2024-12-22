@@ -1,13 +1,13 @@
 from Entity.Entity import Entity
-from Settings.setup import *
-from Controller.isometric_utils import *
+from Settings.setup import HALF_TILE_SIZE
+from Controller.isometric_utils import tile_to_screen
 from Controller.init_sprites import draw_sprite
-import random 
 
 class Resource(Entity):
-    def __init__(self, x, y, acronym, capacity, team = None, variant=0):
-        super().__init__(x, y, team, acronym, size = 1)
-        self.capacity = capacity
+    def __init__(self, x, y, acronym, storage, max_hp, variant=0):
+        super().__init__(x=x, y=y,  team=None, size = 1, max_hp=max_hp, acronym=acronym)
+        
+        self.storage = storage
         self.variant = variant
 
     def display(self, screen, screen_width, screen_height, camera):

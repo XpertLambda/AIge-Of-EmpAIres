@@ -1,4 +1,5 @@
 from Entity.Building import Building
+from Settings.setup import Resources
 
 class Farm(Building):
     def __init__(self, team, x=0, y=0):
@@ -7,12 +8,10 @@ class Farm(Building):
             y=y,
             team=team,
             acronym='F',
-            woodCost=60,
-            goldCost=0,
-            buildTime=10,
-            hp=100,
             size=2,
+            max_hp=100,
+            cost=Resources(food=0, gold=0, wood=60),
+            buildTime=10,
             containsFood=True,
             walkable=True
         )
-        self.max_hp = self.hp  # ajout

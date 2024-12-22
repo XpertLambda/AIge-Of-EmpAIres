@@ -1,6 +1,5 @@
 # Models/Team.py
-
-from Settings.setup import *
+from Settings.setup import LEAN_STARTING_GOLD, LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_VILLAGERS, LEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_GOLD, MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_VILLAGERS, MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS
 from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
@@ -67,10 +66,12 @@ class Team:
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team = teamID))
 
+##### A MODIFIER!!!!!!!!
+'''
     def gestion(self):
-        for u in self.units:
-            if u.hp==0:
-                self.units.remove(u)
+        for unit in self.units:
+            if unit.hp==0:
+                self.units.remove(unit)
         for b in self.buildings:
             if b.hp==0:
                 self.units.remove(b)
@@ -95,11 +96,7 @@ class Team:
                     s=self.units[i]
                     s.task=False
 
-    def bat(building,clock,nb):
-        #building:batiment qu'on veut construire
-        #clock: temps actuel
-        #nb: nombre de villageois maximum qui va construire
-       
+    def bat(self, building,clock,nb):
         if not map.can_place_building(map.grid, x, y, building):
             print(f"{self.acronym}: Cannot place building.")
             return False
@@ -147,4 +144,4 @@ class Team:
                 s=self.units[i]
                 s.task=True   
                 s.attaquer(False,self.cible,map)
- 
+'''

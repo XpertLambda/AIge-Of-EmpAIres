@@ -1,19 +1,29 @@
 import time
-
+from Settings.setup import Resources
 class Entity:
-    HEALTH_BAR_DISPLAY_DURATION = 5  # Durée d'affichage de la barre de vie (en secondes)
+    HEALTH_BAR_DISPLAY_DURATION = 5
 
-    def __init__(self, x, y, team, acronym, size):
+    def __init__(self, 
+        x, 
+        y, 
+        team, 
+        acronym, 
+        size, 
+        max_hp, 
+        cost=Resources(food=0, gold=0, wood=0)
+    ):
+
         self.x = x
         self.y = y
         self.team = team
         self.acronym = acronym
         self.size = size
-
-        # Added for health bar
+        self.max_hp = max_hp
+        self.cost = cost
+        
+        self.hp = max_hp
         self.last_damage_time = 0
         self.last_clicked_time = 0
-        self.max_hp = None  # sera défini dans les sous-classes après hp
 
     def notify_damage(self):
         self.last_damage_time = time.time()

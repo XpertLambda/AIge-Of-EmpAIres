@@ -35,8 +35,8 @@ def generate_team_colors(nb_players):
     return colors
 
 def draw_health_bar(screen, screen_x, screen_y, entity, team_colors, game_state):
-    # On affiche la barre de vie si should_draw_health_bar()
-    # ou si l'unité fait partie de la liste selected_units
+    # Draw Health Bar on top of each selected Entity. Or if triggered by should_draw_health_bar
+
     if (not entity.should_draw_health_bar()) and (entity not in game_state['selected_units']):
         return
     ratio = entity.get_health_ratio()
@@ -57,6 +57,8 @@ def draw_health_bar(screen, screen_x, screen_y, entity, team_colors, game_state)
     pygame.draw.rect(screen, team_color, fill_rect)
 
 def draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state):
+    # Draws all visible entittes on the map
+
     corners_screen = [
         (0, 0),
         (screen_width, 0),
@@ -84,13 +86,9 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     for y in range(min_tile_y, max_tile_y):
         for x in range(min_tile_x, max_tile_x):
             if x % 10 == 0 and y % 10 == 0:   
-                screen_x, screen_y = tile_to_screen(x+4.5, y+4.5,
-                                                    HALF_TILE_SIZE,
-                                                    HALF_TILE_SIZE / 2,
-                                                    camera,
-                                                    screen_width,
-                                                    screen_height)
+                screen_x, screen_y = tile_to_screen(x+4.5, y+4.5, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
                 fill_grass(screen, screen_x, screen_y, camera)
+            
             entities = game_map.grid.get((x, y), None)
             if entities:
                 for entity in entities:
@@ -98,12 +96,10 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
 
     for entity in sorted(visible_entites, key=lambda e: (e.x + e.y)):
         entity.display(screen, screen_width, screen_height, camera)
-        screen_x, screen_y = tile_to_screen(entity.x, entity.y, HALF_TILE_SIZE,
-                                            HALF_TILE_SIZE / 2, camera,
-                                            screen_width, screen_height)
+        screen_x, screen_y = tile_to_screen(entity.x, entity.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_health_bar(screen, screen_x, screen_y, entity, team_colors, game_state)
 
-    # -- Dessin du rectangle de sélection si on est en train de sélectionner --
+    # Rectangle to select entities 
     if game_state['selecting_units'] and game_state['selection_start'] and game_state['selection_end']:
         x1, y1 = game_state['selection_start']
         x2, y2 = game_state['selection_end']

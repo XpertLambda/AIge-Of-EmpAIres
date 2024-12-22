@@ -1,12 +1,9 @@
-# Controller/init_sprites.py
 import re
 import pygame
 import os
 import time
 from collections import OrderedDict
 from Settings.setup import *
-
-
 
 sprites = {}
 zoom_cache = {}
@@ -45,29 +42,22 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
     return frames
 
 def draw_progress_bar(screen, progress, screen_width, screen_height, progress_text, loading_screen_image):
-    # Blit the loading screen image to clear previous progress bar and text
     screen.blit(loading_screen_image, (0, 0))
 
-    # Calculate progress bar dimensions and position
     bar_width = screen_width * PROGRESS_BAR_WIDTH_RATIO
     bar_x = (screen_width - bar_width) / 2
     bar_y = screen_height * PROGRESS_BAR_Y_RATIO
 
-    # Draw the progress bar border
     pygame.draw.rect(screen, WHITE, (bar_x, bar_y, bar_width, BAR_HEIGHT), 2, border_radius=BAR_BORDER_RADIUS)
-    # Draw the progress bar fill
     pygame.draw.rect(screen, WHITE, (bar_x, bar_y, bar_width * progress, BAR_HEIGHT), border_radius=BAR_BORDER_RADIUS)
 
-    # Determine the text color based on the progress bar position
     text_color = BLACK if progress >= 0.5 else WHITE
 
-    # Display the percentage
     font = pygame.font.Font(None, 36)
     percentage_text = font.render(f"{int(progress * 100)}%", True, text_color)
     percentage_text_rect = percentage_text.get_rect(center=(bar_x + bar_width / 2, bar_y + BAR_HEIGHT / 2))
     screen.blit(percentage_text, percentage_text_rect)
 
-    # Display the progress text
     progress_text_surface = font.render("Loading " + progress_text, True, WHITE)
     progress_text_rect = progress_text_surface.get_rect(centerx=(bar_x + bar_width / 2), top=(bar_y + BAR_HEIGHT))
     screen.blit(progress_text_surface, progress_text_rect)
@@ -120,17 +110,15 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                     if filename.lower().endswith("webp"):
                         filepath = os.path.join(directory, filename)
                         sprite = load_sprite(filepath, scale, adjust)
-                        sprites[category][sprite_name].append(sprite)  # Append sprite to list
+                        sprites[category][sprite_name].append(sprite)
                         loaded_files += 1
                         progress = loaded_files / total_files
                         draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
 
             elif category == 'units':
                 sprites[category][sprite_name] = {}
-                # The directory is now units/{sprite_name}/
                 sprite_path = directory
                 if os.path.isdir(sprite_path):
-                    # Load all available states
                     state_dirs = os.listdir(sprite_path)
                     for state_dir in state_dirs:
                         state_path = os.path.join(sprite_path, state_dir)
@@ -152,7 +140,6 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                                 loaded_files += 1
                                 progress = loaded_files / total_files
                                 draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
-                loaded_files += 1
                 progress = loaded_files / total_files
                 draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
     print("Sprites loaded successfully.")
@@ -175,22 +162,19 @@ def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
     scaled_height = int(original_image.get_height() * zoom)
     scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
     
-    # Add to cache
     zoom_cache[name][cache_key] = scaled_image
     zoom_cache[name].move_to_end(cache_key)
-    
-    # Evict least recently used if over capacity
     
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
     return scaled_image
 
-def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame_id=0, variant=0):
+def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0):
     name = Entity_Acronym[category][acronym]
     if state is not None:
         state = states[state]
 
-    scaled_sprite = get_scaled_sprite(name, category, zoom, state, frame_id, variant)
+    scaled_sprite = get_scaled_sprite(name, category, zoom, state, frame, variant)
     if scaled_sprite is None:
         return
     scaled_width = scaled_sprite.get_width()

@@ -1,103 +1,128 @@
-# Entity/Unit/Unit.py
-from Models.Map import *
-from math import sqrt
-import random
-import time
-from Entity.Entity import *
-from Settings.setup import *
-from Controller.isometric_utils import *
+import math
+from Entity.Entity import Entity
+from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE
+from Controller.isometric_utils import tile_to_screen
 from Controller.init_sprites import draw_sprite
 
 class Unit(Entity):
-    cpt=0
-    def __init__(self, x, y, team, acronym, cost_food, cost_gold, cost_wood, hp, attack, speed, training_time):
-        super().__init__(x, y, team, acronym, size=1)
+    next_id = 0
 
-        self.cost_food = cost_food
-        self.cost_gold = cost_gold
-        self.cost_wood = cost_wood
-        self.hp = hp
-        self.max_hp = self.hp
-        self.attack = attack
+    def __init__(
+        self,
+        x,
+        y,
+        team,
+        acronym,
+        max_hp,
+        cost,
+        attack_power,
+        attack_range,
+        speed,
+        training_time
+    ):
+        super().__init__(x=x, y=y, team=team, acronym=acronym, size=1, max_hp=max_hp, cost=cost)
+        self.attack_power = attack_power
+        self.attack_range = attack_range
         self.speed = speed
         self.training_time = training_time
-        self.task=False
-        self.id=Unit.cpt
-        Unit.cpt+=1
-        self.cible=None
-        self.state = random.randint(0, 3)
+
+        self.unit_id = Unit.next_id
+        Unit.next_id += 1
+
+        # State variables
+        self.state = 0
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
         self.frame_counter = 0
         self.frame_duration = 3
         self.direction = 0
 
-        self.cible = None  # Définir la cible par défaut à None
+        self.target = None
 
-    @staticmethod
-    def dist(x1,y1,x2,y2):
-        return sqrt((x1-x2)**2 + (y1-y2)**2)
+    def compute_distance(pos1, pos2):
+        x1, y1 = pos1
+        x2, y2 = pos2
+        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 
-    def attaquer(self,att,t,map):
-        b=True
-        if(self.cible == None or self.cible.hp==0):
-            b=self.search(t,att)
-        if b:
-            if dist(self.x,self.y,self.cible.x,self.cible.y)<100:
-                self.current_frame=0
-                self.frame_counter=0
-                self.cible.hp-=self.attack
-                cible.notify_damage()  # éventuellement notifier les dommages ici
+    def attack(self, attacker_team, game_map):
+        target_found = True
+
+        if self.target is None or self.target.hp <= 0:
+            target_found = self.search_for_target(attacker_team)
+
+        if target_found and self.target is not None:
+            distance_to_target = self.compute_distance((self.x, self.y), (self.target.x, self.target.y))
+            if distance_to_target < 100:
+                # Perform the attack
+                self.current_frame = 0
+                self.frame_counter = 0
+                self.target.hp -= self.attack_power
+                # Notify or handle damage on target
+                if hasattr(self.target, "notify_damage"):
+                    self.target.notify_damage()
             else:
-                self.SeDeplacer(self.cible.x,self.cible.y,map)
-        return b
-    
-    def search(self,t,att):
-        min_dist=300000
-        e=None
-        for u in t.army:
-            distance=dist(u.x,u.y,self.x,self.y)
-            if(att or distance<100):
-                if(distance<min_dist):
-                    min_dist=distance
-                    e=u         
-        if att:
-            for b in t.buildings:
-                print("b=",b)
-                distance=dist(b.x,b.y,self.x,self.y)
-                if(distance<min):
-                    min=distance
-                    e=b
-        self.cible=e
-        return e is not None
-    
-    def is_tile_walkable(self, map, x, y):
-        # Vérifier que la case (x,y) est dans la grille
-        if x < 0 or y < 0 or x >= map.num_tiles_x or y >= map.num_tiles_y:
+                # Move closer to the target
+                self.move((self.target.x, self.target.y), game_map)
+
+        return target_found
+
+    def search_for_target(self, enemy_team, attack_mode=True):
+        """
+        Searches for the closest enemy unit or building depending on the mode.
+        """
+        closest_distance = float("inf")
+        closest_entity = None
+
+        for enemy_unit in enemy_team.army:
+            dist = self.compute_distance((self.x, self.y), (enemy_unit.x, enemy_unit.y))
+            if attack_mode or dist < 100: 
+                if dist < closest_distance:
+                    closest_distance = dist
+                    closest_entity = enemy_unit
+
+        if attack_mode:
+            for enemy_building in enemy_team.buildings:
+                dist = self.compute_distance((self.x, self.y), (enemy_building.x, enemy_building.y))
+                if dist < closest_distance:
+                    closest_distance = dist
+                    closest_entity = enemy_building
+
+        self.target = closest_entity
+        return self.target is not None
+
+    def is_tile_walkable(self, game_map, tile_x, tile_y):
+        """
+        Checks if a tile at (tile_x, tile_y) is walkable for this unit.
+        """
+        if (
+            tile_x < 0 or
+            tile_y < 0 or
+            tile_x >= game_map.num_tiles_x or
+            tile_y >= game_map.num_tiles_y
+        ):
             return False
-        pos = (x,y)
-        if pos not in map.grid:
-            # Pas d'entité ici, donc c'est walkable (terrain "vide" ?)
-            # S'il faut un sol, le code doit le gérer.
-            return True
-        # S'il y a des entités, vérifier si au moins l'une n'est pas walkable
-        for ent in map.grid[pos]:
-            if hasattr(ent, 'is_walkable') and not ent.is_walkable():
-                return False
+
+        tile_pos = (tile_x, tile_y)
+        entities_on_tile = game_map.grid.get(tile_pos, None)
+
+        if entities_on_tile:
+            for entity in entities_on_tile:
+                # Example check for building walkability
+                if hasattr(entity, "walkable") and not entity.walkable:
+                    return False
+
         return True
 
-    def SeDeplacer(self,x,y,map):
-        # Déplacement d'une tile. On doit vérifier la walkabilité.
-        self.frame_counter=0
-        self.current_frame=0
+    def move(self, target_pos, game_map):
+        """
+        Tries to step closer to the target position (target_pos) by checking tile walkability.
+        Adjusts the direction based on movement.
+        """
+        self.frame_counter = 0
+        self.current_frame = 0
 
-        target_x = int(x)
-        target_y = int(y)
-
-        # Exemple simplifié : on tente un déplacement d'une step vers la direction voulue.
-        # On check toutes les directions isométriques possibles.
-        # Note : le code actuel est rudimentaire et doit être amélioré.
-        # On vérifie la présence d'entités avec is_tile_walkable().
+        target_x = int(target_pos[0])
+        target_y = int(target_pos[1])
 
         dx = 0
         dy = 0
@@ -105,52 +130,74 @@ class Unit(Entity):
             dx = 1
         elif self.x > target_x:
             dx = -1
+
         if self.y < target_y:
             dy = 1
         elif self.y > target_y:
             dy = -1
 
-        # Essai de déplacement diagonal si possible
+        # Attempt diagonal movement if possible
         if dx != 0 and dy != 0:
-            if self.is_tile_walkable(map, int(self.x+dx), int(self.y+dy)):
-                self.x += dx
-                self.y += dy
-                # Ajuster direction en fonction dx/dy
-                if dx==1 and dy==1:
-                    self.direction=270
-                elif dx==1 and dy==-1:
-                    self.direction=90
-                elif dx==-1 and dy==1:
-                    self.direction=225
-                elif dx==-1 and dy==-1:
-                    self.direction=45
+            new_x = self.x + dx
+            new_y = self.y + dy
+            if self.is_tile_walkable(game_map, int(new_x), int(new_y)):
+                self.x = new_x
+                self.y = new_y
+                # Set direction based on dx/dy
+                if dx == 1 and dy == 1:
+                    self.direction = 270
+                elif dx == 1 and dy == -1:
+                    self.direction = 90
+                elif dx == -1 and dy == 1:
+                    self.direction = 225
+                elif dx == -1 and dy == -1:
+                    self.direction = 45
                 return
 
-        # Essai de déplacement horizontal si pas diagonal possible
+        # Attempt horizontal movement
         if dx != 0:
-            if self.is_tile_walkable(map, int(self.x+dx), int(self.y)):
-                self.x += dx
-                # Ajuster direction
-                if dx==1:
-                    self.direction=135
-                else:
-                    self.direction=315
+            new_x = self.x + dx
+            if self.is_tile_walkable(game_map, int(new_x), int(self.y)):
+                self.x = new_x
+                self.direction = 135 if dx == 1 else 315
                 return
 
-        # Essai de déplacement vertical si horizontal pas possible
+        # Attempt vertical movement
         if dy != 0:
-            if self.is_tile_walkable(map, int(self.x), int(self.y+dy)):
-                self.y += dy
-                if dy==1:
-                    self.direction=225
-                else:
-                    self.direction=45
+            new_y = self.y + dy
+            if self.is_tile_walkable(game_map, int(self.x), int(new_y)):
+                self.y = new_y
+                self.direction = 225 if dy == 1 else 45
 
     def display(self, screen, screen_width, screen_height, camera):
-        category = 'units'
+        """
+        Displays the unit on the screen with sprite animations.
+        """
+        # Update frame handling for animation
         self.frame_counter += 1
         if self.frame_counter >= self.frame_duration:
             self.frame_counter = 0
             self.current_frame = (self.current_frame + 1) % self.frames
-        screen_x, screen_y = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom, self.state, self.current_frame)
+
+        # Convert tile coordinates to screen coordinates
+        screen_x, screen_y = tile_to_screen(
+            self.x,
+            self.y,
+            HALF_TILE_SIZE,
+            HALF_TILE_SIZE / 2,
+            camera,
+            screen_width,
+            screen_height
+        )
+
+        # Draw the unit sprite
+        draw_sprite(
+            screen,
+            self.acronym,
+            category='units',
+            screen_x=screen_x,
+            screen_y=screen_y,
+            zoom=camera.zoom,
+            state=self.state,
+            frame=self.current_frame
+        )

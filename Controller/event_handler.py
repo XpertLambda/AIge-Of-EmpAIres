@@ -30,7 +30,7 @@ def handle_events(event, game_state):
     player_selection_updated = game_state.get('player_selection_updated', False)
     player_info_updated = game_state.get('player_info_updated', False)
 
-    # Récupération des variables pour la sélection rectangulaire
+    # Required variable for selecting entites
     selecting_units = game_state['selecting_units']
     selection_start = game_state['selection_start']
     selection_end = game_state['selection_end']
@@ -46,11 +46,10 @@ def handle_events(event, game_state):
 
     elif event.type == pygame.KEYDOWN:
         if event.key == pygame.K_F11:
-            # Sauvegarde rapide
+            # Fast save
             game_state['game_map'].save_map()
             print("Game saved successfully.")
         elif event.key == pygame.K_F12:
-            # Chargement
             try:
                 root = tkinter.Tk()
                 root.withdraw()
@@ -126,11 +125,10 @@ def handle_events(event, game_state):
     elif event.type == pygame.MOUSEBUTTONDOWN:
         mouse_x, mouse_y = event.pos
         if event.button == 1:
-            # Clic gauche
             if minimap_rect.collidepoint(mouse_x, mouse_y):
                 game_state['minimap_dragging'] = True
             else:
-                # --- Début de la sélection rectangulaire ---
+                # Selection
                 game_state['selecting_units'] = True
                 game_state['selection_start'] = (mouse_x, mouse_y)
                 game_state['selection_end'] = (mouse_x, mouse_y)
@@ -142,10 +140,10 @@ def handle_events(event, game_state):
 
     elif event.type == pygame.MOUSEMOTION:
         if game_state['minimap_dragging']:
-            # Drag sur la minimap
+            # Minimap Drag
             pass
         else:
-            # Si on est en train de sélectionner
+            # If selecting entities
             if game_state['selecting_units']:
                 game_state['selection_end'] = event.pos
 
@@ -161,16 +159,12 @@ def handle_events(event, game_state):
                     selection_rect = pygame.Rect(x1, y1, x2 - x1, y2 - y1)
                     selection_rect.normalize()
 
-                    # On vide la liste précédente
                     game_state['selected_units'].clear()
 
-                    # Récupération de toutes les unités sur la carte
-                    # (On parcourt tous les players et toutes leurs unités)
                     all_units = []
                     for p in game_state['players']:
                         all_units.extend(p.units)
 
-                    # Test de collision rect <-> position isométrique de l’unité
                     for unit in all_units:
                         sx, sy = tile_to_screen(unit.x, unit.y, HALF_TILE_SIZE,
                                                 HALF_TILE_SIZE / 2, camera, 
@@ -188,7 +182,6 @@ def handle_events(event, game_state):
             camera.set_zoom(camera.zoom / 1.1)
 
     elif event.type == pygame.VIDEORESIZE:
-        # Resize gère la fenêtre, inchangé
         sw, sh = event.size
         camera.width = sw
         camera.height = sh

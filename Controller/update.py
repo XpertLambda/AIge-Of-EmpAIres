@@ -1,9 +1,6 @@
 import pygame
 from Models.html import write_full_html
 def update_game_state(game_state, dt):
-    """
-    Met à jour l'état du jeu en fonction des entrées utilisateur.
-    """
     camera = game_state['camera']
     selected_player = game_state['selected_player']
     minimap_dragging = game_state['minimap_dragging']
@@ -47,7 +44,7 @@ def update_game_state(game_state, dt):
     if dx != 0 or dy != 0:
         camera.move(dx, dy)
 
-    # Mise à jour de la caméra via la minimap
+    # Syncing camera with minimap updates
     if minimap_dragging:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         minimap_click_x = mouse_x - minimap_rect.x

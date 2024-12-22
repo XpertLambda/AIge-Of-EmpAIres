@@ -1,21 +1,16 @@
-# 5) Controller/select_player.py
-# La couleur du bouton reflète maintenant la couleur d'équipe définie dans drawing.py
-
 import pygame
 from collections import Counter
-# Supprimer l'importation de TEAM_COLORS
-# from Controller.drawing import TEAM_COLORS
 
 def create_player_selection_surface(players, selected_player, minimap_rect, team_colors):
     selection_height = 30
     padding = 5
 
-    # Obtenir la hauteur de l'écran
+    # Get screen height
     screen = pygame.display.get_surface()
     screen_height = screen.get_height()
-    max_height = screen_height / 3  # Taille maximale de 1/3 de la fenêtre
+    max_height = screen_height / 3 
 
-    # Déterminer le nombre optimal de colonnes
+    # Determine the optimal number of columns
     columns = 1
     while columns <= 4:
         rows = (len(players) + columns - 1) // columns
