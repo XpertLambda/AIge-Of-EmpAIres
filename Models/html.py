@@ -25,7 +25,6 @@ def write_full_html(players, game_map):
                 <details>
                     <summary>Unité ID: {unit.id} ({unit.acronym})</summary>
                     <p>
-                        <b>Tâche</b>: {unit.task}<br>
                         <b>HP</b>: {unit.hp}/{unit.max_hp}<br>
                         <b>Position</b>: ({unit.x}, {unit.y})<br>
                         <!-- Add any other relevant unit information -->

@@ -5,7 +5,7 @@ from Controller.isometric_utils import tile_to_screen
 from Controller.init_sprites import draw_sprite
 
 class Unit(Entity):
-    next_id = 0
+    id = 0
 
     def __init__(
         self,
@@ -26,8 +26,8 @@ class Unit(Entity):
         self.speed = speed
         self.training_time = training_time
 
-        self.unit_id = Unit.next_id
-        Unit.next_id += 1
+        self.unit_id = Unit.id
+        Unit.id += 1
 
         # State variables
         self.state = 0
