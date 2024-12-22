@@ -46,6 +46,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     minimap_dragging = False
     fullscreen = False
 
+    # Ajout du champ show_all_health_bars
     game_state = {
         'camera': camera,
         'players': players,
@@ -68,10 +69,15 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'player_info_updated': True,
         'minimap_entities_surface': minimap_entities_surface,
         'team_colors': team_colors,
+
+        # Sélection rectangulaire
         'selecting_units': False,
         'selection_start': None,
         'selection_end': None,
-        'selected_units': []
+        'selected_units': [],
+
+        # Nouveau champ : toggle global barres de vie
+        'show_all_health_bars': False
     }
 
     player_selection_surface = None
@@ -102,7 +108,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         game_map = game_state['game_map']
 
         if game_state.get('recompute_camera', False):
-            min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_state['game_map'])
+            min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
             camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
             game_state['recompute_camera'] = False
 
@@ -121,24 +127,25 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
+        # On passe game_state pour l'affichage des barres
         draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
 
         screen.blit(game_state['minimap_background'], minimap_rect.topleft)
         screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)
         draw_minimap_viewport(screen, camera, minimap_rect,
-                              game_state['minimap_scale'], 
-                              game_state['minimap_offset_x'], 
-                              game_state['minimap_offset_y'], 
-                              game_state['minimap_min_iso_x'], 
+                              game_state['minimap_scale'],
+                              game_state['minimap_offset_x'],
+                              game_state['minimap_offset_y'],
+                              game_state['minimap_min_iso_x'],
                               game_state['minimap_min_iso_y'])
 
         if player_selection_surface:
-            selection_surface_height = player_selection_surface.get_height()
-            screen.blit(player_selection_surface, (minimap_rect.x, minimap_rect.y - selection_surface_height))
+            sel_h = player_selection_surface.get_height()
+            screen.blit(player_selection_surface, (minimap_rect.x, minimap_rect.y - sel_h))
 
         if player_info_surface:
-            info_surface_height = player_info_surface.get_height()
-            screen.blit(player_info_surface, (0, screen_height - info_surface_height))
+            inf_h = player_info_surface.get_height()
+            screen.blit(player_info_surface, (0, screen_height - inf_h))
 
         display_fps(screen, clock)
 
