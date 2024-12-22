@@ -8,7 +8,7 @@ class Tree(Resource):
         x, 
         y, 
         acronym = 'W', 
-        storage = Resources(food=0, gold=0, wood=60),
+        storage = Resources(food=0, gold=0, wood=100),
         max_hp=300
         ):
 

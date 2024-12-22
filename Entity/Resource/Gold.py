@@ -8,7 +8,7 @@ class Gold(Resource):
         x, 
         y, 
         acronym = 'G', 
-        storage = Resources(food=0, gold=100, wood=0),
+        storage = Resources(food=0, gold=800, wood=0),
         max_hp=500
         ):
 
