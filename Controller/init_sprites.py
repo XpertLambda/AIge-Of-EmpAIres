@@ -142,6 +142,8 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                                 draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
                 progress = loaded_files / total_files
                 draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
+    
+    
     print("Sprites loaded successfully.")
     
 # Function to get a scaled sprite, handling both static and animated sprites
