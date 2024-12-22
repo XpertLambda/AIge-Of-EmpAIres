@@ -10,7 +10,7 @@ from Entity.Unit import *
 from Entity.Resource.Resource import *
 from Entity.Resource.Gold import Gold
 from Entity.Resource.Tree import Tree
-from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE
+from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE, SAVE_DIRECTORY
 
 class GameMap:
     def __init__(self, grid_size, gold_at_center, players, generate=True):
