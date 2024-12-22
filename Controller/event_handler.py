@@ -290,22 +290,3 @@ def handle_events(event, game_state):
         game_state['minimap_min_iso_y'] = mi_y
         game_state['screen_width'] = sw
         game_state['screen_height'] = sh
-
-    game_state['player_selection_updated'] = player_selection_updated
-    game_state['player_info_updated'] = player_info_updated
-
-    game_state['camera'] = camera
-    game_state['players'] = players
-    game_state['selected_player'] = game_state['selected_player']
-    game_state['minimap_rect'] = game_state['minimap_rect']
-    game_state['minimap_dragging'] = game_state['minimap_dragging']
-    game_state['minimap_background'] = minimap_background
-    game_state['minimap_scale'] = minimap_scale
-    game_state['minimap_offset_x'] = minimap_offset_x
-    game_state['minimap_offset_y'] = minimap_offset_y
-    game_state['minimap_min_iso_x'] = minimap_min_iso_x
-    game_state['minimap_min_iso_y'] = minimap_min_iso_y
-    game_state['screen_width'] = screen_width
-    game_state['screen_height'] = screen_height
-    game_state['screen'] = screen
-    game_state['fullscreen'] = fullscreen
