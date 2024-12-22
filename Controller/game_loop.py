@@ -46,6 +46,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     minimap_dragging = False
     fullscreen = False
 
+    # -- Ajouts pour la sélection rectangulaire --
     game_state = {
         'camera': camera,
         'players': players,
@@ -67,7 +68,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'player_selection_updated': True,
         'player_info_updated': True,
         'minimap_entities_surface': minimap_entities_surface,
-        'team_colors': team_colors
+        'team_colors': team_colors,
+
+        # --- Nouveaux champs pour la sélection ---
+        'selecting_units': False,
+        'selection_start': None,
+        'selection_end': None,
+        'selected_units': []
     }
 
     player_selection_surface = None
@@ -117,7 +124,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
-        draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors)
+        draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
 
         screen.blit(game_state['minimap_background'], minimap_rect.topleft)
         screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)
@@ -138,6 +145,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         display_fps(screen, clock)
 
+        # On force un redraw complet
         if game_state.get('force_full_redraw', False):
             pygame.display.flip()
             game_state['force_full_redraw'] = False
