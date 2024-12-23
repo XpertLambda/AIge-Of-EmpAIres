@@ -153,6 +153,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             screen.blit(player_info_surface, (0, screen_height - inf_h))
 
         display_fps(screen, clock)
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_e] and selected_player:
+            a = TownCentre(selected_player.teamID, 10,10)
+            selected_player.buildBuilding(a, 10, 10, game_map, 1)
+            print(f"game loop : maximum population : {selected_player.maximum_population}")
             
         if game_state.get('force_full_redraw', False):
             pygame.display.flip()

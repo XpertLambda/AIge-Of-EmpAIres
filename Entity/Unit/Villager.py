@@ -41,22 +41,5 @@ class Villager(Unit):
         self.resources = 0
         self.task = False
 
-    def buildBuilding(self, building, x, y, map, num_villagers):
-        if not self.isAvailable():
-            return
-        self.task = True
-        self.move(x, y, map)
-        if not map.can_place_building(map.grid, x, y, building):
-            self.task = False
-            return
-        if self.resources >= building.cost.wood:
-            self.resources -= building.cost.wood
-            map.place_building(x, y, building)
-                # Increment max population if town centre is built
-            if isinstance(building, TownCentre) or isinstance(building, House):
-                self.maximum_population += building.population
-        else:
-            self.task = False
-
     def buildTime(self, building, num_villagers):
         return max(10, (3 * building.buildTime) / (num_villagers + 2)) if num_villagers > 0 else building.buildTime

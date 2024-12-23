@@ -67,6 +67,24 @@ class Team:
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team = teamID))
 
+    def buildBuilding(self, building, x, y, map, num_villagers):
+        ##### A MODIFIER!!!!!!!!
+        '''if not self.isAvailable(): 
+            return
+        self.task = True
+        self.move(x, y, map)
+        if not map.can_place_building(map.grid, x, y, building):
+            self.task = False
+            return
+        if self.resources >= building.cost.wood:
+            self.resources -= building.cost.wood
+            map.place_building(x, y, building)'''
+            # Increment max population if town centre is built
+        if isinstance(building, TownCentre) or isinstance(building, House):
+            self.maximum_population += building.population
+            print(f"Maximum population: {self.maximum_population} - {building.population}")
+        else:
+            self.task = False
 ##### A MODIFIER!!!!!!!!
 '''
     def gestion(self):
@@ -146,3 +164,5 @@ class Team:
                 s.task=True   
                 s.attaquer(False,self.cible,map)
 '''
+
+    
