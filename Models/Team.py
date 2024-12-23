@@ -82,7 +82,6 @@ class Team:
             # Increment max population if town centre is built
         if isinstance(building, TownCentre) or isinstance(building, House):
             self.maximum_population += building.population
-            print(f"Maximum population: {self.maximum_population} - {building.population}")
         else:
             self.task = False
 ##### A MODIFIER!!!!!!!!
