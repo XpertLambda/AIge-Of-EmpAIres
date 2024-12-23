@@ -2,6 +2,9 @@ import time
 import pygame
 import sys
 import random
+from Entity.Building import *
+from Entity.Unit import *
+from Models.Team import Team
 from Controller.camera import Camera
 from Controller.drawing import (
     draw_map,
@@ -12,6 +15,7 @@ from Controller.drawing import (
     draw_minimap_viewport,
     generate_team_colors
 )
+
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
 from Controller.select_player import create_player_selection_surface, create_player_info_surface
@@ -106,6 +110,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         players = game_state['players']
         team_colors = game_state['team_colors']
         game_map = game_state['game_map']
+        
 
         if game_state.get('recompute_camera', False):
             min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
@@ -148,7 +153,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             screen.blit(player_info_surface, (0, screen_height - inf_h))
 
         display_fps(screen, clock)
-
+            
         if game_state.get('force_full_redraw', False):
             pygame.display.flip()
             game_state['force_full_redraw'] = False

@@ -5,7 +5,7 @@ import pickle
 import time
 from collections import defaultdict
 from datetime import datetime
-from Entity.Building import Building
+from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource.Resource import *
 from Entity.Resource.Gold import Gold
@@ -95,6 +95,8 @@ class GameMap:
                     y = random.randint(y_start, max(y_start, y_end - building.size))
                     placed = self.add_entity(grid, x, y, building)
                     if placed:
+                        if (isinstance(building, TownCentre) or isinstance(building, House)):
+                            player.maximum_population += building.population
                         break
                     attempts += 1
               

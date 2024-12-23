@@ -1,15 +1,16 @@
 # Models/Team.py
-from Settings.setup import LEAN_STARTING_GOLD, LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_VILLAGERS, LEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_GOLD, MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_VILLAGERS, MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS
+from Settings.setup import LEAN_STARTING_GOLD, LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_VILLAGERS, LEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_GOLD, MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_VILLAGERS, MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS, START_MAXIMUM_POPULATION
 from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
 
 class Team:
-    def __init__(self, difficulty, teamID):
+    def __init__(self, difficulty, teamID, maximum_population = START_MAXIMUM_POPULATION):
         self.resources = {"gold": 0, "wood": 0, "food": 0}
         self.units = []     
         self.buildings = []
         self.teamID = teamID
+        self.maximum_population = maximum_population
         self.en_cours=dict()
         if difficulty == 'DEBUG':
             self.resources["gold"] = LEAN_STARTING_GOLD
@@ -67,6 +68,23 @@ class Team:
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team = teamID))
 
+    def buildBuilding(self, building, x, y, map, num_villagers):
+        ##### A MODIFIER!!!!!!!!
+        '''if not self.isAvailable(): 
+            return
+        self.task = True
+        self.move(x, y, map)
+        if not map.can_place_building(map.grid, x, y, building):
+            self.task = False
+            return
+        if self.resources >= building.cost.wood:
+            self.resources -= building.cost.wood
+            map.place_building(x, y, building)'''
+            # Increment max population if town centre is built
+        if isinstance(building, TownCentre) or isinstance(building, House):
+            self.maximum_population += building.population
+        else:
+            self.task = False
 ##### A MODIFIER!!!!!!!!
 '''
     def gestion(self):
@@ -146,3 +164,5 @@ class Team:
                 s.task=True   
                 s.attaquer(False,self.cible,map)
 '''
+
+    

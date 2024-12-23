@@ -3,10 +3,12 @@ import os
 
 # -------------------
 # Global Constants
+# Classe Villager / Team restriction
 # -------------------
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_COLLECTION_RATE = 25
 RESOURCE_CAPACITY = 20
+START_MAXIMUM_POPULATION = 200          
 
 # -------------------
 # Entity Resources NamedTuple
@@ -219,6 +221,8 @@ sprite_config = {
 }
 
 FRAMES_PER_UNIT = 10
+
+
 
 
 
