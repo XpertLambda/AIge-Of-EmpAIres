@@ -1,7 +1,3 @@
-# 4) Controller/drawing.py
-# On génère dynamiquement les couleurs d'équipe en fonction de NUMBER_OF_PLAYERS.
-# On n'utilise plus la liste statique. On utilise un simple nuancier.
-
 import pygame
 import math
 import colorsys
@@ -25,24 +21,34 @@ from Entity.Building import Building
 from Entity.Resource.Gold import Gold
 
 def generate_team_colors(nb_players):
-    # Génère des couleurs avec des teintes espacées en évitant les tons de vert
     colors = []
     step = 1.0 / nb_players
     for i in range(nb_players):
         hue = (i * step) % 1.0
-        # Éviter les teintes entre 90° et 150° (verts)
         if 0.25 <= hue <= 0.4167:
-            hue = (hue + 0.2) % 1.0  # Décale la teinte pour éviter le vert
-        saturation = 1.0
-        value = 0.7  # Luminosité pour contraster avec le fond
-        r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
-        r, g, b = int(r * 255), int(g * 255), int(b * 255)
-        colors.append((r, g, b))
+            hue = (hue + 0.2) % 1.0
+        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 0.7)
+        colors.append((int(r*255), int(g*255), int(b*255)))
     return colors
 
-def draw_health_bar(screen, screen_x, screen_y, entity, team_colors):
-    if not entity.should_draw_health_bar():
+def draw_health_bar(screen, screen_x, screen_y, entity, team_colors, game_state):
+    # Si on veut forcer l'affichage pour tout le monde
+    force_display = game_state.get('show_all_health_bars', False)
+
+    # Vérifier si l’entité est un bâtiment ou une unité (sinon on ignore)
+    if not (isinstance(entity, Building) or isinstance(entity, Unit)):
         return
+
+    # Soit l’entité veut afficher sa barre (cliqué/endommagé/sélectionné),
+    # soit on force l’affichage global
+    display_condition = (
+        entity.should_draw_health_bar()
+        or (entity in game_state.get('selected_units', []))
+        or force_display
+    )
+    if not display_condition:
+        return
+
     ratio = entity.get_health_ratio()
     if ratio <= 0:
         return
@@ -59,9 +65,8 @@ def draw_health_bar(screen, screen_x, screen_y, entity, team_colors):
     fill_width = int(bar_width * ratio)
     fill_rect = pygame.Rect(screen_x - bar_width//2, screen_y - 30, fill_width, bar_height)
     pygame.draw.rect(screen, team_color, fill_rect)
-    
 
-def draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors):
+def draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state):
     corners_screen = [
         (0, 0),
         (screen_width, 0),
@@ -70,7 +75,8 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     ]
 
     tile_indices = [
-        screen_to_tile(sx, sy, screen_width, screen_height, camera, HALF_TILE_SIZE / 2, HALF_TILE_SIZE / 4)
+        screen_to_tile(sx, sy, screen_width, screen_height, camera,
+                       HALF_TILE_SIZE / 2, HALF_TILE_SIZE / 4)
         for sx, sy in corners_screen
     ]
 
@@ -87,23 +93,39 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
 
     for y in range(min_tile_y, max_tile_y):
         for x in range(min_tile_x, max_tile_x):
-            if x % 10 == 0 and y % 10 == 0:   
-                screen_x, screen_y = tile_to_screen(x+4.5, y+4.5, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-                fill_grass(screen, screen_x, screen_y, camera)
+            # On dessine l'herbe ponctuellement (exemple)
+            if x % 10 == 0 and y % 10 == 0:
+                sx, sy = tile_to_screen(x+4.5, y+4.5,
+                                        HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
+                                        camera, screen_width, screen_height)
+                fill_grass(screen, sx, sy, camera)
+
             entities = game_map.grid.get((x, y), None)
             if entities:
                 for entity in entities:
                     visible_entites.add(entity)
 
-    for entity in sorted(visible_entites, key=lambda entity: (entity.x + entity.y)):
+    for entity in sorted(visible_entites, key=lambda e: (e.y, e.x)):
         entity.display(screen, screen_width, screen_height, camera)
-        screen_x, screen_y = tile_to_screen(entity.x, entity.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_health_bar(screen, screen_x, screen_y, entity, team_colors)
+        sx, sy = tile_to_screen(entity.x, entity.y,
+                                HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
+                                camera, screen_width, screen_height)
+        draw_health_bar(screen, sx, sy, entity, team_colors, game_state)
+
+    # Dessiner le rectangle de sélection si on est en train de sélectionner
+    if game_state.get('selecting_units', False):
+        sel_start = game_state.get('selection_start')
+        sel_end = game_state.get('selection_end')
+        if sel_start and sel_end:
+            x1, y1 = sel_start
+            x2, y2 = sel_end
+            rect = pygame.Rect(x1, y1, x2 - x1, y2 - y1)
+            rect.normalize()
+            pygame.draw.rect(screen, (255,255,255), rect, 1)
 
 def compute_map_bounds(game_map):
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
-
     num_tiles_x = game_map.num_tiles_x
     num_tiles_y = game_map.num_tiles_y
 
@@ -155,23 +177,23 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
     points = []
     for iso_x, iso_y in iso_coords:
-        minimap_x = (iso_x - min_iso_x) * scale + offset_x
-        minimap_y = (iso_y - min_iso_y) * scale + offset_y
-        points.append((minimap_x, minimap_y))
+        mx = (iso_x - min_iso_x) * scale + offset_x
+        my = (iso_y - min_iso_y) * scale + offset_y
+        points.append((mx, my))
     pygame.draw.polygon(minimap_surface, (0, 128, 0), points)
 
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
-
 def update_minimap_entities(game_state):
+    camera = game_state['camera']
+    game_map = game_state['game_map']
+    team_colors = game_state['team_colors']
     minimap_scale = game_state['minimap_scale']
     minimap_offset_x = game_state['minimap_offset_x']
     minimap_offset_y = game_state['minimap_offset_y']
     minimap_min_iso_x = game_state['minimap_min_iso_x']
     minimap_min_iso_y = game_state['minimap_min_iso_y']
     minimap_entities_surface = game_state['minimap_entities_surface']
-    game_map = game_state['game_map']
-    team_colors = game_state['team_colors']  # Récupérer team_colors depuis game_state
 
     minimap_entities_surface.fill((0,0,0,0))
 
@@ -179,36 +201,34 @@ def update_minimap_entities(game_state):
     tile_height = HALF_TILE_SIZE / 2
 
     entities_to_draw = set()
-    matrix = game_map.grid
-    for pos, entities in matrix.items():
-        for entity in entities:
-            entities_to_draw.add(entity)
+    for pos, entities in game_map.grid.items():
+        for e in entities:
+            entities_to_draw.add(e)
 
-    MIN_BUILDING_SIZE = 4  
-    MIN_UNIT_RADIUS = 3 
+    MIN_BUILDING_SIZE = 4
+    MIN_UNIT_RADIUS = 3
 
     for entity in entities_to_draw:
         x, y = entity.x, entity.y
         team = entity.team
         size = entity.size
         iso_x, iso_y = to_isometric(x, y, tile_width, tile_height)
-        minimap_x = (iso_x - minimap_min_iso_x) * minimap_scale + minimap_offset_x
-        minimap_y = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
-        
+        mx = (iso_x - minimap_min_iso_x) * minimap_scale + minimap_offset_x
+        my = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
+
         if team is not None:
             color = team_colors[team % len(team_colors)]
             if isinstance(entity, Building):
                 half_dim = max(MIN_BUILDING_SIZE, size)
-                rect = pygame.Rect(minimap_x - half_dim, minimap_y - half_dim, half_dim*2, half_dim*2)
+                rect = pygame.Rect(mx - half_dim, my - half_dim, half_dim*2, half_dim*2)
                 pygame.draw.rect(minimap_entities_surface, (*color, 150), rect)
             else:
                 radius = max(MIN_UNIT_RADIUS, size)
-                pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), radius)
+                pygame.draw.circle(minimap_entities_surface, (*color, 150), (mx, my), radius)
         elif isinstance(entity, Gold):
             color = get_color_for_terrain('gold')
             radius = max(MIN_UNIT_RADIUS, size)
-            pygame.draw.circle(minimap_entities_surface, (*color, 150), (minimap_x, minimap_y), radius)
-
+            pygame.draw.circle(minimap_entities_surface, (*color, 150), (mx, my), radius)
 
 def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
     half_screen_width = camera.width / (2 * camera.zoom)
@@ -226,12 +246,9 @@ def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_
     rect_right = (bottom_right_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
     rect_bottom = (bottom_right_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
 
-    rect_x = rect_left
-    rect_y = rect_top
-    rect_width = rect_right - rect_left
-    rect_height = rect_bottom - rect_top
-
-    pygame.draw.rect(screen, (255, 255, 255), (rect_x, rect_y, rect_width, rect_height), 2)
+    rect_w = rect_right - rect_left
+    rect_h = rect_bottom - rect_top
+    pygame.draw.rect(screen, (255,255,255), (rect_left, rect_top, rect_w, rect_h), 2)
 
 def display_fps(screen, clock):
     font = pygame.font.SysFont(None, 24)

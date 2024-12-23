@@ -1,4 +1,5 @@
 from Entity.Building import Building
+from Settings.setup import Resources
 
 class Camp(Building):
     def __init__(self, team, x=0, y=0):
@@ -7,11 +8,9 @@ class Camp(Building):
             y=y,
             team=team,
             acronym='C',
-            woodCost=100,
-            goldCost=0,
-            buildTime=25,
-            hp=200,
             size=2,
+            max_hp=200,
+            cost=Resources(food=0, gold=0, wood=100),
+            buildTime=25,
             resourceDropPoint=True
         )
-        self.max_hp = self.hp  # ajout

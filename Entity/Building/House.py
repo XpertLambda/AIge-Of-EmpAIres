@@ -1,4 +1,5 @@
 from Entity.Building import Building
+from Settings.setup import Resources
 
 class House(Building):
     def __init__(self, team, x=0, y=0):
@@ -7,11 +8,9 @@ class House(Building):
             y=y,
             team=team,
             acronym='H',
-            woodCost=25,
-            goldCost=0,
-            buildTime=25,
-            hp=200,
             size=2,
+            max_hp=200,
+            cost=Resources(food=0, gold=0, wood=25),
+            buildTime=25,
             population=5
         )
-        self.max_hp = self.hp  # ajout

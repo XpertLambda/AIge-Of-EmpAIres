@@ -1,23 +1,36 @@
-from Entity.Entity import *
-from Controller.isometric_utils import *
-from Settings.setup import *
+from Entity.Entity import Entity
+from Controller.isometric_utils import tile_to_screen
+from Settings.setup import HALF_TILE_SIZE
 from Controller.init_sprites import draw_sprite
 
 class Building(Entity):
-    def __init__(self, x, y, team, acronym, woodCost, goldCost, buildTime, hp, size, population=0, resourceDropPoint=False, spawnsUnits=False, containsFood=False, walkable=False, attack=0, range=0):
-        super().__init__(x, y, team, acronym, size)
-        self.woodCost = woodCost
-        self.goldCost = goldCost
+    def __init__(
+        self, 
+        x, 
+        y, 
+        team, 
+        acronym, 
+        size, 
+        max_hp, 
+        cost, 
+        buildTime, 
+        population=0, 
+        resourceDropPoint=False,
+        spawnsUnits=False, 
+        containsFood=False, 
+        walkable=False,
+        attack_power=0, 
+        attack_range=0
+    ):
+        super().__init__(x=x, y=y, team=team, acronym=acronym, size=size, max_hp=max_hp, cost=cost)
         self.buildTime = buildTime
-        self.hp = hp
-        self.max_hp = self.hp  # ajout de la définition de max_hp
         self.population = population
         self.resourceDropPoint = resourceDropPoint
         self.spawnsUnits = spawnsUnits
         self.containsFood = containsFood
         self.walkable = walkable
-        self.attack = attack
-        self.range = range
+        self.attack_power = attack_power
+        self.attack_range = attack_range
 
     def display(self, screen, screen_width, screen_height, camera):
         category = 'buildings'

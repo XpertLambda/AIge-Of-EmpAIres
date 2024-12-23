@@ -1,7 +1,5 @@
-# Controller/camera.py
-
-from Settings.setup import *
-from Controller.isometric_utils import *
+from Settings.setup import MAX_ZOOM, MIN_ZOOM
+from Controller.isometric_utils import screen_to_tile, tile_to_screen
 
 class Camera:
     def __init__(self, width, height):
@@ -16,27 +14,30 @@ class Camera:
         self.max_y = None
 
     def apply(self, x, y):
+        # Apply camera transformations to coordinates
         x = (x + self.offset_x) * self.zoom + self.width / 2
         y = (y + self.offset_y) * self.zoom + self.height / 2
         return x, y
 
     def unapply(self, screen_x, screen_y):
-        # Convertit les coordonnées de l'écran en coordonnées du monde
+        # Convert screen coordinates to world coordinates
         world_x = (screen_x - self.width / 2) / self.zoom - self.offset_x
         world_y = (screen_y - self.height / 2) / self.zoom - self.offset_y
         return world_x, world_y
 
     def move(self, dx, dy):
+        # Move the camera by dx and dy
         self.offset_x += dx / self.zoom
         self.offset_y += dy / self.zoom
         self.limit_camera()
 
     def set_zoom(self, zoom_factor):
-        # Limiter le zoom entre un minimum et un maximum
+        # Set the zoom level within allowed limits
         self.zoom = max(MIN_ZOOM, min(zoom_factor, MAX_ZOOM))
         self.limit_camera()
 
     def set_bounds(self, min_x, max_x, min_y, max_y):
+        # Set the camera bounds
         self.min_x = min_x
         self.max_x = max_x
         self.min_y = min_y
@@ -44,6 +45,7 @@ class Camera:
         self.limit_camera()
 
     def limit_camera(self):
+        # Limit the camera to the set bounds
         if self.min_x is None or self.max_x is None:
             return
 
@@ -59,13 +61,12 @@ class Camera:
         self.offset_y = max(min_offset_y, min(self.offset_y, max_offset_y))
 
     def zoom_out_to_global(self):
-        # Center the camera on the entire map
+        # Center the camera on the entire map and zoom out
         self.offset_x = - (self.min_x + self.max_x) / 2
         self.offset_y = - (self.min_y + self.max_y) / 2
-        # Calculate a zoom level to zoom out more significantly
-        zoom_factor = 0.5  # Adjust this value to zoom out more
+        
+        zoom_factor = 0.5 
         self.zoom = zoom_factor * MIN_ZOOM
-        # Ensure the zoom level is within allowed limits
+        
         self.zoom = max(MIN_ZOOM, min(self.zoom, MAX_ZOOM))
         self.limit_camera()
-

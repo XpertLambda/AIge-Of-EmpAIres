@@ -1,4 +1,5 @@
 from Entity.Building import Building
+from Settings.setup import Resources
 
 class TownCentre(Building):
     def __init__(self, team, x=0, y=0):
@@ -7,13 +8,11 @@ class TownCentre(Building):
             y=y,
             team=team,
             acronym='T',
-            woodCost=350,
-            goldCost=0,
-            buildTime=150,
-            hp=1000,
             size=4,
+            max_hp=1200,
+            cost=Resources(food=0, gold=0, wood=200),
+            buildTime=100,
             population=5,
             resourceDropPoint=True,
             spawnsUnits=True
         )
-        self.max_hp = self.hp  # ajout

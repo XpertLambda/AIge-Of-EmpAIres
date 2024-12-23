@@ -1,4 +1,5 @@
 from Entity.Unit import Unit
+from Settings.setup import Resources
 
 class Horseman(Unit):
     def __init__(self, team, x=0, y=0):
@@ -7,12 +8,10 @@ class Horseman(Unit):
             y=y,
             team=team,
             acronym="h",
-            cost_food=80,
-            cost_gold=20,
-            cost_wood=0,
-            hp=45,
-            attack=4,
+            max_hp=45,
+            cost=Resources(food=80, gold=20, wood=0),
+            attack_power=4,
+            attack_range=1,
             speed=1.2,
             training_time=30
         )
-        self.max_hp = self.hp  # ajout

@@ -1,6 +1,5 @@
 from Entity.Building import Building
-from Entity.Unit.Horseman import Horseman
-import time
+from Settings.setup import Resources
 
 class Stable(Building):
     def __init__(self, team, x=0, y=0):
@@ -9,11 +8,9 @@ class Stable(Building):
             y=y,
             team=team,
             acronym='S',
-            woodCost=175,
-            goldCost=0,
-            buildTime=50,
-            hp=500,
             size=3,
+            max_hp=550,
+            cost=Resources(food=0, gold=0, wood=175),
+            buildTime=70,
             spawnsUnits=True
         )
-        self.max_hp = self.hp  # ajout

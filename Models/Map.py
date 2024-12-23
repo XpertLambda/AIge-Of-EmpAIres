@@ -1,8 +1,3 @@
-# Models/Map.py
-# On modifie la logique de déploiement des joueurs pour qu'ils occupent
-# chacun une zone carrée (ou rectangulaire) de la carte, en répartissant
-# la carte en grille en fonction du nombre de joueurs.
-
 import math
 import random
 import os
@@ -14,15 +9,14 @@ from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource.Resource import *
 from Entity.Resource.Gold import Gold
-from Entity.Resource.Wood import Wood
-from Entity.Resource.Food import Food
-from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE
+from Entity.Resource.Tree import Tree
+from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE, SAVE_DIRECTORY
 
 class GameMap:
     def __init__(self, grid_size, gold_at_center, players, generate=True):
-        self.grid_size = grid_size        # Store grid size
-        self.gold_at_center = gold_at_center  # Store gold_at_center flag
-        self.players = players            # Store players list
+        self.grid_size = grid_size
+        self.gold_at_center = gold_at_center
+        self.players = players
         self.num_tiles_x = grid_size
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
@@ -32,18 +26,18 @@ class GameMap:
             else:
                 self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y)
         else:
-            self.grid = {}  # Initialize an empty grid
+            self.grid = {}
 
     def add_entity(self, grid, x, y, entity):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
             return False
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
                 if pos in grid:
-                    # Impossible de placer l'entité ici
                     return False
-        # Placement effectif
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
@@ -55,13 +49,14 @@ class GameMap:
 
     def remove_entity(self, grid, x, y, entity):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
-            return False  # Position out of bounds
+            return False
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
                 if pos not in grid or entity not in grid[pos]:
                     return False  # Entity not present at the position
-        # Remove entity from the grid
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
@@ -71,17 +66,12 @@ class GameMap:
         return True
 
     def generate_zones(self, num_players):
-        # On veut répartir les joueurs dans une grille la plus carrée possible.
-        # Nombre de colonnes = ceil(sqrt(num_players))
-        # Nombre de lignes = ceil(num_players / cols)
         cols = int(math.ceil(math.sqrt(num_players)))
         rows = int(math.ceil(num_players / cols))
-
         zone_width = self.num_tiles_x // cols
         zone_height = self.num_tiles_y // rows
-
         zones = []
-        # On crée une liste de zones (x_start, x_end, y_start, y_end) pour chaque joueur
+
         for i in range(num_players):
             row = i // cols
             col = i % cols
@@ -89,8 +79,7 @@ class GameMap:
             y_start = row * zone_height
             x_end = x_start + zone_width
             y_end = y_start + zone_height
-            # S'il reste de la place non utilisée (division non entière), c'est pas grave.
-            # On se limite au sol de zone_width/zone_height.
+
             zones.append((x_start, x_end, y_start, y_end))
         return zones
 
@@ -100,7 +89,6 @@ class GameMap:
 
         for index, player in enumerate(players):
             x_start, x_end, y_start, y_end = zones[index]
-
             for building in player.buildings:
                 max_attempts = (x_end - x_start) * (y_end - y_start)
                 attempts = 0
@@ -114,12 +102,13 @@ class GameMap:
                             player.maximum_population += building.population
                         break
                     attempts += 1
+              
+                # Si impossible de placer le bâtiment dans cette zone
+                # On essaie juste sur la carte complète en dernier recours
                 if not placed:
-                    # Si impossible de placer le bâtiment dans cette zone
-                    # On essaie juste sur la carte complète en dernier recours
-                    for ty in range(self.num_tiles_y - building.size):
-                        for tx in range(self.num_tiles_x - building.size):
-                            placed = self.add_entity(grid, tx, ty, building)
+                    for tile_y in range(self.num_tiles_y - building.size):
+                        for tile_x in range(self.num_tiles_x - building.size):
+                            placed = self.add_entity(grid, tile_x, tile_y, building)
                             if placed:
                                 break
                         if placed:
@@ -161,14 +150,12 @@ class GameMap:
 
         resource_classes = {
             'gold': Gold,
-            'wood': Wood,
-            'food': Food,
+            'wood': Tree
         }
 
         resources = (
             ['gold'] * NUM_GOLD_TILES +
-            ['wood'] * NUM_WOOD_TILES +
-            ['food'] * NUM_FOOD_TILES
+            ['wood'] * NUM_WOOD_TILES
         )
         random.shuffle(resources)
 
@@ -192,15 +179,13 @@ class GameMap:
 
         resource_classes = {
             'gold': Gold,
-            'wood': Wood,
-            'food': Food,
+            'wood': Tree,
         }
 
         # Placer l'or au centre
         resources = (
             ['gold'] * NUM_GOLD_TILES +
-            ['wood'] * NUM_WOOD_TILES +
-            ['food'] * NUM_FOOD_TILES
+            ['wood'] * NUM_WOOD_TILES
         )
 
         center_x = num_tiles_x // 2
