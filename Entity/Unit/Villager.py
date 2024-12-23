@@ -1,5 +1,6 @@
 from Entity.Unit import Unit  
 from Settings.setup import Resources
+from Entity.Building import TownCentre, House
 
 class Villager(Unit):
     def __init__(self, team, x=0, y=0):
@@ -51,6 +52,9 @@ class Villager(Unit):
         if self.resources >= building.cost.wood:
             self.resources -= building.cost.wood
             map.place_building(x, y, building)
+                # Increment max population if town centre is built
+            if isinstance(building, TownCentre) or isinstance(building, House):
+                self.maximum_population += building.population
         else:
             self.task = False
 

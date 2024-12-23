@@ -11,7 +11,7 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
     # Get screen height
     screen = pygame.display.get_surface()
     screen_height = screen.get_height()
-    max_height = screen_height / 2  # Taille maximale de 1/3 de la fenêtre
+    max_height = screen_height / 3  # Taille maximale de 1/3 de la fenêtre
 
     # Determine the optimal number of columns
     columns = 1
