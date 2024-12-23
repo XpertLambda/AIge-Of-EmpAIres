@@ -175,7 +175,6 @@ sprite_config = {
         },
         'tree': {
             'directory': 'assets/resources/tree/',
-            'scale': (TILE_SIZE * 2, TILE_SIZE * 2),
             'variant': 4
         }
     },

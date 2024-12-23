@@ -13,18 +13,15 @@ from Entity.Resource.Tree import Tree
 from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE, SAVE_DIRECTORY
 
 class GameMap:
-    def __init__(self, grid_size, gold_at_center, players, generate=True):
+    def __init__(self, grid_size, center_gold_flag, players, generate=True):
         self.grid_size = grid_size
-        self.gold_at_center = gold_at_center
+        self.center_gold_flag = center_gold_flag
         self.players = players
         self.num_tiles_x = grid_size
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         if generate:
-            if gold_at_center:
-                self.grid = self.random_map_gold(self.num_tiles_x, self.num_tiles_y, players)
-            else:
-                self.grid = self.random_map(self.num_tiles_x, self.num_tiles_y)
+            self.generate_map()
         else:
             self.grid = {}
 
@@ -101,8 +98,6 @@ class GameMap:
                         break
                     attempts += 1
               
-                # Si impossible de placer le bâtiment dans cette zone
-                # On essaie juste sur la carte complète en dernier recours
                 if not placed:
                     for tile_y in range(self.num_tiles_y - building.size):
                         for tile_x in range(self.num_tiles_x - building.size):
@@ -124,14 +119,12 @@ class GameMap:
             for unit in player.units:
                 placed = False
                 attempts = 0
-                # On essaie de placer l'unité dans la zone du joueur
                 while not placed and attempts < 1000:
                     x_unit = random.randint(x_start, x_end - 1)
                     y_unit = random.randint(y_start, y_end - 1)
                     placed = self.add_entity(grid, x_unit, y_unit, unit)
                     attempts += 1
                 if not placed:
-                    # Si non placé dans la zone, on tente globalement
                     attempts = 0
                     while not placed and attempts < 1000:
                         x_unit = random.randint(0, self.num_tiles_x - 1)
@@ -141,97 +134,75 @@ class GameMap:
                     if not placed:
                         print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
-    def random_map(self, num_tiles_x, num_tiles_y):
+    def generate_map(self):
         grid = {}
-        self.generate_buildings(grid, self.players)  # Use self.players
+        self.generate_resources(grid)
+        self.generate_buildings(grid, self.players)
         self.generate_units(grid, self.players)
+        self.grid = grid
+        return grid
 
+    def generate_resources(self, grid):
         resource_classes = {
             'gold': Gold,
             'wood': Tree
         }
-
-        resources = (
-            ['gold'] * NUM_GOLD_TILES +
-            ['wood'] * NUM_WOOD_TILES
-        )
-        random.shuffle(resources)
-
-        for resource_type in resources:
-            placed = False
-            attempts = 0
-            while not placed and attempts < 1000:
-                x = random.randint(0, num_tiles_x - 1)
-                y = random.randint(0, num_tiles_y - 1)
-                resource_class = resource_classes[resource_type]
-                resource = resource_class(x, y)
-                placed = self.add_entity(grid, x, y, resource)
-                attempts += 1
-            if not placed:
-                print(f"Warning: Failed to deploy {resource_type} after 1000 attempts.")
-        return grid
-
-    def random_map_gold(self, num_tiles_x, num_tiles_y, players):
-        # On ne modifie pas la logique du spawn gold centré, uniquement l'assignation d'entités joueurs reste inchangée
-        grid = {}
-
-        resource_classes = {
-            'gold': Gold,
-            'wood': Tree,
-        }
-
-        # Placer l'or au centre
-        resources = (
-            ['gold'] * NUM_GOLD_TILES +
-            ['wood'] * NUM_WOOD_TILES
-        )
-
-        center_x = num_tiles_x // 2
-        center_y = num_tiles_y // 2
-        gold_count = 0
-        layer = 0
-        while gold_count < NUM_GOLD_TILES:
-            for dx in range(-layer, layer + 1):
-                for dy in range(-layer, layer + 1):
-                    x = center_x + dx
-                    y = center_y + dy
-                    if 0 <= x < num_tiles_x and 0 <= y < num_tiles_y:
-                        if (x, y) not in grid:
+        if self.center_gold_flag:
+            center_x = self.num_tiles_x // 2
+            center_y = self.num_tiles_y // 2
+            gold_count = 0
+            layer = 0
+            max_layer = max(self.num_tiles_x, self.num_tiles_y)
+            while gold_count < NUM_GOLD_TILES and layer < max_layer:
+                for dx in range(-layer, layer + 1):
+                    for dy in range(-layer, layer + 1):
+                        x = center_x + dx
+                        y = center_y + dy
+                        if 0 <= x < self.num_tiles_x and 0 <= y < self.num_tiles_y and (x, y) not in grid:
                             grid[(x, y)] = set()
-                            if gold_count < NUM_GOLD_TILES:
-                                resource = resource_classes['gold'](x, y)
-                                grid[(x, y)].add(resource)
-                                gold_count += 1
-                                if gold_count >= NUM_GOLD_TILES:
-                                    break
-                if gold_count >= NUM_GOLD_TILES:
+                            grid[(x, y)].add(resource_classes['gold'](x, y))
+                            gold_count += 1
+                            if gold_count >= NUM_GOLD_TILES:
+                                break
+                    if gold_count >= NUM_GOLD_TILES:
+                        break
+                layer += 1
+        else:
+            # Place gold randomly
+            for _ in range(NUM_GOLD_TILES):
+                placed = False
+                attempts = 0
+                while not placed and attempts < 1000:
+                    x = random.randint(0, self.num_tiles_x - 1)
+                    y = random.randint(0, self.num_tiles_y - 1)
+                    resource = resource_classes['gold'](x, y)
+                    placed = self.add_entity(grid, x, y, resource)
+                    attempts += 1
+
+        # Generate trees as groups instead of one by one
+        cluster_size_min, cluster_size_max = 2, 4
+        wood_placed = 0
+        while wood_placed < NUM_WOOD_TILES:
+            cluster_size = random.randint(cluster_size_min, cluster_size_max)
+            x_start = random.randint(0, self.num_tiles_x - cluster_size)
+            y_start = random.randint(0, self.num_tiles_y - cluster_size)
+            for i in range(cluster_size):
+                for j in range(cluster_size):
+                    if wood_placed >= NUM_WOOD_TILES:
+                        break
+                    x = x_start + i
+                    y = y_start + j
+                    attempts = 0
+                    placed = False
+                    while not placed and attempts < 10:
+                        resource = resource_classes['wood'](x, y)
+                        placed = self.add_entity(grid, x, y, resource)
+                        attempts += 1
+                    if placed:
+                        wood_placed += 1
+                if wood_placed >= NUM_WOOD_TILES:
                     break
-            layer += 1
 
-        # Place other resources randomly
-        for resource_type in resources:
-            if resource_type == 'gold':
-                continue
-            placed = False
-            attempts = 0
-            while not placed and attempts < 1000:
-                x = random.randint(0, num_tiles_x - 1)
-                y = random.randint(0, num_tiles_y - 1)
-                if (x, y) not in grid:
-                    grid[(x, y)] = set()
-                    resource_class = resource_classes[resource_type]
-                    resource = resource_class(x, y)
-                    grid[(x, y)].add(resource)
-                    placed = True
-                attempts += 1
-            if not placed:
-                print(f"Warning: Failed to place {resource_type} after 1000 attempts.")
-
-        # Déploiement des entités joueurs
-        self.generate_buildings(grid, players)
-        self.generate_units(grid, players)
-
-        return grid
 
     def print_map(self):
         for y in range(self.num_tiles_y):
@@ -240,7 +211,6 @@ class GameMap:
                 pos = (x, y)
                 if pos in self.grid:
                     entities = self.grid[pos]
-                    # On affiche juste le premier acronyme
                     acr = list(entities)[0].acronym if entities else ' '
                     row_display.append(acr)
                 else:
@@ -261,7 +231,7 @@ class GameMap:
         data = {
             'grid': self.grid,
             'grid_size': self.grid_size,
-            'gold_at_center': self.gold_at_center,
+            'center_gold_flag': self.center_gold_flag,
             'players': self.players
         }
         with open(full_path, 'wb') as f:
@@ -274,7 +244,7 @@ class GameMap:
                 data = pickle.load(f)
             self.grid = data['grid']
             self.grid_size = data['grid_size']
-            self.gold_at_center = data['gold_at_center']
+            self.center_gold_flag = data['center_gold_flag']
             self.players = data['players']
             self.num_tiles_x = self.num_tiles_y = self.grid_size
             print(f"Game map loaded successfully from {filename}.")
