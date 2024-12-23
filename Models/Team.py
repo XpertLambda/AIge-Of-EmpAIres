@@ -95,7 +95,7 @@ class Team:
             s.attaquer(True,t,map)
             
     def buildBatiment(self, building, x, y, map, num_villagers):
-        '''if not self.isAvailable():
+        if not self.isAvailable():
             return
         self.task = True
         self.SeDeplacer(x, y, map)
@@ -109,14 +109,11 @@ class Team:
             map.place_building(x, y, building)
         else:
             print(f"{self.acronym}: Not enough resources.")
-            '''
+            
             # Increment max population if town centre is built
-        print("in buildBatiment method")
-        print(building)
-        print(isinstance(building, TownCentre))
         if isinstance(building, TownCentre) or isinstance(building, House):
             self.maximum_population += building.population
-            print(f"in is instance {building.population}")
+            
         self.task = False
         
     

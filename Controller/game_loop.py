@@ -142,13 +142,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             screen.blit(player_info_surface, (0, screen_height - info_surface_height))
 
         display_fps(screen, clock)
-        
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_e] and selected_player:
-            a = TownCentre(selected_player.teamID, 10,10)
-            selected_player.buildBatiment(a, 10, 10, game_map, 1)
-            print(type(selected_player))
-            print("Number of buildings: ", len(selected_player.buildings))
             
         if game_state.get('force_full_redraw', False):
             pygame.display.flip()
