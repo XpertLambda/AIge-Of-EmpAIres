@@ -1,12 +1,13 @@
 # Settings/setup.py
 
 # -------------------
-# Classe Villager
+# Classe Villager / Team restriction
 # -------------------
 
 BUILDING_TIME_REDUCTION = 0.75  # Facteur de réduction du temps de construction
 RESOURCE_COLLECTION_RATE = 25    # Taux de collecte de ressources (unités par minute)
 RESOURCE_CAPACITY = 20            # Capacité de transport des ressources
+START_MAXIMUM_POPULATION = 200           # Population de départ
 
 ####################
 
@@ -103,3 +104,5 @@ if not os.path.exists(SAVE_DIRECTORY):
 # Configuration Animation
 # -------------------
 FRAMES_PER_UNIT = 10
+
+

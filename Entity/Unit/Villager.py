@@ -47,22 +47,7 @@ class Villager(Unit):
         self.resources = 0
         self.task = False
 
-    def buildBatiment(self, building, x, y, map, num_villagers):
-        if not self.isAvailable():
-            return
-        self.task = True
-        self.SeDeplacer(x, y, map)
-        if not map.can_place_building(map.grid, x, y, building):
-            print(f"{self.acronym}: Cannot place building.")
-            self.task = False
-            return
-        if self.resources >= building.woodCost:
-            self.resources -= building.woodCost
-            print(f"{self.acronym}: Building...")
-            map.place_building(x, y, building)
-        else:
-            print(f"{self.acronym}: Not enough resources.")
-        self.task = False
+    
 
     def buildTime(self, building, num_villagers):
         return max(10, (3 * building.buildTime) / (num_villagers + 2)) if num_villagers > 0 else building.buildTime

@@ -6,12 +6,15 @@ from Entity.Unit import *
 from Entity.Resource import Resource
 
 class Team:
-    def __init__(self, difficulty, teamID):
+    def __init__(self, difficulty, teamID, maximum_population = START_MAXIMUM_POPULATION):
         self.resources = {"gold": 0, "wood": 0, "food": 0}
         self.units = []     
         self.buildings = []
         self.teamID = teamID
+        self.maximum_population = START_MAXIMUM_POPULATION
         self.army = set()
+        print(f"Initialized Team {teamID} with maximum_population: {self.maximum_population}")
+
         
         if difficulty == 'DEBUG':
             self.resources["gold"] = LEAN_STARTING_GOLD
@@ -90,3 +93,30 @@ class Team:
             s=self.army[i]
             s.task=True
             s.attaquer(True,t,map)
+            
+    def buildBatiment(self, building, x, y, map, num_villagers):
+        '''if not self.isAvailable():
+            return
+        self.task = True
+        self.SeDeplacer(x, y, map)
+        if not map.can_place_building(map.grid, x, y, building):
+            print(f"{self.acronym}: Cannot place building.")
+            self.task = False
+            return
+        if self.resources >= building.woodCost:
+            self.resources -= building.woodCost
+            print(f"{self.acronym}: Building...")
+            map.place_building(x, y, building)
+        else:
+            print(f"{self.acronym}: Not enough resources.")
+            '''
+            # Increment max population if town centre is built
+        print("in buildBatiment method")
+        print(building)
+        print(isinstance(building, TownCentre))
+        if isinstance(building, TownCentre) or isinstance(building, House):
+            self.maximum_population += building.population
+            print(f"in is instance {building.population}")
+        self.task = False
+        
+    

@@ -3,6 +3,7 @@
 
 import pygame
 from collections import Counter
+from Models.Team import *
 # Supprimer l'importation de TEAM_COLORS
 # from Controller.drawing import TEAM_COLORS
 
@@ -13,7 +14,7 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
     # Obtenir la hauteur de l'écran
     screen = pygame.display.get_surface()
     screen_height = screen.get_height()
-    max_height = screen_height / 3  # Taille maximale de 1/3 de la fenêtre
+    max_height = screen_height / 2  # Taille maximale de 1/3 de la fenêtre
 
     # Déterminer le nombre optimal de colonnes
     columns = 1
@@ -55,7 +56,7 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
 def create_player_info_surface(selected_player, screen_width, team_colors):
     font = pygame.font.Font(None, 24)
     padding = 5
-    info_height = 130
+    info_height = 160
     surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
 
     team_color = team_colors[selected_player.teamID % len(team_colors)]
@@ -75,5 +76,9 @@ def create_player_info_surface(selected_player, screen_width, team_colors):
     buildings_text = "Buildings - " + ", ".join([f"{acronym}: {count}" for acronym, count in building_counts.items()])
     buildings_surface = font.render(buildings_text, True, (255, 255, 255))
     surface.blit(buildings_surface, (padding, 90))
+
+    maximum_population_text = (f"Maximum population : {selected_player.maximum_population}")
+    maximum_population = font.render(maximum_population_text, True, (255, 255, 255))
+    surface.blit(maximum_population, (padding, 120))
 
     return surface
