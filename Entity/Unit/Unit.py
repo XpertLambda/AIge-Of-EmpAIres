@@ -3,7 +3,7 @@ from Entity.Entity import Entity
 from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE
 from Controller.isometric_utils import tile_to_screen
 from Controller.init_sprites import draw_sprite
-
+import heapq
 class Unit(Entity):
     id = 0
 
@@ -201,3 +201,74 @@ class Unit(Entity):
             state=self.state,
             frame=self.current_frame
         )
+        
+    def a_star(unit, start, goal, game_map):
+        def heuristic(a, b):
+            return abs(a[0] - b[0]) + abs(a[1] - b[1])
+    
+        def get_neighbors(position):
+            directions = [
+                (1, 0), (0, 1), (-1, 0), (0, -1),
+                (1, 1), (1, -1), (-1, 1), (-1, -1)
+            ]
+            neighbors = []
+            for dx, dy in directions:
+                neighbor = (position[0] + dx, position[1] + dy)
+                if unit.is_tile_walkable(game_map, neighbor[0], neighbor[1]):
+                    neighbors.append(neighbor)
+            return neighbors
+    
+        open_set = []
+        heapq.heappush(open_set, (0, start))
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: heuristic(start, goal)}
+    
+        while open_set:
+            _, current = heapq.heappop(open_set)
+        
+            if current == goal:
+                path = []
+                while current in came_from:
+                    path.append(current)
+                    current = came_from[current]
+                path.reverse()
+                return path
+        
+            for neighbor in get_neighbors(current):
+                tentative_g_score = g_score[current] + 1
+                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goal)
+                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+    
+        return []
+    def move_unit(unit, path, game_map, move_speed, dt):
+        if not path:
+            return None
+
+        current_position = (unit.x, unit.y)
+        target_position = path[0]
+
+        direction_x = target_position[0] - current_position[0]
+        direction_y = target_position[1] - current_position[1]
+        distance = (direction_x**2 + direction_y**2) ** 0.5
+
+        step_x = direction_x / distance * move_speed * dt if distance != 0 else 0
+        step_y = direction_y / distance * move_speed * dt if distance != 0 else 0
+
+        new_x = unit.x + step_x
+        new_y = unit.y + step_y
+
+        if abs(new_x - target_position[0]) < 0.1 and abs(new_y - target_position[1]) < 0.1:
+            game_map.remove_entity(game_map.grid, int(unit.x), int(unit.y), unit)
+            unit.x, unit.y = target_position
+            game_map.add_entity(game_map.grid, int(unit.x), int(unit.y), unit)
+            path.pop(0)
+        else:
+            game_map.remove_entity(game_map.grid, int(unit.x), int(unit.y), unit)
+            unit.x, unit.y = new_x, new_y
+            game_map.add_entity(game_map.grid, int(unit.x), int(unit.y), unit)
+
+        return path
