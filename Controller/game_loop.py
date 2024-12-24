@@ -21,6 +21,7 @@ from Controller.update import update_game_state
 from Controller.select_player import create_player_selection_surface, create_player_info_surface
 from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
 
+
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
     camera = Camera(screen_width, screen_height)
@@ -44,13 +45,12 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     )
 
     minimap_entities_surface = pygame.Surface((minimap_width, minimap_height), pygame.SRCALPHA)
-    minimap_entities_surface.fill((0,0,0,0))
+    minimap_entities_surface.fill((0, 0, 0, 0))
 
     selected_player = players[0] if players else None
     minimap_dragging = False
     fullscreen = False
 
-    # Ajout du champ show_all_health_bars
     game_state = {
         'camera': camera,
         'players': players,
@@ -73,19 +73,28 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'player_info_updated': True,
         'minimap_entities_surface': minimap_entities_surface,
         'team_colors': team_colors,
-
-        # Sélection rectangulaire
         'selecting_units': False,
         'selection_start': None,
         'selection_end': None,
         'selected_units': [],
-
-        # Nouveau champ : toggle global barres de vie
         'show_all_health_bars': False
     }
 
     player_selection_surface = None
     player_info_surface = None
+
+    # Initialize A* pathfinding for a test unit
+    test_unit = players[0].units[0]  # Assume the first player's first unit
+    start_pos = (test_unit.x, test_unit.y)
+    goal_pos = (10, 10)  # Example goal position
+    path = Unit.a_star(test_unit, start_pos, goal_pos, game_map)
+    move_speed = 10  # Updated move speed to 10 units at a time
+
+    if path:
+        print(f"Path found: {path}")
+    else:
+        print("No path found.")
+        path = []
 
     running = True
     update_interval = 60
@@ -94,10 +103,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     while running:
         dt = clock.tick(120) / 1000
         frame_counter += 1
+
         for event in pygame.event.get():
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
                 running = False
+
+        if path:
+            path = Unit.move_unit(test_unit, path, game_map, move_speed, dt)
+
+            # Debugging unit position
+            print(f"Unit position: {test_unit.x}, {test_unit.y}")
 
         update_game_state(game_state, dt)
 
@@ -110,7 +126,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         players = game_state['players']
         team_colors = game_state['team_colors']
         game_map = game_state['game_map']
-        
 
         if game_state.get('recompute_camera', False):
             min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
@@ -132,7 +147,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
-        # On passe game_state pour l'affichage des barres
         draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
 
         screen.blit(game_state['minimap_background'], minimap_rect.topleft)
@@ -153,9 +167,4 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             screen.blit(player_info_surface, (0, screen_height - inf_h))
 
         display_fps(screen, clock)
-            
-        if game_state.get('force_full_redraw', False):
-            pygame.display.flip()
-            game_state['force_full_redraw'] = False
-        else:
-            pygame.display.flip()
+        pygame.display.flip()
