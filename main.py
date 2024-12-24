@@ -1,79 +1,53 @@
 import pygame
 import os
+import sys
+import threading
 from Controller.init_map import init_pygame, game_loop
 from Models.Map import GameMap
-from Models.Team import Team
 from Controller.init_player import init_players
 from Controller.init_sprites import load_sprites
 from Settings.setup import SAVE_DIRECTORY
+from Controller.menu import run_gui_menu, ask_terminal_inputs, user_choices
 
 def main():
-    load_game = input("Voulez-vous charger une partie sauvegardée ? (oui/non) : ").lower() == 'oui'
-    if load_game:
-        # Liste les fichiers de sauvegarde disponibles
-        save_files = [f for f in os.listdir(SAVE_DIRECTORY)
-                      if f.endswith('.pkl') and os.path.isfile(os.path.join(SAVE_DIRECTORY, f))]
-        if save_files:
-            print("Saves disponibles :")
-            for idx, filename in enumerate(save_files):
-                print(f"{idx + 1}: {filename}")
-            choice = int(input("Entrez le numéro de la sauvegarde à charger : ")) - 1
-            if 0 <= choice < len(save_files):
-                full_path = os.path.join(SAVE_DIRECTORY, save_files[choice])
+    screen, screen_width, screen_height = init_pygame()
+    load_sprites(screen, screen_width, screen_height)
 
-                # Initialisation Pygame + écran
-                screen, screen_width, screen_height = init_pygame()
+    # Launch the terminal in a separate thread
+    terminal_thread = threading.Thread(target=ask_terminal_inputs)
+    terminal_thread.start()
 
-                # Chargement de la map sans régénération
-                game_map = GameMap(0, False, [], generate=False)
-                game_map.load_map(full_path)
+    # Run GUI in the main thread
+    run_gui_menu(screen, screen_width, screen_height)
 
-                # Afficher la carte dans le terminal
-                print("Carte chargée :")
-                game_map.display_map_in_terminal()
+    # If GUI just validated, kill the terminal thread
+    if user_choices["validated"] and terminal_thread.is_alive():
+        # This forcibly ends the thread so the game can proceed
+        # (In Python, there's no safe direct thread kill, so we do an exit check in the thread.)
+        pass
+    elif not user_choices["validated"]:
+        terminal_thread.join()
 
-                # Récupère les joueurs de la sauvegarde
-                players = game_map.players
+    # Récupération finale des paramètres
+    grid_size     = user_choices["grid_size"]
+    number_of_bots= user_choices["num_bots"]
+    bot_level     = user_choices["bot_level"]  # si vous en avez besoin plus tard
+    gold_at_center= user_choices["gold_at_center"]
+    load_game     = user_choices["load_game"]
+    chosen_save   = user_choices["chosen_save"]
 
-                # Charge les sprites
-                load_sprites(screen, screen_width, screen_height)
-
-                # Lance la boucle de jeu avec les données chargées
-                game_loop(screen, game_map, screen_width, screen_height, players)
-            else:
-                print("Choix invalide. Démarrage d'une nouvelle partie.")
-                grid_size = int(input("Veuillez entrer la taille de la grille : "))
-                number_of_players = int(input("Veuillez entrer le nombre de joueurs : "))
-                gold_at_center_input = input("Voulez-vous de l'or au centre ? (oui/non) : ").lower()
-                gold_at_center = gold_at_center_input == 'oui'
-
-                screen, screen_width, screen_height = init_pygame()
-                players = init_players(number_of_players)
-                load_sprites(screen, screen_width, screen_height)
-                game_map = GameMap(grid_size, gold_at_center, players)
-                game_loop(screen, game_map, screen_width, screen_height, players)
-        else:
-            print("Aucune sauvegarde trouvée. Démarrage d'une nouvelle partie.")
-            grid_size = int(input("Veuillez entrer la taille de la grille : "))
-            number_of_players = int(input("Veuillez entrer le nombre de joueurs : "))
-            gold_at_center_input = input("Voulez-vous de l'or au centre ? (oui/non) : ").lower()
-            gold_at_center = gold_at_center_input == 'oui'
-
-            screen, screen_width, screen_height = init_pygame()
-            players = init_players(number_of_players)
-            load_sprites(screen, screen_width, screen_height)
-            game_map = GameMap(grid_size, gold_at_center, players)
-            game_loop(screen, game_map, screen_width, screen_height, players)
+    # Lance ensuite la partie
+    if load_game and chosen_save:
+        screen, screen_width, screen_height = init_pygame()
+        game_map = GameMap(0, False, [], generate=False)
+        game_map.load_map(chosen_save)
+        print("Carte chargée :", chosen_save)
+        game_map.display_map_in_terminal()
+        players = game_map.players
+        game_loop(screen, game_map, screen_width, screen_height, players)
     else:
         # Nouvelle partie
-        grid_size = int(input("Veuillez entrer la taille de la grille : "))
-        number_of_players = int(input("Veuillez entrer le nombre de joueurs : "))
-        gold_at_center_input = input("Voulez-vous de l'or au centre ? (oui/non) : ").lower()
-        gold_at_center = gold_at_center_input == 'oui'
-
-        screen, screen_width, screen_height = init_pygame()
-        players = init_players(number_of_players)
-        load_sprites(screen, screen_width, screen_height)
+        players = init_players(number_of_bots)
         game_map = GameMap(grid_size, gold_at_center, players)
         game_loop(screen, game_map, screen_width, screen_height, players)
 
