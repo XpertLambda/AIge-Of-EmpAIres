@@ -182,8 +182,8 @@ def handle_events(event, game_state):
                     if rect_btn.collidepoint(mouse_x, mouse_y):
                         if game_state['selected_player'] != player:
                             game_state['selected_player'] = player
-                            player_selection_updated = True
-                            player_info_updated = True
+                            game_state['player_selection_updated'] = True
+                            game_state['player_info_updated'] = True
                             # Centre caméra sur le TownCentre
                             for building in player.buildings:
                                 if isinstance(building, TownCentre):
