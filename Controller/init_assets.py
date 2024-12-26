@@ -9,6 +9,8 @@ sprites = {}
 zoom_cache = {}
 MAX_ZOOM_CACHE_PER_SPRITE = 60
 
+gui_elements = {}
+
 def load_sprite(filepath=None, scale=None, adjust=None):
     if filepath:
         sprite = pygame.image.load(filepath).convert_alpha()
@@ -64,12 +66,22 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     pygame.display.flip()
 
-def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config, sprite_loading_screen=sprite_loading_screen):
+
+def load_sprites(screen, screen_width, screen_height):
+    global gui_elements
+    gui_elements.clear()
+    
     total_files = sum(len(files) for _, _, files in os.walk('assets'))
     loaded_files = 0
-    for category, value in sprite_loading_screen.items():
-        directory = value.get('directory')
-        scale = (screen_width, screen_height)
+    
+    # Load GUI assets
+    for gui_key, gui_val in gui_config.items():
+        directory = gui_val.get('directory')
+        gui_scale = gui_val.get('scale')
+        gui_adjust_scale = gui_val.get('adjust_scale')
+        if not directory:
+            continue
+        gui_elements[gui_key] = []
         try:
             dir_content = os.listdir(directory)
         except FileNotFoundError:
@@ -79,27 +91,29 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
         for filename in dir_content:
             if filename.lower().endswith("webp"):
                 filepath = os.path.join(directory, filename)
-                loading_sprite = load_sprite(filepath, scale)
-                # Afficher l'écran de chargement
-                if category == 'loading_screen':
-                    screen.blit(loading_sprite, (0, 0))
+                if gui_key == 'loading_screen':
+                    loading_screen = load_sprite(filepath, (screen_width, screen_height))
+                    screen.blit(loading_screen, (0, 0))
                     pygame.display.flip()
+                    continue
+                loaded_sprite = load_sprite(filepath, gui_scale, gui_adjust_scale)
+                gui_elements[gui_key].append(loaded_sprite)
                 loaded_files += 1
                 progress = loaded_files / total_files
-                draw_progress_bar(screen, progress, screen_width, screen_height, "", loading_sprite)         
+                draw_progress_bar(screen, progress, screen_width, screen_height, gui_key, loading_screen)
 
+    # Load sprites from sprite_config
     for category in sprite_config:
         sprites[category] = {}
         for sprite_name, value in sprite_config[category].items():
             directory = value['directory']
             scale = value.get('scale')
             adjust = value.get('adjust_scale')
+            if 'sheet_config' in value:
+                sheet_cols = value['sheet_config'].get('columns', 0)
+                sheet_rows = value['sheet_config'].get('rows', 0)
 
-            if 'sheet_config' in sprite_config[category][sprite_name]:
-                sheet_cols = sprite_config[category][sprite_name]['sheet_config'].get('columns', 0)
-                sheet_rows = sprite_config[category][sprite_name]['sheet_config'].get('rows', 0)
-
-            if category == 'resources' or category == 'buildings':
+            if category in ['resources', 'buildings']:
                 sprites[category][sprite_name] = []
                 try:
                     dir_content = os.listdir(directory)
@@ -113,7 +127,8 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                         sprites[category][sprite_name].append(sprite)
                         loaded_files += 1
                         progress = loaded_files / total_files
-                        draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
+                        # Re-blit loading screen last loaded for continuity
+                        draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name,loading_screen)
 
             elif category == 'units':
                 sprites[category][sprite_name] = {}
@@ -135,15 +150,14 @@ def load_sprites(screen,screen_width,screen_height, sprite_config=sprite_config,
                                     sprites[category][sprite_name][state_dir].extend(frames)
                                 except Exception as e:
                                     print(f"Error loading sprite sheet {filepath}: {e}")
-                                    print(f"info : category : {category}, sprite_name : {sprite_name}, state : {state_dir}")
                                     exit()
                                 loaded_files += 1
                                 progress = loaded_files / total_files
-                                draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
+                                draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
+
                 progress = loaded_files / total_files
-                draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_sprite)
-    
-    
+                draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
+
     print("Sprites loaded successfully.")
     
 # Function to get a scaled sprite, handling both static and animated sprites

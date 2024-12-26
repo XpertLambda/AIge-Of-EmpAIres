@@ -20,6 +20,7 @@ from Controller.event_handler import handle_events
 from Controller.update import update_game_state
 from Controller.select_player import create_player_selection_surface, create_player_info_surface
 from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
+from Controller.gui import draw_gui_elements
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
@@ -90,7 +91,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     running = True
     update_interval = 60
     frame_counter = 0
-
     while running:
         dt = clock.tick(120) / 1000
         frame_counter += 1
@@ -132,8 +132,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
-        # On passe game_state pour l'affichage des barres
-        draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
+        #draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
+        draw_gui_elements(screen, screen_width, screen_height)
 
         screen.blit(game_state['minimap_background'], minimap_rect.topleft)
         screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)

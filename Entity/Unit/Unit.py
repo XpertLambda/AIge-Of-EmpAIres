@@ -2,7 +2,7 @@ import math
 from Entity.Entity import Entity
 from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE
 from Controller.isometric_utils import tile_to_screen
-from Controller.init_sprites import draw_sprite
+from Controller.init_assets import draw_sprite
 import heapq
 class Unit(Entity):
     id = 0

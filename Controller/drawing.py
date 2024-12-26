@@ -16,7 +16,7 @@ from Controller.isometric_utils import (
     screen_to_tile,
     tile_to_screen,
 )
-from Controller.init_sprites import fill_grass
+from Controller.init_assets import fill_grass
 from Entity.Building import Building
 from Entity.Resource.Gold import Gold
 
