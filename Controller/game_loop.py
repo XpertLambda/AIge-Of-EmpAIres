@@ -18,7 +18,7 @@ from Controller.drawing import (
 
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
-from Controller.select_player import create_player_selection_surface, create_player_info_surface
+from Controller.gui import create_player_selection_surface, create_player_info_surface
 from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
 from Controller.gui import draw_gui_elements
 
@@ -132,7 +132,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
-        #draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
+        draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
         draw_gui_elements(screen, screen_width, screen_height)
 
         screen.blit(game_state['minimap_background'], minimap_rect.topleft)

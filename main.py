@@ -7,7 +7,7 @@ from Models.Map import GameMap
 from Controller.init_player import init_players
 from Controller.init_assets import load_sprites
 from Settings.setup import SAVE_DIRECTORY
-from Controller.menu import run_gui_menu, ask_terminal_inputs, user_choices
+from Controller.gui import run_gui_menu, ask_terminal_inputs, user_choices
 
 def main():
     screen, screen_width, screen_height = init_pygame()
