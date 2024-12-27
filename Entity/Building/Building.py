@@ -1,7 +1,7 @@
 from Entity.Entity import Entity
 from Controller.isometric_utils import tile_to_screen
 from Settings.setup import HALF_TILE_SIZE
-from Controller.init_sprites import draw_sprite
+from Controller.init_assets import draw_sprite
 
 class Building(Entity):
     def __init__(
