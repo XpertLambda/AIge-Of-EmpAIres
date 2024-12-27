@@ -253,10 +253,11 @@ class GameMap:
         except Exception as e:
             print(f"Error loading game map: {e}")
 
-    def display_map_in_terminal(self):
+    def update_terminal(self):
         """
         Affiche une représentation textuelle de la carte dans le terminal.
         """
+        os.system('cls' if os.name == 'nt' else 'clear')  # Clear the terminal
         for y in range(self.num_tiles_y):
             row = ''
             for x in range(self.num_tiles_x):

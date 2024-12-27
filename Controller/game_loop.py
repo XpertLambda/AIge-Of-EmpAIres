@@ -2,6 +2,7 @@ import time
 import pygame
 import sys
 import random
+from Models.Map import *
 from Entity.Building import *
 from Entity.Unit import *
 from Models.Team import Team
@@ -73,6 +74,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'player_info_updated': True,
         'minimap_entities_surface': minimap_entities_surface,
         'team_colors': team_colors,
+        'last_terminal_update': 0,
 
         # Sélection rectangulaire
         'selecting_units': False,
@@ -111,7 +113,12 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         team_colors = game_state['team_colors']
         game_map = game_state['game_map']
         
-
+        # Updating terminal display
+        if time.time() - game_state.get('last_terminal_update', 0) >= 2:
+            start_time = time.time()
+            game_map.update_terminal()
+            game_state['last_terminal_update'] = start_time
+            
         if game_state.get('recompute_camera', False):
             min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
             camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)

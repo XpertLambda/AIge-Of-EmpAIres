@@ -42,7 +42,6 @@ def main():
         game_map = GameMap(0, False, [], generate=False)
         game_map.load_map(chosen_save)
         print("Carte chargée :", chosen_save)
-        game_map.display_map_in_terminal()
         players = game_map.players
         game_loop(screen, game_map, screen_width, screen_height, players)
     else:
