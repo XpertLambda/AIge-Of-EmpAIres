@@ -21,5 +21,7 @@ class Barracks(Building):
 
     def train(self, team, clock):
         swordsman = Swordsman(team)
-        if(team.resources["food"] > swordsman.cost.food):
+        if(team.resources["food"] >= swordsman.cost.food and team.resources["gold"] >= swordsman.cost.gold):
+            team.resources["food"] -= swordsman.cost.food
+            team.resources["gold"] -= swordsman.cost.gold
             team.en_cours[swordsman] = clock
