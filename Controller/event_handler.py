@@ -1,3 +1,4 @@
+# Chemin de /home/cyril/Documents/INSA/Projet_python/Controller/event_handler.py
 import pygame
 import sys
 import os
@@ -8,6 +9,7 @@ from Controller.isometric_utils import to_isometric, screen_to_tile, tile_to_scr
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY
 from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
 from Models.Map import GameMap
+from Controller.gui import get_scaled_gui
 
 def handle_events(event, game_state):
     camera = game_state['camera']
@@ -31,7 +33,6 @@ def handle_events(event, game_state):
     player_selection_updated = game_state.get('player_selection_updated', False)
     player_info_updated = game_state.get('player_info_updated', False)
 
-    # -- Assurer l'existence des clés pour la sélection rectangulaire --
     if 'selecting_units' not in game_state:
         game_state['selecting_units'] = False
     if 'selection_start' not in game_state:
@@ -59,10 +60,8 @@ def handle_events(event, game_state):
 
     elif event.type == pygame.KEYDOWN:
         if event.key == pygame.K_F2:
-            # Ici on toggle seulement les barres de vie
             game_state['show_all_health_bars'] = not game_state['show_all_health_bars']
         elif event.key == pygame.K_F12:
-            # Logique de chargement (votre code existant)
             try:
                 root = tkinter.Tk()
                 root.withdraw()
@@ -82,7 +81,6 @@ def handle_events(event, game_state):
 
                     game_state['players'].clear()
                     game_state['players'].extend(game_state['game_map'].players)
-
                     if game_state['players']:
                         game_state['selected_player'] = game_state['players'][0]
                     else:
@@ -98,8 +96,8 @@ def handle_events(event, game_state):
                     camera.offset_y = 0
                     camera.zoom = 1.0
 
-                    minimap_width = int(game_state['screen_width'] * 0.25)
-                    minimap_height = int(game_state['screen_height'] * 0.25)
+                    minimap_width = int(game_state['screen_width'] * 0.20)  # ajusté ici
+                    minimap_height = int(game_state['screen_height'] * 0.20)
                     mb, ms, mo_x, mo_y, mi_x, mi_y = create_minimap_background(
                         game_state['game_map'], minimap_width, minimap_height
                     )
@@ -124,16 +122,12 @@ def handle_events(event, game_state):
         elif event.key == pygame.K_F11:
             game_state['game_map'].save_map()
             print("Game saved successfully.")
-
         elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS:
             camera.set_zoom(camera.zoom * 1.1)
-
         elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
             camera.set_zoom(camera.zoom / 1.1)
-
         elif event.key == pygame.K_m:
             camera.zoom_out_to_global()
-
         elif event.key == pygame.K_ESCAPE:
             try:
                 os.remove('full_snapshot.html')
@@ -149,14 +143,11 @@ def handle_events(event, game_state):
                 game_state['minimap_dragging'] = True
             else:
                 player_clicked = False
-
-                # Calcul pour les boutons joueurs
                 selection_height = 30
                 padding = 5
                 players = game_state['players']
                 screen_height = game_state['screen_height']
                 max_height = screen_height / 3
-
                 columns = 1
                 while columns <= 4:
                     rows = (len(players) + columns - 1) // columns
@@ -167,12 +158,10 @@ def handle_events(event, game_state):
 
                 button_width = (minimap_rect.width - padding * (columns - 1)) // columns
                 rows = (len(players) + columns - 1) // columns
-
                 surface_height = selection_height * rows + padding * (rows - 1)
                 buttons_origin_x = minimap_rect.x
                 buttons_origin_y = minimap_rect.y - surface_height - padding
 
-                # Vérifie si on a cliqué sur un bouton de joueur
                 for index, player in enumerate(reversed(players)):
                     col = index % columns
                     row = index // columns
@@ -184,7 +173,6 @@ def handle_events(event, game_state):
                             game_state['selected_player'] = player
                             game_state['player_selection_updated'] = True
                             game_state['player_info_updated'] = True
-                            # Centre caméra sur le TownCentre
                             for building in player.buildings:
                                 if isinstance(building, TownCentre):
                                     iso_x, iso_y = to_isometric(building.x, building.y,
@@ -195,7 +183,6 @@ def handle_events(event, game_state):
                         player_clicked = True
                         break
 
-                # Sélection d'une entité sur la carte (single-click)
                 if not player_clicked:
                     tile_x, tile_y = screen_to_tile(
                         mouse_x, mouse_y,
@@ -210,20 +197,17 @@ def handle_events(event, game_state):
                         clicked_entity = next(iter(entities_on_tile))
                         clicked_entity.notify_clicked()
 
-                    # DÉBUT sélection rectangulaire
                     game_state['selecting_units'] = True
                     game_state['selection_start'] = (mouse_x, mouse_y)
                     game_state['selection_end'] = (mouse_x, mouse_y)
 
         elif event.button == 4:
             camera.set_zoom(camera.zoom * 1.1)
-
         elif event.button == 5:
             camera.set_zoom(camera.zoom / 1.1)
 
     elif event.type == pygame.MOUSEMOTION:
         if game_state['minimap_dragging']:
-            # Géré éventuellement ailleurs
             pass
         else:
             if game_state['selecting_units']:
@@ -232,17 +216,12 @@ def handle_events(event, game_state):
     elif event.type == pygame.MOUSEBUTTONUP:
         if event.button == 1:
             game_state['minimap_dragging'] = False
-
             if game_state['selecting_units']:
                 x1, y1 = game_state['selection_start']
                 x2, y2 = game_state['selection_end']
                 rect = pygame.Rect(x1, y1, x2 - x1, y2 - y1)
                 rect.normalize()
-
-                # On vide la liste précédente
                 game_state['selected_units'].clear()
-
-                # Exemple: on ne sélectionne que les unités du joueur courant
                 if game_state['selected_player']:
                     all_units = game_state['selected_player'].units
                     for unit in all_units:
@@ -268,19 +247,21 @@ def handle_events(event, game_state):
         camera.width = sw
         camera.height = sh
 
-        minimap_width = int(sw * 0.25)
-        minimap_height = int(sh * 0.25)
+        minimap_img = get_scaled_gui('minimapPanel', 0, target_width=sw // 4)
+        mpw, mph = minimap_img.get_width(), minimap_img.get_height()
+
         new_rect = pygame.Rect(
-            sw - minimap_width - minimap_margin,
-            sh - minimap_height - minimap_margin,
-            minimap_width,
-            minimap_height
+            sw - mpw - game_state['minimap_margin'],
+            sh - mph - game_state['minimap_margin'],
+            mpw,
+            mph
         )
 
         mb, ms, mo_x, mo_y, mi_x, mi_y = create_minimap_background(
-            game_state['game_map'], minimap_width, minimap_height
+            game_state['game_map'], mpw, mph
         )
 
+        game_state['minimap_img'] = minimap_img
         game_state['minimap_rect'] = new_rect
         game_state['minimap_background'] = mb
         game_state['minimap_scale'] = ms

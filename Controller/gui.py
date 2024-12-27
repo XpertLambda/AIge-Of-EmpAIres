@@ -19,8 +19,8 @@ gui_cache = {}
 
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     """
-    Fonction de mise à l'échelle des éléments d'interface,
-    mise en cache pour éviter de re-scaler à chaque fois.
+    Charge et met à l'échelle un élément d'interface (GUI).
+    Mise en cache pour éviter les redimensionnements répétitifs.
     """
     global gui_cache
     key = (ui_name, variant, target_width, target_height)
@@ -37,6 +37,7 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
         ratio = target_height / oh
         target_width = int(ow * ratio)
     elif not target_width and not target_height:
+        # Pas de mise à l'échelle
         gui_cache[key] = original
         return original
 
@@ -46,14 +47,17 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
 
 def draw_gui_elements(screen, screen_width, screen_height):
     """
-    Affiche quelques éléments d'interface (panneaux, ressources, minimap, etc.)
+    Dessine le panneau de ressources (en haut) et autres éléments
+    (icônes ressource, etc.). Positionné plus haut pour éviter d'être hors-écran.
     """
-    panel_img = get_scaled_gui('ResourcesPanel', 0, target_width=screen_width//2)
-    screen.blit(panel_img, (0, 0))
-    pw, ph = panel_img.get_width(), panel_img.get_height()
+    # Dessin du panel "resources" en haut. On lui fixe une largeur d'environ la moitié de l'écran
+    resources_panel_img = get_scaled_gui('ResourcesPanel', 0, target_width=screen_width // 2)
+    screen.blit(resources_panel_img, (0, 0))
 
+    pw, ph = resources_panel_img.get_width(), resources_panel_img.get_height()
     icon_scale_width = pw // 22
 
+    # On place 3 icônes (gold, wood, food) alignées, petit offset vertical
     gold_img = get_scaled_gui('gold', 0, target_width=icon_scale_width)
     gold_x = 12
     screen.blit(gold_img, (gold_x, ph // 15))
@@ -66,14 +70,10 @@ def draw_gui_elements(screen, screen_width, screen_height):
     food_x = wood_x + wood_img.get_width() + (2 * wood_img.get_width())
     screen.blit(food_img, (food_x, ph // 15))
 
-    minimap_img = get_scaled_gui('minimapPanel', 0, target_width=screen_width // 4)
-    mpw, mph = minimap_img.get_width(), minimap_img.get_height()
-    screen.blit(minimap_img, (screen_width - mpw, screen_height - mph))
-
 # Paramètres partagés
 user_choices = {
-    "grid_size":      100,
-    "num_bots":       1,
+    "grid_size":      120,
+    "num_bots":       2,
     "bot_level":      "lean",
     "gold_at_center": False,
     "load_game":      False,

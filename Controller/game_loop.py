@@ -18,9 +18,8 @@ from Controller.drawing import (
 
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
-from Controller.gui import create_player_selection_surface, create_player_info_surface
-from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
-from Controller.gui import draw_gui_elements
+from Controller.gui import create_player_selection_surface, create_player_info_surface, get_scaled_gui, draw_gui_elements
+from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
@@ -29,29 +28,32 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
-    minimap_margin = MINIMAP_MARGIN
-    minimap_width = int(screen_width * 0.25)
-    minimap_height = int(screen_height * 0.25)
+    # On charge ici directement l'image de fond du panneau minimap
+    minimap_img = get_scaled_gui('minimapPanel', 0, target_width=screen_width // 4)
+    mpw, mph = minimap_img.get_width(), minimap_img.get_height()
+    minimap_margin = 10
     minimap_rect = pygame.Rect(
-        screen_width - minimap_width - minimap_margin,
-        screen_height - minimap_height - minimap_margin,
-        minimap_width,
-        minimap_height
+        screen_width - mpw - minimap_margin,
+        screen_height - mph - minimap_margin,
+        mpw,
+        mph
     )
 
+    # On crée l'arrière-plan du minimap avec la même dimension que le panneau
     minimap_background, minimap_scale, minimap_offset_x, minimap_offset_y, \
     minimap_min_iso_x, minimap_min_iso_y = create_minimap_background(
-        game_map, minimap_width, minimap_height
+        game_map, mpw, mph
     )
 
-    minimap_entities_surface = pygame.Surface((minimap_width, minimap_height), pygame.SRCALPHA)
-    minimap_entities_surface.fill((0,0,0,0))
+    # Surface transparente pour les entités du minimap
+    minimap_entities_surface = pygame.Surface((mpw, mph), pygame.SRCALPHA)
+    minimap_entities_surface.fill((0, 0, 0, 0))
 
     selected_player = players[0] if players else None
     minimap_dragging = False
     fullscreen = False
 
-    # Ajout du champ show_all_health_bars
+    # Regroupement des infos dans un dict
     game_state = {
         'camera': camera,
         'players': players,
@@ -67,7 +69,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'game_map': game_map,
         'screen_width': screen_width,
         'screen_height': screen_height,
-        'minimap_margin': minimap_margin,
         'screen': screen,
         'fullscreen': fullscreen,
         'player_selection_updated': True,
@@ -81,8 +82,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'selection_end': None,
         'selected_units': [],
 
-        # Nouveau champ : toggle global barres de vie
-        'show_all_health_bars': False
+        # Affichage global barres de vie
+        'show_all_health_bars': False,
+
+        'minimap_margin': MINIMAP_MARGIN,
+        'minimap_img': minimap_img
     }
 
     player_selection_surface = None
@@ -110,8 +114,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         players = game_state['players']
         team_colors = game_state['team_colors']
         game_map = game_state['game_map']
+        minimap_img = game_state['minimap_img']
         
-
         if game_state.get('recompute_camera', False):
             min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
             camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
@@ -123,37 +127,56 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
             if game_state.get('player_selection_updated', False):
                 player_selection_surface = create_player_selection_surface(
-                    players, selected_player, minimap_rect, team_colors)
+                    players, selected_player, minimap_rect, team_colors
+                )
                 game_state['player_selection_updated'] = False
 
             if game_state.get('player_info_updated', False):
                 player_info_surface = create_player_info_surface(
-                    selected_player, screen_width, team_colors)
+                    selected_player, screen_width, team_colors
+                )
                 game_state['player_info_updated'] = False
 
         screen.fill((0, 0, 0))
+
+        # Dessin principal de la carte et des entités
         draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
+
+        # Dessin du panneau minimap
+        # 1) on blit le fond du panneau
+        screen.blit(minimap_img, (minimap_rect.x, minimap_rect.y))
+        # 2) on dessine la "surface" du minimap (fond vert en losange)
+        screen.blit(game_state['minimap_background'], minimap_rect.topleft)
+        # 3) on dessine la surface d’entités
+        screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)
+        # 4) on dessine le rectangle de vue
+        draw_minimap_viewport(
+            screen,
+            camera,
+            minimap_rect,
+            game_state['minimap_scale'],
+            game_state['minimap_offset_x'],
+            game_state['minimap_offset_y'],
+            game_state['minimap_min_iso_x'],
+            game_state['minimap_min_iso_y']
+        )
+
+        # GUI de base (panneau ressources, etc.)
         draw_gui_elements(screen, screen_width, screen_height)
 
-        screen.blit(game_state['minimap_background'], minimap_rect.topleft)
-        screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)
-        draw_minimap_viewport(screen, camera, minimap_rect,
-                              game_state['minimap_scale'],
-                              game_state['minimap_offset_x'],
-                              game_state['minimap_offset_y'],
-                              game_state['minimap_min_iso_x'],
-                              game_state['minimap_min_iso_y'])
-
+        # Sélection du joueur (au-dessus du minimap)
         if player_selection_surface:
             sel_h = player_selection_surface.get_height()
             screen.blit(player_selection_surface, (minimap_rect.x, minimap_rect.y - sel_h))
 
+        # Infos du joueur (barre en bas)
         if player_info_surface:
             inf_h = player_info_surface.get_height()
             screen.blit(player_info_surface, (0, screen_height - inf_h))
 
+        # Affichage FPS
         display_fps(screen, clock)
-            
+
         if game_state.get('force_full_redraw', False):
             pygame.display.flip()
             game_state['force_full_redraw'] = False
