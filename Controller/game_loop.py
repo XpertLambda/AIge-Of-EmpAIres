@@ -90,9 +90,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     running = True
     update_interval = 60
     frame_counter = 0
-
+    time=0
     while running:
         dt = clock.tick(120) / 1000
+        time+=dt
         frame_counter += 1
         for event in pygame.event.get():
             handle_events(event, game_state)
@@ -159,3 +160,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             game_state['force_full_redraw'] = False
         else:
             pygame.display.flip()
+        barrack=Barracks(selected_player)
+        if selected_player.resources["wood"] >= barrack.cost[2]:
+            selected_player.buildBatiment(barrack,time,3,game_map)
+            print(len(selected_player.buildings))
+        selected_player.manage_creation(time)

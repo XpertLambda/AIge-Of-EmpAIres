@@ -28,7 +28,7 @@ class Unit(Entity):
 
         self.unit_id = Unit.id
         Unit.id += 1
-
+        self.task=False
         # State variables
         self.state = 0
         self.frames = FRAMES_PER_UNIT

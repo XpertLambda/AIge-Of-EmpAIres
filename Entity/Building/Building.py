@@ -31,6 +31,7 @@ class Building(Entity):
         self.walkable = walkable
         self.attack_power = attack_power
         self.attack_range = attack_range
+        self.constructors=[] #liste des villageois qui construisent le batiment
 
     def display(self, screen, screen_width, screen_height, camera):
         category = 'buildings'
