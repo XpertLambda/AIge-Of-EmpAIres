@@ -9,7 +9,8 @@ BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_COLLECTION_RATE = 25
 RESOURCE_CAPACITY = 20
 START_MAXIMUM_POPULATION = 200          
-
+UPDATE_EVERY_N_MILLISECOND = 20
+ONE_SECOND = 60
 # -------------------
 # Entity Resources NamedTuple
 # -------------------

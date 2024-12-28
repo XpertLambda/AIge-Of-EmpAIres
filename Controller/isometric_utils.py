@@ -26,3 +26,10 @@ def tile_to_screen(x, y, width, height, camera, screen_width, screen_height):
     screen_y = (iso_y + camera.offset_y) * camera.zoom + screen_height / 2
 
     return screen_x, screen_y
+
+def angle_with_x_axis(vx, vy):
+    magnitude = math.sqrt(vx**2 + vy**2)
+    cosine_theta = vx / magnitude
+    theta_radians = math.acos(cosine_theta)
+    theta_degrees = math.degrees(theta_radians)
+    return theta_degrees

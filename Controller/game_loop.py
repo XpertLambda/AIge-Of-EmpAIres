@@ -15,12 +15,12 @@ from Controller.drawing import (
     draw_minimap_viewport,
     generate_team_colors
 )
-
+import copy
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
 from Controller.select_player import create_player_selection_surface, create_player_info_surface
 from Settings.setup import MINIMAP_MARGIN, HALF_TILE_SIZE
-
+from Controller.isometric_utils import tile_to_screen
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
@@ -83,18 +83,23 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     player_selection_surface = None
     player_info_surface = None
 
-    # Initialize A* pathfinding for a test unit
-    test_unit = players[0].units[0]  # Assume the first player's first unit
-    start_pos = (test_unit.x, test_unit.y)
-    goal_pos = (10, 10)  # Example goal position
-    path = Unit.a_star(test_unit, start_pos, goal_pos, game_map)
-    move_speed = 10  # Updated move speed to 10 units at a time
-
-    if path:
-        print(f"Path found: {path}")
-    else:
-        print("No path found.")
-        path = []
+    # Initialize A* pathfinding for all units in the first player's team
+    move_speed = 10
+    units_data = {}
+    if players and players[0].units:
+        for unit in players[0].units:
+            start_pos = (unit.x, unit.y)
+            goal_pos = ((unit.x + 40) % 100, (unit.y + 40) % 100)
+            path = Unit.a_star(unit, start_pos, goal_pos, game_map)
+            if path:
+                print(f"Path found for unit {unit}: {path}")
+            else:
+                print(f"No path found for unit {unit}")
+                path = []
+            units_data[unit] = {
+                'path': copy.deepcopy(path),
+                'goal_pos': goal_pos
+            }
 
     running = True
     update_interval = 60
@@ -109,11 +114,22 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if event.type == pygame.QUIT:
                 running = False
 
-        if path:
-            path = Unit.move_unit(test_unit, path, game_map, move_speed, dt)
-
-            # Debugging unit position
-            print(f"Unit position: {test_unit.x}, {test_unit.y}")
+        # Move each unit along its path
+        for unit, data in units_data.items():
+            path = data['path']
+            goal_pos = data['goal_pos']
+            if path:
+                data['path'] = Unit.move_unit(unit, path, game_map, move_speed, dt)
+                print(f"Unit position: {unit.x}, {unit.y}")
+            if (unit.x, unit.y) == goal_pos:
+                new_goal_x = (goal_pos[0] + 10) % 120
+                new_goal_y = (goal_pos[1] + 10) % 120
+                print(f"Unit arrived, switching to new goal {new_goal_x}, {new_goal_y}")
+                new_path = Unit.a_star(unit, (unit.x, unit.y), (new_goal_x, new_goal_y), game_map)
+                if new_path:
+                    print("New path found")
+                    data['path'] = copy.deepcopy(new_path)
+                data['goal_pos'] = (new_goal_x, new_goal_y)
 
         update_game_state(game_state, dt)
 
@@ -148,6 +164,32 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         screen.fill((0, 0, 0))
         draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
+
+        # Draw original path for each unit
+        for unit, data in units_data.items():
+            base_path = data['path']
+            if base_path:
+                for x, y in base_path:
+                    screen_x, screen_y = tile_to_screen(
+                        x,
+                        y,
+                        HALF_TILE_SIZE,
+                        HALF_TILE_SIZE / 2,
+                        camera,
+                        screen_width,
+                        screen_height
+                    )
+                    pygame.draw.circle(screen, (255, 0, 0), (screen_x, screen_y), 4)
+                screen_x, screen_y = tile_to_screen(
+                    unit.x,
+                    unit.y,
+                    HALF_TILE_SIZE,
+                    HALF_TILE_SIZE / 2,
+                    camera,
+                    screen_width,
+                    screen_height
+                )
+                pygame.draw.circle(screen, (0, 0, 255), (screen_x, screen_y), 4)
 
         screen.blit(game_state['minimap_background'], minimap_rect.topleft)
         screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)

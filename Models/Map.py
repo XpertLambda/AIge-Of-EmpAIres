@@ -21,30 +21,30 @@ class GameMap:
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         if generate:
-            self.generate_map()
+            self.grid = self.generate_map()
         else:
             self.grid = {}
 
-    def add_entity(self, grid, x, y, entity):
+    def add_entity(self, entity):
+        x = entity.x - (entity.size - 1) / 2
+        y = entity.y - (entity.size - 1) / 2
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
             return False
 
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
-                if pos in grid:
+                if pos in self.grid:
                     return False
 
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (x + i, y + j)
-                grid[pos] = set()
-                grid[pos].add(entity)
-        entity.x = x + (entity.size - 1)/2
-        entity.y = y + (entity.size - 1)/2
+                self.grid[pos] = set()
+                self.grid[pos].add(entity)
         return True
 
-    def remove_entity(self, grid, x, y, entity):
+    def remove_entity(self, grid, entity):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
             return False
 
@@ -52,7 +52,7 @@ class GameMap:
             for j in range(entity.size):
                 pos = (x + i, y + j)
                 if pos not in grid or entity not in grid[pos]:
-                    return False  # Entity not present at the position
+                    return False
 
         for i in range(entity.size):
             for j in range(entity.size):
@@ -138,7 +138,7 @@ class GameMap:
 
     def generate_map(self):
         grid = {}
-        self.generate_resources(grid)
+        #self.generate_resources(grid)
         self.generate_buildings(grid, self.players)
         self.generate_units(grid, self.players)
         self.grid = grid

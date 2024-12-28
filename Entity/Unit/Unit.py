@@ -1,7 +1,7 @@
 import math
 from Entity.Entity import Entity
 from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE
-from Controller.isometric_utils import tile_to_screen
+from Controller.isometric_utils import tile_to_screen, angle_with_x_axis
 from Controller.init_sprites import draw_sprite
 import heapq
 class Unit(Entity):
@@ -29,6 +29,7 @@ class Unit(Entity):
         self.unit_id = Unit.id
         Unit.id += 1
 
+        self.last_step_time = pygame.time.get_ticks()
         # State variables
         self.state = 0
         self.frames = FRAMES_PER_UNIT
@@ -113,61 +114,17 @@ class Unit(Entity):
 
         return True
 
-    def move(self, target_pos, game_map):
-        """
-        Tries to step closer to the target position (target_pos) by checking tile walkability.
-        Adjusts the direction based on movement.
-        """
-        self.frame_counter = 0
-        self.current_frame = 0
-
-        target_x = int(target_pos[0])
-        target_y = int(target_pos[1])
-
-        dx = 0
-        dy = 0
-        if self.x < target_x:
-            dx = 1
-        elif self.x > target_x:
-            dx = -1
-
-        if self.y < target_y:
-            dy = 1
-        elif self.y > target_y:
-            dy = -1
-
-        # Attempt diagonal movement if possible
-        if dx != 0 and dy != 0:
-            new_x = self.x + dx
-            new_y = self.y + dy
-            if self.is_tile_walkable(game_map, int(new_x), int(new_y)):
-                self.x = new_x
-                self.y = new_y
-                # Set direction based on dx/dy
-                if dx == 1 and dy == 1:
-                    self.direction = 270
-                elif dx == 1 and dy == -1:
-                    self.direction = 90
-                elif dx == -1 and dy == 1:
-                    self.direction = 225
-                elif dx == -1 and dy == -1:
-                    self.direction = 45
-                return
-
-        # Attempt horizontal movement
-        if dx != 0:
-            new_x = self.x + dx
-            if self.is_tile_walkable(game_map, int(new_x), int(self.y)):
-                self.x = new_x
-                self.direction = 135 if dx == 1 else 315
-                return
-
-        # Attempt vertical movement
-        if dy != 0:
-            new_y = self.y + dy
-            if self.is_tile_walkable(game_map, int(self.x), int(new_y)):
-                self.y = new_y
-                self.direction = 225 if dy == 1 else 45
+    def move(self, time, target_pos, game_map):
+        if time - self.last_step_time > UPDATE_EVERY_N_MILLISECOND :
+            self.last_step_time = current_time
+            dx = target_pos[0] - self.x
+            dy = target_pos[1] - self.y
+            angle = angle_with_x_axis(dx,dy)
+            self.x = self.x + math.cos(angle)*(self.speed*TILE_SIZE*UPDATE_EVERY_N_MILLISECOND / ONE_SECOND)
+            self.y = self.y + math.sin(angle)*(self.speed*TILE_SIZE*UPDATE_EVERY_N_MILLISECOND / ONE_SECOND)
+            if dx > TILE_SIZE or dy > TILE_SIZE : 
+                game_map.remove_entity(game_map.grid, round(self.x), round(self.y), self)
+                game_map.add_entity(game_map.grid, round(self.x), round(self.y), self)
 
     def display(self, screen, screen_width, screen_height, camera):
         """
