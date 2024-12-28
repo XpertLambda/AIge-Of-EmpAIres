@@ -6,12 +6,6 @@ from collections import OrderedDict, Counter
 from Settings.setup import *
 from Controller.init_assets import gui_elements
 
-# -----------------------------
-# Correction des problèmes :
-# 1) Éviter le clic à travers les menus déroulants
-# 2) Rendre les menus déroulants scrollables (limite de 5 items visibles)
-# -----------------------------
-
 pygame.init()
 font = pygame.font.SysFont(None, 32)
 
@@ -47,10 +41,8 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
 
 def draw_gui_elements(screen, screen_width, screen_height):
     """
-    Dessine le panneau de ressources (en haut) et autres éléments
-    (icônes ressource, etc.). Positionné plus haut pour éviter d'être hors-écran.
+    Dessine le panneau de ressources (en haut) et autres éléments.
     """
-    # Dessin du panel "resources" en haut. On lui fixe une largeur d'environ la moitié de l'écran
     resources_panel_img = get_scaled_gui('ResourcesPanel', 0, target_width=screen_width // 2)
     screen.blit(resources_panel_img, (0, 0))
 
@@ -70,7 +62,6 @@ def draw_gui_elements(screen, screen_width, screen_height):
     food_x = wood_x + wood_img.get_width() + (2 * wood_img.get_width())
     screen.blit(food_img, (food_x, ph // 15))
 
-# Paramètres partagés
 user_choices = {
     "grid_size":      120,
     "num_bots":       2,
@@ -94,7 +85,6 @@ combo_scroll_positions = {
 MAX_VISIBLE_ITEMS = 5
 ITEM_HEIGHT = 25
 
-# On redéfinit la fonction pour éviter tout problème de cache (on la retrouve deux fois dans le code initial)
 gui_cache = {}
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     global gui_cache
@@ -118,7 +108,6 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     gui_cache[key] = scaled
     return scaled
 
-
 def run_gui_menu(screen, sw, sh):
     """
     Menu GUI bloquant : boucle Pygame jusqu'à ce que user_choices["validated"] == True
@@ -139,7 +128,6 @@ def run_gui_menu(screen, sw, sh):
     if os.path.isdir(SAVE_DIRECTORY):
         save_files = [f for f in os.listdir(SAVE_DIRECTORY) if f.endswith('.pkl')]
 
-    # Indices des combos
     if user_choices["grid_size"] not in VALID_GRID_SIZES:
         user_choices["grid_size"] = VALID_GRID_SIZES[0]
     idx_grid = VALID_GRID_SIZES.index(user_choices["grid_size"])
@@ -163,13 +151,12 @@ def run_gui_menu(screen, sw, sh):
                 pygame.quit()
                 sys.exit()
 
-            # Gestion de la molette pour le scroll
             elif event.type == pygame.MOUSEWHEEL:
                 if combo_open == "grid":
-                    if event.y < 0:  # molette vers le bas
+                    if event.y < 0:
                         if combo_scroll_positions["grid"] < len(VALID_GRID_SIZES) - MAX_VISIBLE_ITEMS:
                             combo_scroll_positions["grid"] += 1
-                    else:           # molette vers le haut
+                    else:
                         if combo_scroll_positions["grid"] > 0:
                             combo_scroll_positions["grid"] -= 1
 
@@ -190,15 +177,12 @@ def run_gui_menu(screen, sw, sh):
                             combo_scroll_positions["lvl"] -= 1
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                # Si un combo est ouvert, on vérifie d'abord le clic sur ce menu
                 if combo_open == "grid":
-                    # On affiche max 5 items à la fois
                     start_idx = combo_scroll_positions["grid"]
                     visible_items = VALID_GRID_SIZES[start_idx:start_idx + MAX_VISIBLE_ITEMS]
                     item_height = ITEM_HEIGHT
 
                     expanded_rect = pygame.Rect(sw//2 - 100, 100 + item_height, 200, item_height * len(visible_items))
-                    # Clique sur un item ?
                     if expanded_rect.collidepoint(mx,my):
                         relative_y = my - (100 + item_height)
                         item_index = relative_y // item_height
@@ -207,7 +191,7 @@ def run_gui_menu(screen, sw, sh):
                             idx_grid = VALID_GRID_SIZES.index(new_val)
                             user_choices["grid_size"] = new_val
                         combo_open = None
-                        continue  # Eviter de cliquer à travers
+                        continue
                 elif combo_open == "nbot":
                     start_idx = combo_scroll_positions["nbot"]
                     visible_items = VALID_BOTS_COUNT[start_idx:start_idx + MAX_VISIBLE_ITEMS]
@@ -235,9 +219,7 @@ def run_gui_menu(screen, sw, sh):
                         combo_open = None
                         continue
 
-                # Si combo_open != None mais clic hors menu => fermer
                 if combo_open:
-                    # Rectangle principal combo (fermeture si clic hors)
                     combo_rect_grid = pygame.Rect(sw//2 - 100, 100, 200, 30)
                     combo_rect_nbot = pygame.Rect(sw//2 - 100, 160, 200, 30)
                     combo_rect_lvl  = pygame.Rect(sw//2 - 100, 220, 200, 30)
@@ -245,13 +227,9 @@ def run_gui_menu(screen, sw, sh):
                     if not (combo_rect_grid.collidepoint(mx,my) or 
                             combo_rect_nbot.collidepoint(mx,my) or 
                             combo_rect_lvl.collidepoint(mx,my)):
-                        # On ferme si clic en dehors
                         if combo_open not in ["", None]:
                             combo_open = None
 
-                # --------------------------------------------------------
-                # Gestion des menus
-                # --------------------------------------------------------
                 if show_main_menu:
                     for i, btn in enumerate(main_buttons):
                         if btn["rect"].collidepoint(mx,my):
@@ -268,7 +246,6 @@ def run_gui_menu(screen, sw, sh):
                                 sys.exit()
 
                 elif show_config_menu:
-                    # Clique sur la zone combo (pour l'ouvrir / fermer)
                     combo_rect = pygame.Rect(sw//2 - 100, 100, 200, 30)
                     combo_rect2= pygame.Rect(sw//2 - 100, 160, 200, 30)
                     combo_rect3= pygame.Rect(sw//2 - 100, 220, 200, 30)
@@ -279,13 +256,11 @@ def run_gui_menu(screen, sw, sh):
                     elif combo_rect3.collidepoint(mx,my):
                         combo_open = ("lvl" if combo_open!="lvl" else None)
 
-                    # Checkbox
                     chk_rect = pygame.Rect(sw//2 - 100, 280, 30, 30)
                     if chk_rect.collidepoint(mx,my):
                         gold_checked = not gold_checked
                         user_choices["gold_at_center"] = gold_checked
 
-                    # Bouton valider
                     valid_rect = pygame.Rect(sw//2 - 50, 340, 100, 40)
                     if valid_rect.collidepoint(mx,my):
                         user_choices["validated"] = True
@@ -307,7 +282,6 @@ def run_gui_menu(screen, sw, sh):
                 if event.key == pygame.K_ESCAPE:
                     combo_open = None
 
-        # Affichage des écrans
         if show_main_menu:
             draw_main_menu(screen, sw, sh, main_buttons)
         elif show_config_menu:
@@ -328,7 +302,6 @@ def draw_main_menu(screen, sw, sh, buttons):
         screen.blit(txt, txt.get_rect(center=btn["rect"].center))
 
 def draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, combo_open):
-    # Combo fermés
     if combo_open!="grid":
         draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Taille: {VALID_GRID_SIZES[idx_grid]}", None, idx_grid)
     if combo_open!="nbot":
@@ -336,7 +309,6 @@ def draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, 
     if combo_open!="lvl":
         draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}", None, idx_lvl)
 
-    # Checkbox
     chk_rect = pygame.Rect(sw//2 - 100, 280, 30, 30)
     pygame.draw.rect(screen, (200,200,200), chk_rect)
     if gold_checked:
@@ -344,13 +316,11 @@ def draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, 
     txt = font.render("Or au centre ?", True, (255,255,255))
     screen.blit(txt, (chk_rect.right+10, chk_rect.y))
 
-    # Bouton valider
     valid_rect = pygame.Rect(sw//2 - 50, 340, 100, 40)
     pygame.draw.rect(screen, (80,200,80), valid_rect)
     vtxt = font.render("Valider", True, (255,255,255))
     screen.blit(vtxt, vtxt.get_rect(center=valid_rect.center))
 
-    # Si un combo est ouvert, on le dessine avec ses items
     if combo_open == "grid":
         draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Taille: {VALID_GRID_SIZES[idx_grid]}", 
                        VALID_GRID_SIZES, idx_grid, combo_type="grid")
@@ -383,25 +353,21 @@ def draw_combo_box(screen, x, y, w, h, text, items_list, selected_idx, combo_typ
     screen.blit(font.render(text, True, (255,255,255)), (x+5, y+3))
 
     if items_list:
-        # On affiche seulement la partie visible (MAX_VISIBLE_ITEMS)
         start_idx = combo_scroll_positions[combo_type]
         visible_items = items_list[start_idx:start_idx + MAX_VISIBLE_ITEMS]
 
-        # Dessin de l'arrière-plan des items
         total_height = len(visible_items) * ITEM_HEIGHT
         shadow_surf = pygame.Surface((w, total_height))
         shadow_surf.set_alpha(160)
         shadow_surf.fill((0,0,0))
         screen.blit(shadow_surf, (x, y + h))
 
-        # Dessin des items
         for i, val in enumerate(visible_items):
             rect = pygame.Rect(x, y + h + i*ITEM_HEIGHT, w, ITEM_HEIGHT)
             pygame.draw.rect(screen, (60,60,120), rect)
             txt = font.render(str(val), True, (255,255,255))
             screen.blit(txt, txt.get_rect(center=rect.center))
 
-        # Si plus d'items que le max visible, on dessine le scroll (indicateur)
         if len(items_list) > MAX_VISIBLE_ITEMS:
             scroll_bar_height = 50
             scroll_bar_x = x + w - 10
@@ -409,12 +375,10 @@ def draw_combo_box(screen, x, y, w, h, text, items_list, selected_idx, combo_typ
             scroll_track_height = total_height
             pygame.draw.rect(screen, (100,100,100), (scroll_bar_x, scroll_bar_y, 10, scroll_track_height))
 
-            # Position du "curseur" de scroll
             ratio = start_idx / float(len(items_list) - MAX_VISIBLE_ITEMS)
             cursor_y = scroll_bar_y + int(ratio * (scroll_track_height - scroll_bar_height))
             pygame.draw.rect(screen, (200,200,200), (scroll_bar_x, cursor_y, 10, scroll_bar_height))
 
-# Gestion de la sélection de joueurs (dans le jeu)
 def create_player_selection_surface(players, selected_player, minimap_rect, team_colors):
     selection_height = 30
     padding = 5
@@ -423,7 +387,6 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
     screen_height = screen.get_height()
     max_height = screen_height / 3
 
-    # Nombre de colonnes pour ne pas dépasser 1/3 de l'écran
     columns = 1
     while columns <= 4:
         rows = (len(players) + columns - 1) // columns

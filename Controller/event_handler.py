@@ -1,4 +1,3 @@
-# Chemin de /home/cyril/Documents/INSA/Projet_python/Controller/event_handler.py
 import pygame
 import sys
 import os
@@ -11,27 +10,35 @@ from Controller.drawing import create_minimap_background, compute_map_bounds, ge
 from Models.Map import GameMap
 from Controller.gui import get_scaled_gui
 
+PANEL_RATIO = 0.25
+BG_RATIO    = 0.20
+
+def get_centered_rect_in_bottom_right(w, h, scr_w, scr_h, margin=10):
+    rect = pygame.Rect(0, 0, w, h)
+    cx = scr_w - margin - (w // 2)
+    cy = scr_h - margin - (h // 2)
+    rect.center = (cx, cy)
+    return rect
+
 def handle_events(event, game_state):
     camera = game_state['camera']
     players = game_state['players']
     selected_player = game_state['selected_player']
-    minimap_rect = game_state['minimap_rect']
-    minimap_dragging = game_state['minimap_dragging']
     screen_width = game_state['screen_width']
     screen_height = game_state['screen_height']
-    minimap_margin = game_state['minimap_margin']
     screen = game_state['screen']
     fullscreen = game_state['fullscreen']
 
-    minimap_background = game_state.get('minimap_background', None)
+    minimap_dragging = game_state['minimap_dragging']
+    minimap_panel_sprite = game_state['minimap_panel_sprite']
+    minimap_panel_rect = game_state['minimap_panel_rect']
+    minimap_background_rect = game_state['minimap_background_rect']
+    minimap_background_surface = game_state.get('minimap_background', None)
     minimap_scale = game_state.get('minimap_scale', 1)
     minimap_offset_x = game_state.get('minimap_offset_x', 0)
     minimap_offset_y = game_state.get('minimap_offset_y', 0)
     minimap_min_iso_x = game_state.get('minimap_min_iso_x', 0)
     minimap_min_iso_y = game_state.get('minimap_min_iso_y', 0)
-
-    player_selection_updated = game_state.get('player_selection_updated', False)
-    player_info_updated = game_state.get('player_info_updated', False)
 
     if 'selecting_units' not in game_state:
         game_state['selecting_units'] = False
@@ -41,7 +48,6 @@ def handle_events(event, game_state):
         game_state['selection_end'] = None
     if 'selected_units' not in game_state:
         game_state['selected_units'] = []
-
     if 'show_all_health_bars' not in game_state:
         game_state['show_all_health_bars'] = False
 
@@ -89,17 +95,19 @@ def handle_events(event, game_state):
                     team_colors = generate_team_colors(len(game_state['players']))
                     game_state['team_colors'] = team_colors
 
-                    camera = game_state['camera']
                     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_state['game_map'])
                     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
                     camera.offset_x = 0
                     camera.offset_y = 0
                     camera.zoom = 1.0
 
-                    minimap_width = int(game_state['screen_width'] * 0.20)  # ajusté ici
-                    minimap_height = int(game_state['screen_height'] * 0.20)
+                    sw = game_state['screen_width']
+                    sh = game_state['screen_height']
+
+                    bg_width  = int(sw * BG_RATIO)
+                    bg_height = int(sh * BG_RATIO)
                     mb, ms, mo_x, mo_y, mi_x, mi_y = create_minimap_background(
-                        game_state['game_map'], minimap_width, minimap_height
+                        game_state['game_map'], bg_width, bg_height
                     )
                     game_state['minimap_background'] = mb
                     game_state['minimap_scale'] = ms
@@ -108,11 +116,20 @@ def handle_events(event, game_state):
                     game_state['minimap_min_iso_x'] = mi_x
                     game_state['minimap_min_iso_y'] = mi_y
 
+                    new_bg_rect = mb.get_rect()
+                    new_bg_rect.center = game_state['minimap_panel_rect'].center
+                    new_bg_rect.y -= 10
+                    game_state['minimap_background_rect'] = new_bg_rect
+
+                    game_state['minimap_entities_surface'] = pygame.Surface(
+                        (mb.get_width(), mb.get_height()),
+                        pygame.SRCALPHA
+                    )
+                    game_state['minimap_entities_surface'].fill((0, 0, 0, 0))
+
                     game_state['player_selection_updated'] = True
                     game_state['player_info_updated'] = True
                     game_state['force_full_redraw'] = True
-
-                    game_state['minimap_entities_surface'].fill((0, 0, 0, 0))
                     game_state['recompute_camera'] = True
                 else:
                     print("No save file selected.")
@@ -122,9 +139,9 @@ def handle_events(event, game_state):
         elif event.key == pygame.K_F11:
             game_state['game_map'].save_map()
             print("Game saved successfully.")
-        elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS:
+        elif event.key in (pygame.K_PLUS, pygame.K_KP_PLUS):
             camera.set_zoom(camera.zoom * 1.1)
-        elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+        elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
             camera.set_zoom(camera.zoom / 1.1)
         elif event.key == pygame.K_m:
             camera.zoom_out_to_global()
@@ -139,34 +156,32 @@ def handle_events(event, game_state):
     elif event.type == pygame.MOUSEBUTTONDOWN:
         mouse_x, mouse_y = event.pos
         if event.button == 1:
-            if minimap_rect.collidepoint(mouse_x, mouse_y):
+            if minimap_background_rect.collidepoint(mouse_x, mouse_y):
                 game_state['minimap_dragging'] = True
             else:
                 player_clicked = False
                 selection_height = 30
                 padding = 5
-                players = game_state['players']
-                screen_height = game_state['screen_height']
                 max_height = screen_height / 3
                 columns = 1
                 while columns <= 4:
                     rows = (len(players) + columns - 1) // columns
-                    total_height = selection_height * rows + padding * (rows - 1)
+                    total_height = selection_height * rows + padding*(rows - 1)
                     if total_height <= max_height or columns == 4:
                         break
                     columns += 1
 
-                button_width = (minimap_rect.width - padding * (columns - 1)) // columns
+                button_width = (minimap_background_rect.width - padding*(columns - 1)) // columns
                 rows = (len(players) + columns - 1) // columns
-                surface_height = selection_height * rows + padding * (rows - 1)
-                buttons_origin_x = minimap_rect.x
-                buttons_origin_y = minimap_rect.y - surface_height - padding
+                surface_height = selection_height * rows + padding*(rows - 1)
+                buttons_origin_x = minimap_background_rect.x
+                buttons_origin_y = minimap_background_rect.y - surface_height - padding
 
                 for index, player in enumerate(reversed(players)):
                     col = index % columns
                     row = index // columns
-                    rect_x = buttons_origin_x + col * (button_width + padding)
-                    rect_y = buttons_origin_y + row * (selection_height + padding)
+                    rect_x = buttons_origin_x + col*(button_width + padding)
+                    rect_y = buttons_origin_y + row*(selection_height + padding)
                     rect_btn = pygame.Rect(rect_x, rect_y, button_width, selection_height)
                     if rect_btn.collidepoint(mouse_x, mouse_y):
                         if game_state['selected_player'] != player:
@@ -175,10 +190,13 @@ def handle_events(event, game_state):
                             game_state['player_info_updated'] = True
                             for building in player.buildings:
                                 if isinstance(building, TownCentre):
-                                    iso_x, iso_y = to_isometric(building.x, building.y,
-                                                               HALF_TILE_SIZE, HALF_TILE_SIZE / 2)
+                                    iso_x, iso_y = to_isometric(
+                                        building.x, building.y,
+                                        HALF_TILE_SIZE, HALF_TILE_SIZE / 2
+                                    )
                                     camera.offset_x = -iso_x
                                     camera.offset_y = -iso_y
+                                    camera.limit_camera()
                                     break
                         player_clicked = True
                         break
@@ -232,7 +250,6 @@ def handle_events(event, game_state):
                         )
                         if rect.collidepoint(sx, sy):
                             game_state['selected_units'].append(unit)
-
                 game_state['selecting_units'] = False
                 game_state['selection_start'] = None
                 game_state['selection_end'] = None
@@ -247,27 +264,40 @@ def handle_events(event, game_state):
         camera.width = sw
         camera.height = sh
 
-        minimap_img = get_scaled_gui('minimapPanel', 0, target_width=sw // 4)
-        mpw, mph = minimap_img.get_width(), minimap_img.get_height()
+        panel_width  = int(sw * PANEL_RATIO)
+        panel_height = int(sh * PANEL_RATIO)
+        minimap_panel_sprite = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
+        game_state['minimap_panel_sprite'] = minimap_panel_sprite
 
-        new_rect = pygame.Rect(
-            sw - mpw - game_state['minimap_margin'],
-            sh - mph - game_state['minimap_margin'],
-            mpw,
-            mph
+        new_panel_rect = get_centered_rect_in_bottom_right(
+            panel_width, panel_height, sw, sh, game_state['minimap_margin']
         )
+        game_state['minimap_panel_rect'] = new_panel_rect
 
+        bg_width  = int(sw * BG_RATIO)
+        bg_height = int(sh * BG_RATIO)
         mb, ms, mo_x, mo_y, mi_x, mi_y = create_minimap_background(
-            game_state['game_map'], mpw, mph
+            game_state['game_map'], bg_width, bg_height
         )
-
-        game_state['minimap_img'] = minimap_img
-        game_state['minimap_rect'] = new_rect
         game_state['minimap_background'] = mb
         game_state['minimap_scale'] = ms
         game_state['minimap_offset_x'] = mo_x
         game_state['minimap_offset_y'] = mo_y
         game_state['minimap_min_iso_x'] = mi_x
         game_state['minimap_min_iso_y'] = mi_y
+
+        new_bg_rect = mb.get_rect()
+        new_bg_rect.center = new_panel_rect.center
+        new_bg_rect.y -= panel_height /50
+        new_bg_rect.x += panel_width / 18
+        game_state['minimap_background_rect'] = new_bg_rect
+
+        game_state['minimap_entities_surface'] = pygame.Surface(
+            (mb.get_width(), mb.get_height()),
+            pygame.SRCALPHA
+        )
+        game_state['minimap_entities_surface'].fill((0, 0, 0, 0))
+
         game_state['screen_width'] = sw
         game_state['screen_height'] = sh
+        game_state['player_selection_updated'] = True

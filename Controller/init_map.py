@@ -9,15 +9,26 @@ from Controller.init_player import init_players
 def init_pygame():
     pygame.init()
     pygame.display.set_caption("Age of Empires II - Version Python")
-    
-    # Get screen resolution
-    infoObject = pygame.display.Info()
-    screen_width = infoObject.current_w
-    screen_height = infoObject.current_h
-    
-    screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
-    
+
+    # Fenêtre directement maximisée.
+    screen = pygame.display.set_mode((0, 0), pygame.RESIZABLE | pygame.WINDOWMAXIMIZED)
+
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+
+    # (Éventuellement, on poste un VIDEORESIZE, mais ce n’est plus forcément nécessaire)
+    pygame.event.post(
+        pygame.event.Event(
+            pygame.VIDEORESIZE,
+            {
+                "size": (screen_width, screen_height),
+                "w": screen_width,
+                "h": screen_height
+            }
+        )
+    )
+
     return screen, screen_width, screen_height
+
 
 if __name__ == "__main__":
     grid_size = int(input("Veuillez entrer la taille de la grille : "))

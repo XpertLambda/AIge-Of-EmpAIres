@@ -183,9 +183,6 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
         my = (iso_y - min_iso_y) * scale + offset_y
         points.append((mx, my))
 
-    # Dessine le losange vert (ou la forme correspondante) sans aucun fond noir
-    pygame.draw.polygon(minimap_surface, (0, 128, 0, 255), points)
-
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
 def update_minimap_entities(game_state):
@@ -199,7 +196,6 @@ def update_minimap_entities(game_state):
     minimap_min_iso_y = game_state['minimap_min_iso_y']
     minimap_entities_surface = game_state['minimap_entities_surface']
 
-    # Efface la couche entités en la rendant transparente
     minimap_entities_surface.fill((0, 0, 0, 0))
 
     tile_width = HALF_TILE_SIZE

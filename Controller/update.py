@@ -4,7 +4,7 @@ def update_game_state(game_state, dt):
     camera = game_state['camera']
     selected_player = game_state['selected_player']
     minimap_dragging = game_state['minimap_dragging']
-    minimap_rect = game_state['minimap_rect']
+    minimap_background_rect = game_state['minimap_background_rect']
     minimap_scale = game_state.get('minimap_scale', 1)
     minimap_offset_x = game_state.get('minimap_offset_x', 0)
     minimap_offset_y = game_state.get('minimap_offset_y', 0)
@@ -47,8 +47,8 @@ def update_game_state(game_state, dt):
     # Syncing camera with minimap updates
     if minimap_dragging:
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        minimap_click_x = mouse_x - minimap_rect.x
-        minimap_click_y = mouse_y - minimap_rect.y
+        minimap_click_x = mouse_x - minimap_background_rect.x
+        minimap_click_y = mouse_y - minimap_background_rect.y
 
         iso_x = (minimap_click_x - minimap_offset_x) / minimap_scale + minimap_min_iso_x
         iso_y = (minimap_click_y - minimap_offset_y) / minimap_scale + minimap_min_iso_y
