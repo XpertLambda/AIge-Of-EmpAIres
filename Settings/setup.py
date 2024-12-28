@@ -8,13 +8,21 @@ import os
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_COLLECTION_RATE = 25
 RESOURCE_CAPACITY = 20
-START_MAXIMUM_POPULATION = 200          
-UPDATE_EVERY_N_MILLISECOND = 20
-ONE_SECOND = 60
+START_MAXIMUM_POPULATION = 200
+
 # -------------------
 # Entity Resources NamedTuple
 # -------------------
 Resources = namedtuple("Resources", ["food", "gold", "wood"])
+
+# -------------------
+# Unit constants
+# -------------------
+ALLOWED_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
+UPDATE_EVERY_N_MILLISECOND = 20
+ONE_SECOND = 1000
+FRAMES_PER_UNIT = 10
+
 
 # -------------------
 # Difficulty Settings
@@ -221,7 +229,6 @@ sprite_config = {
     }
 }
 
-FRAMES_PER_UNIT = 10
 
 
 

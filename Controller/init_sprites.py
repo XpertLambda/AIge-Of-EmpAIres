@@ -32,6 +32,8 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
 
     frame_step = columns // FRAMES_PER_UNIT
     for row in range(rows):
+        if row % 2 != 0:
+            continue
         for col in range(columns):
             if col % frame_step == 0:
                 x = col * frame_width

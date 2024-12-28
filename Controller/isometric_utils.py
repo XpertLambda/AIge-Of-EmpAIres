@@ -1,4 +1,4 @@
-# Controller/isometric_utils.py
+import math
 
 def to_isometric(x, y, tile_width, tile_height):
     iso_x = (x - y) * (tile_width / 2)

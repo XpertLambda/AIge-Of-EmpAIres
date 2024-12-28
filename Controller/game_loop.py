@@ -6,6 +6,7 @@ from Entity.Building import *
 from Entity.Unit import *
 from Models.Team import Team
 from Controller.camera import Camera
+from AiUtils.aStar import a_star
 from Controller.drawing import (
     draw_map,
     compute_map_bounds,
@@ -83,23 +84,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     player_selection_surface = None
     player_info_surface = None
 
-    # Initialize A* pathfinding for all units in the first player's team
-    move_speed = 10
-    units_data = {}
     if players and players[0].units:
         for unit in players[0].units:
-            start_pos = (unit.x, unit.y)
-            goal_pos = ((unit.x + 40) % 100, (unit.y + 40) % 100)
-            path = Unit.a_star(unit, start_pos, goal_pos, game_map)
-            if path:
-                print(f"Path found for unit {unit}: {path}")
-            else:
-                print(f"No path found for unit {unit}")
-                path = []
-            units_data[unit] = {
-                'path': copy.deepcopy(path),
-                'goal_pos': goal_pos
-            }
+            a_star(unit, (random.randint(0,60),random.randint(0,60)), game_map)
 
     running = True
     update_interval = 60
@@ -113,23 +100,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
                 running = False
-
-        # Move each unit along its path
-        for unit, data in units_data.items():
-            path = data['path']
-            goal_pos = data['goal_pos']
-            if path:
-                data['path'] = Unit.move_unit(unit, path, game_map, move_speed, dt)
-                print(f"Unit position: {unit.x}, {unit.y}")
-            if (unit.x, unit.y) == goal_pos:
-                new_goal_x = (goal_pos[0] + 10) % 120
-                new_goal_y = (goal_pos[1] + 10) % 120
-                print(f"Unit arrived, switching to new goal {new_goal_x}, {new_goal_y}")
-                new_path = Unit.a_star(unit, (unit.x, unit.y), (new_goal_x, new_goal_y), game_map)
-                if new_path:
-                    print("New path found")
-                    data['path'] = copy.deepcopy(new_path)
-                data['goal_pos'] = (new_goal_x, new_goal_y)
 
         update_game_state(game_state, dt)
 
@@ -165,32 +135,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         screen.fill((0, 0, 0))
         draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
 
-        # Draw original path for each unit
-        for unit, data in units_data.items():
-            base_path = data['path']
-            if base_path:
-                for x, y in base_path:
-                    screen_x, screen_y = tile_to_screen(
-                        x,
-                        y,
-                        HALF_TILE_SIZE,
-                        HALF_TILE_SIZE / 2,
-                        camera,
-                        screen_width,
-                        screen_height
-                    )
-                    pygame.draw.circle(screen, (255, 0, 0), (screen_x, screen_y), 4)
-                screen_x, screen_y = tile_to_screen(
-                    unit.x,
-                    unit.y,
-                    HALF_TILE_SIZE,
-                    HALF_TILE_SIZE / 2,
-                    camera,
-                    screen_width,
-                    screen_height
-                )
-                pygame.draw.circle(screen, (0, 0, 255), (screen_x, screen_y), 4)
-
         screen.blit(game_state['minimap_background'], minimap_rect.topleft)
         screen.blit(game_state['minimap_entities_surface'], minimap_rect.topleft)
         draw_minimap_viewport(screen, camera, minimap_rect,
@@ -199,6 +143,31 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                               game_state['minimap_offset_y'],
                               game_state['minimap_min_iso_x'],
                               game_state['minimap_min_iso_y'])
+
+        for unit in players[0].units:
+            unit.move(game_map)
+            if unit.path:
+                for x, y in unit.path:
+                    screen_x, screen_y = tile_to_screen(
+                                x,
+                                y,
+                                HALF_TILE_SIZE,
+                                HALF_TILE_SIZE / 2,
+                                camera,
+                                screen_width,
+                                screen_height
+                            )
+                    pygame.draw.circle(screen, (255, 23, 0), (screen_x, screen_y), 5*camera.zoom)
+                    screen_x, screen_y = tile_to_screen(
+                            unit.x,
+                            unit.y,
+                            HALF_TILE_SIZE,
+                            HALF_TILE_SIZE / 2,
+                            camera,
+                            screen_width,
+                            screen_height
+                        )
+                    pygame.draw.circle(screen, (99, 0, 255), (screen_x, screen_y), 5*camera.zoom)
 
         if player_selection_surface:
             sel_h = player_selection_surface.get_height()
