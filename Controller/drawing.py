@@ -3,7 +3,6 @@ import math
 import colorsys
 from Settings.setup import (
     HALF_TILE_SIZE,
-    MINIMAP_MARGIN,
     MINIMAP_WIDTH,
     MINIMAP_HEIGHT,
     MAP_PADDING,
@@ -16,7 +15,7 @@ from Controller.isometric_utils import (
     screen_to_tile,
     tile_to_screen,
 )
-from Controller.init_sprites import fill_grass
+from Controller.init_assets import fill_grass
 from Entity.Building import Building
 from Entity.Resource.Gold import Gold
 
@@ -25,6 +24,7 @@ def generate_team_colors(nb_players):
     step = 1.0 / nb_players
     for i in range(nb_players):
         hue = (i * step) % 1.0
+        # Éviter un ton vert trop proche
         if 0.25 <= hue <= 0.4167:
             hue = (hue + 0.2) % 1.0
         r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 0.7)
@@ -32,15 +32,11 @@ def generate_team_colors(nb_players):
     return colors
 
 def draw_health_bar(screen, screen_x, screen_y, entity, team_colors, game_state):
-    # Si on veut forcer l'affichage pour tout le monde
+    # Soit l’entité est endommagée/cliquée/sélectionnée, soit on force l’affichage global
     force_display = game_state.get('show_all_health_bars', False)
-
-    # Vérifier si l’entité est un bâtiment ou une unité (sinon on ignore)
     if not (isinstance(entity, Building) or isinstance(entity, Unit)):
         return
 
-    # Soit l’entité veut afficher sa barre (cliqué/endommagé/sélectionné),
-    # soit on force l’affichage global
     display_condition = (
         entity.should_draw_health_bar()
         or (entity in game_state.get('selected_units', []))
@@ -60,7 +56,7 @@ def draw_health_bar(screen, screen_x, screen_y, entity, team_colors, game_state)
         team_color = team_colors[entity.team % len(team_colors)]
 
     bg_rect = pygame.Rect(screen_x - bar_width//2, screen_y - 30, bar_width, bar_height)
-    pygame.draw.rect(screen, (50,50,50), bg_rect)
+    pygame.draw.rect(screen, (50, 50, 50), bg_rect)
 
     fill_width = int(bar_width * ratio)
     fill_rect = pygame.Rect(screen_x - bar_width//2, screen_y - 30, fill_width, bar_height)
@@ -73,31 +69,32 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
         (0, screen_height),
         (screen_width, screen_height)
     ]
-
     tile_indices = [
-        screen_to_tile(sx, sy, screen_width, screen_height, camera,
-                       HALF_TILE_SIZE / 2, HALF_TILE_SIZE / 4)
-        for sx, sy in corners_screen
+        screen_to_tile(
+            sx, sy, screen_width, screen_height, camera,
+            HALF_TILE_SIZE / 2, HALF_TILE_SIZE / 4
+        ) for sx, sy in corners_screen
     ]
 
     x_indices = [tile_x for tile_x, _ in tile_indices]
     y_indices = [tile_y for _, tile_y in tile_indices]
 
     margin = 5
-
     min_tile_x = max(0, min(x_indices) - margin)
     max_tile_x = min(game_map.num_tiles_x - 1, max(x_indices) + margin)
     min_tile_y = max(0, min(y_indices) - margin)
     max_tile_y = min(game_map.num_tiles_y - 1, max(y_indices) + margin)
-    visible_entites = set()
 
+    visible_entites = set()
     for y in range(min_tile_y, max_tile_y):
         for x in range(min_tile_x, max_tile_x):
-            # On dessine l'herbe ponctuellement (exemple)
+            # On dessine un patch de gazon
             if x % 10 == 0 and y % 10 == 0:
-                sx, sy = tile_to_screen(x+4.5, y+4.5,
-                                        HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
-                                        camera, screen_width, screen_height)
+                sx, sy = tile_to_screen(
+                    x + 4.5, y + 4.5,
+                    HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
+                    camera, screen_width, screen_height
+                )
                 fill_grass(screen, sx, sy, camera)
 
             entities = game_map.grid.get((x, y), None)
@@ -105,14 +102,17 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                 for entity in entities:
                     visible_entites.add(entity)
 
+    # Tri : on dessine d’abord ceux du haut pour éviter de les superposer bizarrement
     for entity in sorted(visible_entites, key=lambda e: (e.y, e.x)):
         entity.display(screen, screen_width, screen_height, camera)
-        sx, sy = tile_to_screen(entity.x, entity.y,
-                                HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
-                                camera, screen_width, screen_height)
+        sx, sy = tile_to_screen(
+            entity.x, entity.y,
+            HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
+            camera, screen_width, screen_height
+        )
         draw_health_bar(screen, sx, sy, entity, team_colors, game_state)
 
-    # Dessiner le rectangle de sélection si on est en train de sélectionner
+    # Rectangle de sélection
     if game_state.get('selecting_units', False):
         sel_start = game_state.get('selection_start')
         sel_end = game_state.get('selection_end')
@@ -145,8 +145,10 @@ def compute_map_bounds(game_map):
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
 
 def create_minimap_background(game_map, minimap_width, minimap_height):
-    minimap_surface = pygame.Surface((minimap_width, minimap_height))
-    minimap_surface.fill((0, 0, 0))
+    # On utilise SRCALPHA pour la transparence
+    minimap_surface = pygame.Surface((minimap_width, minimap_height), pygame.SRCALPHA)
+    # Pas de fill noir : on le rend totalement transparent au départ
+    minimap_surface.fill((0, 0, 0, 0))
 
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
@@ -180,7 +182,6 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
         mx = (iso_x - min_iso_x) * scale + offset_x
         my = (iso_y - min_iso_y) * scale + offset_y
         points.append((mx, my))
-    pygame.draw.polygon(minimap_surface, (0, 128, 0), points)
 
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
@@ -195,7 +196,7 @@ def update_minimap_entities(game_state):
     minimap_min_iso_y = game_state['minimap_min_iso_y']
     minimap_entities_surface = game_state['minimap_entities_surface']
 
-    minimap_entities_surface.fill((0,0,0,0))
+    minimap_entities_surface.fill((0, 0, 0, 0))
 
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
@@ -205,8 +206,8 @@ def update_minimap_entities(game_state):
         for e in entities:
             entities_to_draw.add(e)
 
-    MIN_BUILDING_SIZE = 4
-    MIN_UNIT_RADIUS = 3
+    MIN_BUILDING_SIZE = 3
+    MIN_UNIT_RADIUS = 2
 
     for entity in entities_to_draw:
         x, y = entity.x, entity.y

@@ -81,6 +81,7 @@ class GameMap:
 
     def generate_buildings(self, players):
         num_players = len(players)
+        global zones
         zones = self.generate_zones(num_players)
 
         for index, player in enumerate(players):
@@ -249,10 +250,11 @@ class GameMap:
         except Exception as e:
             print(f"Error loading game map: {e}")
 
-    def display_map_in_terminal(self):
+    def update_terminal(self):
         """
         Affiche une représentation textuelle de la carte dans le terminal.
         """
+        os.system('cls' if os.name == 'nt' else 'clear')  # Clear the terminal
         for y in range(self.num_tiles_y):
             row = ''
             for x in range(self.num_tiles_x):
@@ -264,3 +266,30 @@ class GameMap:
                 else:
                     row += ' '
             print(row)
+
+   #ne marche pas
+    def place_building(self,building,team):
+        #placer un building au hasard
+        x_start, x_end, y_start, y_end = zones[team.teamID]
+        max_attempts = (x_end - x_start) * (y_end - y_start)
+        attempts = 0
+        placed = False
+        while attempts < max_attempts:
+            x = random.randint(x_start, max(x_start, x_end - building.size))
+            y = random.randint(y_start, max(y_start, y_end - building.size))
+            placed = self.add_entity(self.grid, x, y, building)
+            if placed:
+                return True
+            attempts += 1
+        if not placed:
+            # Si impossible de placer le bâtiment dans cette zone
+            # On essaie juste sur la carte complète en dernier recours
+            for ty in range(self.num_tiles_y - building.size):
+                for tx in range(self.num_tiles_x - building.size):
+                    placed = self.add_entity(grid, tx, ty, building)
+                    if placed:
+                        break
+            if placed:
+                return True
+            if not placed:
+                return False

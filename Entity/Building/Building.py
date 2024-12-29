@@ -1,7 +1,7 @@
 from Entity.Entity import Entity
 from Controller.isometric_utils import tile_to_screen
 from Settings.setup import HALF_TILE_SIZE
-from Controller.init_sprites import draw_sprite
+from Controller.init_assets import draw_sprite
 
 class Building(Entity):
     def __init__(
@@ -31,6 +31,7 @@ class Building(Entity):
         self.walkable = walkable
         self.attack_power = attack_power
         self.attack_range = attack_range
+        self.constructors=[] #liste des villageois qui construisent le batiment
 
     def display(self, screen, screen_width, screen_height, camera):
         category = 'buildings'

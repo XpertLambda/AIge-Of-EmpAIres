@@ -89,10 +89,30 @@ if not os.path.exists(SAVE_DIRECTORY):
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
-sprite_loading_screen = {
+gui_config = {
     'loading_screen': {
         'directory': 'assets/launcher/',
         'scale': None
+    },
+
+    'ResourcesPanel' :{
+        'directory' : 'assets/UI/Panels/resourcesPan', 
+    }, 
+
+    'minimapPanel' :{
+        'directory' : 'assets/UI/Panels/minimapPan', 
+    },
+
+    'gold':{
+        'directory' : 'assets/UI/Resources/gold',
+    },
+
+    'wood':{
+        'directory' : 'assets/UI/Resources/wood',
+    },
+
+    'food':{
+        'directory' : 'assets/UI/Resources/food',
     }
 }
 

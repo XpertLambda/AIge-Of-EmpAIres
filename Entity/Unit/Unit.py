@@ -3,7 +3,7 @@ import pygame
 from Entity.Entity import Entity
 from Settings.setup import FRAMES_PER_UNIT, TILE_SIZE, HALF_TILE_SIZE, UPDATE_EVERY_N_MILLISECOND, ONE_SECOND, ALLOWED_ANGLES
 from Controller.isometric_utils import tile_to_screen, angle_with_x_axis
-from Controller.init_sprites import draw_sprite
+from Controller.init_assets import draw_sprite
 
 class Unit(Entity):
     id = 0
@@ -28,11 +28,11 @@ class Unit(Entity):
         self.training_time = training_time
 
         self.unit_id = Unit.id
-        
+
         # Movement
         self.path = None
         self.last_step_time = pygame.time.get_ticks()
-        
+
         # State variables
         self.state = 1
         self.last_frame_time = pygame.time.get_ticks()

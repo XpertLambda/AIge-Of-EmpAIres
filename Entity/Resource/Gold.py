@@ -1,5 +1,5 @@
 import random
-from Controller.init_sprites import sprite_config
+from Controller.init_assets import sprite_config
 from Entity.Resource.Resource import Resource
 from Settings.setup import Resources
 

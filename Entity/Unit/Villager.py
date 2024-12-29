@@ -41,5 +41,13 @@ class Villager(Unit):
         self.resources = 0
         self.task = False
 
+    def build(self, map,building):
+        if not self.isAvailable():
+            return
+        self.task = True
+        self.move((building.x, building.y), map)
+        building.constructors.append(self)
+    
+
     def buildTime(self, building, num_villagers):
         return max(10, (3 * building.buildTime) / (num_villagers + 2)) if num_villagers > 0 else building.buildTime
