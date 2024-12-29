@@ -6,7 +6,6 @@ from Entity.Building import *
 from Entity.Unit import *
 from Models.Team import Team
 from Controller.camera import Camera
-from AiUtils.aStar import a_star
 from Controller.drawing import (
     draw_map,
     compute_map_bounds,
@@ -84,9 +83,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     player_selection_surface = None
     player_info_surface = None
 
-    if players and players[0].units:
-        for unit in players[0].units:
-            a_star(unit, (random.randint(0,60),random.randint(0,60)), game_map)
 
     running = True
     update_interval = 60

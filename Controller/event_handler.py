@@ -8,6 +8,7 @@ from Controller.isometric_utils import to_isometric, screen_to_tile, tile_to_scr
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY
 from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
 from Models.Map import GameMap
+from AiUtils.aStar import a_star
 
 def handle_events(event, game_state):
     camera = game_state['camera']
@@ -148,6 +149,16 @@ def handle_events(event, game_state):
             if minimap_rect.collidepoint(mouse_x, mouse_y):
                 game_state['minimap_dragging'] = True
             else:
+                if game_state['selected_units']:
+                    tile_x, tile_y = screen_to_tile(
+                            mouse_x, mouse_y,
+                            screen_width, screen_height,
+                            camera,
+                            HALF_TILE_SIZE/2,
+                            HALF_TILE_SIZE/4
+                        )
+                    for unit in game_state['selected_units']:
+                        a_star(unit, (tile_x, tile_y), game_state['game_map'])
                 player_clicked = False
 
                 # Calcul pour les boutons joueurs

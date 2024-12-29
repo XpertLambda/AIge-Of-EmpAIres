@@ -119,8 +119,9 @@ class Unit(Entity):
     def move(self, game_map, ALLOWED_ANGLES=ALLOWED_ANGLES):
         if not self.path:
             self.state = 0
+            self.last_step_time = pygame.time.get_ticks()
             return
-            
+
         self.state = 1
         dt = pygame.time.get_ticks() - self.last_step_time
         target_tile = self.path[0]
@@ -139,7 +140,7 @@ class Unit(Entity):
                 self.path.pop(0)
                 game_map.remove_entity(self, self.x, self.y)
                 game_map.add_entity(self, self.x, self.y)
-            self.direction = ((snapped_angle // 45 )+1)%8 # +1 to mathc the sprite sheet
+            self.direction = ((snapped_angle // 45 )+1)%8 # +1 to match the sprite sheet and %8 because tere are 8 directions
         return self.path
 
     def display(self, screen, screen_width, screen_height, camera):

@@ -18,10 +18,10 @@ def get_neighbors(unit, game_map, position):
 
 def a_star(unit, goal, game_map):
     open_set = []
-    heapq.heappush(open_set, (0, (unit.x, unit.y)))
+    heapq.heappush(open_set, (0, (round(unit.x), round(unit.y))))
     came_from = {}
-    g_score = {(unit.x, unit.y): 0}
-    f_score = {(unit.x, unit.y): heuristic((unit.x, unit.y), goal)}
+    g_score = {(round(unit.x), round(unit.y)): 0}
+    f_score = {(round(unit.x), round(unit.y)): heuristic((round(unit.x), round(unit.y)), goal)}
 
     while open_set:
         _, current = heapq.heappop(open_set)
