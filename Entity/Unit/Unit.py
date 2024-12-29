@@ -34,7 +34,7 @@ class Unit(Entity):
         self.last_step_time = pygame.time.get_ticks()
 
         # State variables
-        self.state = 1
+        self.state = 0
         self.last_frame_time = pygame.time.get_ticks()
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
