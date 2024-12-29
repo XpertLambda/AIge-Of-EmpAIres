@@ -10,6 +10,7 @@ from Controller.drawing import create_minimap_background, compute_map_bounds, ge
 from Models.Map import GameMap
 from AiUtils.aStar import a_star
 from Controller.gui import get_scaled_gui
+from Models.html import write_full_html   # for generating snapshot
 
 PANEL_RATIO = 0.25
 BG_RATIO    = 0.20
@@ -31,7 +32,6 @@ def handle_events(event, game_state):
     fullscreen = game_state['fullscreen']
 
     minimap_dragging = game_state['minimap_dragging']
-    minimap_panel_sprite = game_state['minimap_panel_sprite']
     minimap_panel_rect = game_state['minimap_panel_rect']
     minimap_background_rect = game_state['minimap_background_rect']
     minimap_background_surface = game_state.get('minimap_background', None)
@@ -66,11 +66,17 @@ def handle_events(event, game_state):
         sys.exit()
 
     elif event.type == pygame.KEYDOWN:
+        # Toggle health bars
         if event.key == pygame.K_F2:
             game_state['show_all_health_bars'] = not game_state['show_all_health_bars']
+
+        # Save / load
+        elif event.key == pygame.K_F11:
+            game_state['game_map'].save_map()
+            print("Game saved successfully.")
         elif event.key == pygame.K_F12:
             try:
-                root = tkinter.Tk()
+                root = Tk()
                 root.withdraw()
                 initial_dir = os.path.abspath(SAVE_DIRECTORY)
                 filetypes = [('Pickle files', '*.pkl')]
@@ -81,10 +87,11 @@ def handle_events(event, game_state):
                 )
                 root.destroy()
                 if full_path:
+                    # Load logic
+                    from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
                     game_state['game_map'] = GameMap(0, False, [], generate=False)
                     game_state['game_map'].load_map(full_path)
                     print(f"Loaded save: {os.path.basename(full_path)}")
-                    game_state['game_map'].display_map_in_terminal()
 
                     game_state['players'].clear()
                     game_state['players'].extend(game_state['game_map'].players)
@@ -137,15 +144,15 @@ def handle_events(event, game_state):
             except Exception as e:
                 print(f"Error loading save: {e}")
 
-        elif event.key == pygame.K_F11:
-            game_state['game_map'].save_map()
-            print("Game saved successfully.")
+        # Zoom
         elif event.key in (pygame.K_PLUS, pygame.K_KP_PLUS):
             camera.set_zoom(camera.zoom * 1.1)
         elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
             camera.set_zoom(camera.zoom / 1.1)
         elif event.key == pygame.K_m:
             camera.zoom_out_to_global()
+
+        # Quit
         elif event.key == pygame.K_ESCAPE:
             try:
                 os.remove('full_snapshot.html')
@@ -154,22 +161,31 @@ def handle_events(event, game_state):
             pygame.quit()
             sys.exit()
 
+    elif event.type == pygame.KEYUP:
+        if event.key == pygame.K_TAB:
+            game_state['paused'] = not game_state['paused']
+            if game_state['paused']:
+                write_full_html(game_state['players'], game_state['game_map'])
+
     elif event.type == pygame.MOUSEBUTTONDOWN:
         mouse_x, mouse_y = event.pos
         if event.button == 1:
             if minimap_background_rect.collidepoint(mouse_x, mouse_y):
                 game_state['minimap_dragging'] = True
             else:
+                # If user clicked inside main map => pathfinding for selected units
                 if game_state['selected_units']:
                     tile_x, tile_y = screen_to_tile(
-                            mouse_x, mouse_y,
-                            screen_width, screen_height,
-                            camera,
-                            HALF_TILE_SIZE/2,
-                            HALF_TILE_SIZE/4
-                        )
+                        mouse_x, mouse_y,
+                        screen_width, screen_height,
+                        camera,
+                        HALF_TILE_SIZE/2,
+                        HALF_TILE_SIZE/4
+                    )
                     for unit in game_state['selected_units']:
                         a_star(unit, (tile_x, tile_y), game_state['game_map'])
+
+                # Detect if user clicked on a "player" rectangle near minimap
                 player_clicked = False
                 selection_height = 30
                 padding = 5
@@ -199,6 +215,7 @@ def handle_events(event, game_state):
                             game_state['selected_player'] = player
                             game_state['player_selection_updated'] = True
                             game_state['player_info_updated'] = True
+                            # Optionally recenter camera on first building
                             for building in player.buildings:
                                 if isinstance(building, TownCentre):
                                     iso_x, iso_y = to_isometric(
@@ -212,6 +229,7 @@ def handle_events(event, game_state):
                         player_clicked = True
                         break
 
+                # If not on player button => we do a "selection" rectangle
                 if not player_clicked:
                     tile_x, tile_y = screen_to_tile(
                         mouse_x, mouse_y,
@@ -220,18 +238,14 @@ def handle_events(event, game_state):
                         HALF_TILE_SIZE/2,
                         HALF_TILE_SIZE/4
                     )
-                    game_map = game_state['game_map']
-                    entities_on_tile = game_map.grid.get((tile_x, tile_y), None)
-                    if entities_on_tile:
-                        clicked_entity = next(iter(entities_on_tile))
-                        clicked_entity.notify_clicked()
-
                     game_state['selecting_units'] = True
                     game_state['selection_start'] = (mouse_x, mouse_y)
-                    game_state['selection_end'] = (mouse_x, mouse_y)
+                    game_state['selection_end']   = (mouse_x, mouse_y)
 
+        # Wheel up => zoom in
         elif event.button == 4:
             camera.set_zoom(camera.zoom * 1.1)
+        # Wheel down => zoom out
         elif event.button == 5:
             camera.set_zoom(camera.zoom / 1.1)
 
@@ -265,6 +279,7 @@ def handle_events(event, game_state):
                 game_state['selection_start'] = None
                 game_state['selection_end'] = None
 
+        # Again for wheel
         if event.button == 4:
             camera.set_zoom(camera.zoom * 1.1)
         elif event.button == 5:
@@ -280,6 +295,7 @@ def handle_events(event, game_state):
         minimap_panel_sprite = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
         game_state['minimap_panel_sprite'] = minimap_panel_sprite
 
+        from Controller.drawing import create_minimap_background
         new_panel_rect = get_centered_rect_in_bottom_right(
             panel_width, panel_height, sw, sh, game_state['minimap_margin']
         )
