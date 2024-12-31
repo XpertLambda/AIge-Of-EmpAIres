@@ -86,7 +86,7 @@ class GameMap:
         zones = self.generate_zones(num_players)
 
         for index, player in enumerate(players):
-            x_start, x_end, y_start, y_end = zones[index]
+            x_start, x_end, y_start, y_end = zones[player.teamID]
             for building in player.buildings:
                 max_attempts = (x_end - x_start) * (y_end - y_start)
                 attempts = 0
@@ -289,7 +289,7 @@ class GameMap:
             # On essaie juste sur la carte complète en dernier recours
             for ty in range(self.num_tiles_y - building.size):
                 for tx in range(self.num_tiles_x - building.size):
-                    placed = self.add_entity(grid, tx, ty, building)
+                    placed = self.add_entity(self.grid, tx, ty, building)
                     if placed:
                         break
             if placed:

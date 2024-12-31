@@ -5,6 +5,7 @@ import random
 from Entity.Building import *
 from Entity.Unit import *
 from Models.Team import Team
+#from Models.Map import GameMap
 from Controller.camera import Camera
 from Controller.drawing import (
     draw_map,
@@ -162,6 +163,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             pygame.display.flip()
         barrack=Barracks(selected_player)
         if selected_player.resources["wood"] >= barrack.cost[2]:
-            selected_player.buildBatiment(barrack,time,3,game_map)
-            print(len(selected_player.buildings))
+            selected_player.buildBuilding(barrack,time,3,game_map)
+         
         selected_player.manage_creation(time)

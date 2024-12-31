@@ -100,13 +100,13 @@ class Team:
             del self.en_cours[entity]
 
 
-    def buildBatiment(self,building,clock,nb,map):
+    def buildBuilding(self,building,clock,nb,map):
         #building:batiment qu'on veut construire
         #clock: temps actuel
         #nb: nombre de villageois maximum qui va construire
        
         
-        if all([e.task for e in self.units if isinstance(e,Villager)]):
+        if all([unit.task for unit in self.units if isinstance(unit,Villager)]):
             print("les villageois sont occupés")
             return False
         if self.resources["wood"] >= building.cost[2]:
@@ -117,22 +117,21 @@ class Team:
             print(f"{self}: Not enough resources.")
             return False
        #rajouter le placement sur la map ne marche pas
-        """
         if not map.place_building(building,self):
             print("cannot place")
             return False
-        """
+       
         i=0
-        j=0
-        while(i<len(self.units) and j<nb):
+        num_constructors=0
+        while(i<len(self.units) and num_constructors<nb):
             v=self.units[i]
             if isinstance(v,Villager) and not(v.task):
                 v.build(map,building)
-                j+=1
+                num_constructors +=1
                 v1=v
             i+=1
          
-        self.en_cours[building]=clock+v1.buildTime(building,j) 
+        self.en_cours[building]=clock+v1.buildTime(building,num_constructors) 
 
 
     def battle(self,t,map,nb):
