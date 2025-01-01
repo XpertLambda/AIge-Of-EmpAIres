@@ -1,9 +1,10 @@
 import math
+import pygame
 from Entity.Entity import Entity
-from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE
-from Controller.isometric_utils import tile_to_screen
-from Controller.init_sprites import draw_sprite
-import heapq
+from Settings.setup import FRAMES_PER_UNIT, TILE_SIZE, HALF_TILE_SIZE, UPDATE_EVERY_N_MILLISECOND, ONE_SECOND, ALLOWED_ANGLES
+from Controller.isometric_utils import tile_to_screen, angle_with_x_axis
+from Controller.init_assets import draw_sprite
+
 class Unit(Entity):
     id = 0
 
@@ -27,18 +28,23 @@ class Unit(Entity):
         self.training_time = training_time
 
         self.unit_id = Unit.id
-        Unit.id += 1
-        self.task=False
+
+        # Movement
+        self.path = None
+        self.last_step_time = pygame.time.get_ticks()
+
         # State variables
         self.state = 0
+        self.last_frame_time = pygame.time.get_ticks()
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
-        self.frame_counter = 0
-        self.frame_duration = 3
+        self.frame_duration = 1000/self.frames
         self.direction = 0
 
         self.target = None
+        Unit.id += 1
 
+    @staticmethod
     def compute_distance(pos1, pos2):
         x1, y1 = pos1
         x2, y2 = pos2
@@ -55,15 +61,13 @@ class Unit(Entity):
             if distance_to_target < 100:
                 # Perform the attack
                 self.current_frame = 0
-                self.frame_counter = 0
                 self.target.hp -= self.attack_power
-                # Notify or handle damage on target
                 if hasattr(self.target, "notify_damage"):
                     self.target.notify_damage()
             else:
                 # Move closer to the target
-                self.move((self.target.x, self.target.y), game_map)
-
+                # We'll pass 0 dt if paused => no movement
+                self.move(game_map, 0.016)  # example dt if we want forced step
         return target_found
 
     def search_for_target(self, enemy_team, attack_mode=True):
@@ -73,14 +77,21 @@ class Unit(Entity):
         closest_distance = float("inf")
         closest_entity = None
 
-        for enemy_unit in enemy_team.army:
+        # Suppose enemy_team has a list of units in "army" or "units"
+        # This example code might differ from your production code
+        if hasattr(enemy_team, 'army'):
+            enemy_units_list = enemy_team.army
+        else:
+            enemy_units_list = enemy_team.units
+
+        for enemy_unit in enemy_units_list:
             dist = self.compute_distance((self.x, self.y), (enemy_unit.x, enemy_unit.y))
-            if attack_mode or dist < 100: 
+            if attack_mode or dist < 100:
                 if dist < closest_distance:
                     closest_distance = dist
                     closest_entity = enemy_unit
 
-        if attack_mode:
+        if attack_mode and hasattr(enemy_team, 'buildings'):
             for enemy_building in enemy_team.buildings:
                 dist = self.compute_distance((self.x, self.y), (enemy_building.x, enemy_building.y))
                 if dist < closest_distance:
@@ -91,9 +102,6 @@ class Unit(Entity):
         return self.target is not None
 
     def is_tile_walkable(self, game_map, tile_x, tile_y):
-        """
-        Checks if a tile at (tile_x, tile_y) is walkable for this unit.
-        """
         if (
             tile_x < 0 or
             tile_y < 0 or
@@ -107,79 +115,63 @@ class Unit(Entity):
 
         if entities_on_tile:
             for entity in entities_on_tile:
-                # Example check for building walkability
+                # For example, if that tile is occupied by a non-walkable building
                 if hasattr(entity, "walkable") and not entity.walkable:
                     return False
-
         return True
 
-    def move(self, target_pos, game_map):
+    def move(self, game_map, dt, ALLOWED_ANGLES=ALLOWED_ANGLES):
         """
-        Tries to step closer to the target position (target_pos) by checking tile walkability.
-        Adjusts the direction based on movement.
+        Move with dt-based increments. If dt <= 0 => skip to avoid
+        accumulation or 'jump' after unpause.
         """
-        self.frame_counter = 0
-        self.current_frame = 0
+        if not self.path or dt <= 0:
+            self.state = 0
+            self.last_step_time = pygame.time.get_ticks()
+            return
 
-        target_x = int(target_pos[0])
-        target_y = int(target_pos[1])
+        self.state = 1
+        # Time since last step
+        ms_since_last = pygame.time.get_ticks() - self.last_step_time
+        # If enough ms have passed => do a step
+        if ms_since_last > UPDATE_EVERY_N_MILLISECOND:
+            self.last_step_time = pygame.time.get_ticks()
 
-        dx = 0
-        dy = 0
-        if self.x < target_x:
-            dx = 1
-        elif self.x > target_x:
-            dx = -1
+            # Target tile is self.path[0]
+            target_tile = self.path[0]
+            dx = target_tile[0] - self.x
+            dy = target_tile[1] - self.y
+            angle = math.degrees(math.atan2(dy, dx))
+            angle = (angle + 360) % 360
+            snapped_angle = min(ALLOWED_ANGLES, key=lambda x: abs(x - angle))
+            snapped_angle_rad = math.radians(snapped_angle)
 
-        if self.y < target_y:
-            dy = 1
-        elif self.y > target_y:
-            dy = -1
+            # distance per second => use dt
+            step_x = (dt * self.speed) * math.cos(snapped_angle_rad)
+            step_y = (dt * self.speed) * math.sin(snapped_angle_rad)
 
-        # Attempt diagonal movement if possible
-        if dx != 0 and dy != 0:
-            new_x = self.x + dx
-            new_y = self.y + dy
-            if self.is_tile_walkable(game_map, int(new_x), int(new_y)):
-                self.x = new_x
-                self.y = new_y
-                # Set direction based on dx/dy
-                if dx == 1 and dy == 1:
-                    self.direction = 270
-                elif dx == 1 and dy == -1:
-                    self.direction = 90
-                elif dx == -1 and dy == 1:
-                    self.direction = 225
-                elif dx == -1 and dy == -1:
-                    self.direction = 45
-                return
+            self.x += step_x
+            self.y += step_y
 
-        # Attempt horizontal movement
-        if dx != 0:
-            new_x = self.x + dx
-            if self.is_tile_walkable(game_map, int(new_x), int(self.y)):
-                self.x = new_x
-                self.direction = 135 if dx == 1 else 315
-                return
+            # If we've passed or reached the target tile => remove it from path
+            # We check if the new step is overshooting
+            if (abs(dx) < abs(step_x)) or (abs(dy) < abs(step_y)):
+                # Remove the tile from path
+                self.path.pop(0)
+                # Update game_map to reflect new position
+                game_map.remove_entity(self, self.x, self.y)
+                game_map.add_entity(self, self.x, self.y)
 
-        # Attempt vertical movement
-        if dy != 0:
-            new_y = self.y + dy
-            if self.is_tile_walkable(game_map, int(self.x), int(new_y)):
-                self.y = new_y
-                self.direction = 225 if dy == 1 else 45
+            # Direction for sprite
+            # e.g. snapped_angle // 45 => direction in [0..7]
+            self.direction = int((snapped_angle // 45) % 8)
 
     def display(self, screen, screen_width, screen_height, camera):
-        """
-        Displays the unit on the screen with sprite animations.
-        """
-        # Update frame handling for animation
-        self.frame_counter += 1
-        if self.frame_counter >= self.frame_duration:
-            self.frame_counter = 0
-            self.current_frame = (self.current_frame + 1) % self.frames
+        dt = pygame.time.get_ticks() - self.last_frame_time
+        if dt > self.frame_duration:
+            self.current_frame = (self.current_frame + 1) % self.frames + self.frames*self.direction
+            self.last_frame_time = pygame.time.get_ticks()
 
-        # Convert tile coordinates to screen coordinates
         screen_x, screen_y = tile_to_screen(
             self.x,
             self.y,
@@ -201,74 +193,3 @@ class Unit(Entity):
             state=self.state,
             frame=self.current_frame
         )
-        
-    def a_star(unit, start, goal, game_map):
-        def heuristic(a, b):
-            return abs(a[0] - b[0]) + abs(a[1] - b[1])
-    
-        def get_neighbors(position):
-            directions = [
-                (1, 0), (0, 1), (-1, 0), (0, -1),
-                (1, 1), (1, -1), (-1, 1), (-1, -1)
-            ]
-            neighbors = []
-            for dx, dy in directions:
-                neighbor = (position[0] + dx, position[1] + dy)
-                if unit.is_tile_walkable(game_map, neighbor[0], neighbor[1]):
-                    neighbors.append(neighbor)
-            return neighbors
-    
-        open_set = []
-        heapq.heappush(open_set, (0, start))
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: heuristic(start, goal)}
-    
-        while open_set:
-            _, current = heapq.heappop(open_set)
-        
-            if current == goal:
-                path = []
-                while current in came_from:
-                    path.append(current)
-                    current = came_from[current]
-                path.reverse()
-                return path
-        
-            for neighbor in get_neighbors(current):
-                tentative_g_score = g_score[current] + 1
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goal)
-                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
-    
-        return []
-    def move_unit(unit, path, game_map, move_speed, dt):
-        if not path:
-            return None
-
-        current_position = (unit.x, unit.y)
-        target_position = path[0]
-
-        direction_x = target_position[0] - current_position[0]
-        direction_y = target_position[1] - current_position[1]
-        distance = (direction_x**2 + direction_y**2) ** 0.5
-
-        step_x = direction_x / distance * move_speed * dt if distance != 0 else 0
-        step_y = direction_y / distance * move_speed * dt if distance != 0 else 0
-
-        new_x = unit.x + step_x
-        new_y = unit.y + step_y
-
-        if abs(new_x - target_position[0]) < 0.1 and abs(new_y - target_position[1]) < 0.1:
-            game_map.remove_entity(game_map.grid, int(unit.x), int(unit.y), unit)
-            unit.x, unit.y = target_position
-            game_map.add_entity(game_map.grid, int(unit.x), int(unit.y), unit)
-            path.pop(0)
-        else:
-            game_map.remove_entity(game_map.grid, int(unit.x), int(unit.y), unit)
-            unit.x, unit.y = new_x, new_y
-            game_map.add_entity(game_map.grid, int(unit.x), int(unit.y), unit)
-
-        return path

@@ -8,12 +8,21 @@ import os
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_COLLECTION_RATE = 25
 RESOURCE_CAPACITY = 20
-START_MAXIMUM_POPULATION = 200          
+START_MAXIMUM_POPULATION = 200
 
 # -------------------
 # Entity Resources NamedTuple
 # -------------------
 Resources = namedtuple("Resources", ["food", "gold", "wood"])
+
+# -------------------
+# Unit constants
+# -------------------
+ALLOWED_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
+UPDATE_EVERY_N_MILLISECOND = 20
+ONE_SECOND = 1000
+FRAMES_PER_UNIT = 10
+
 
 # -------------------
 # Difficulty Settings
@@ -80,10 +89,30 @@ if not os.path.exists(SAVE_DIRECTORY):
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
-sprite_loading_screen = {
+gui_config = {
     'loading_screen': {
         'directory': 'assets/launcher/',
         'scale': None
+    },
+
+    'ResourcesPanel' :{
+        'directory' : 'assets/UI/Panels/resourcesPan', 
+    }, 
+
+    'minimapPanel' :{
+        'directory' : 'assets/UI/Panels/minimapPan', 
+    },
+
+    'gold':{
+        'directory' : 'assets/UI/Resources/gold',
+    },
+
+    'wood':{
+        'directory' : 'assets/UI/Resources/wood',
+    },
+
+    'food':{
+        'directory' : 'assets/UI/Resources/food',
     }
 }
 
@@ -220,7 +249,6 @@ sprite_config = {
     }
 }
 
-FRAMES_PER_UNIT = 10
 
 
 

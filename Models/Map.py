@@ -20,46 +20,45 @@ class GameMap:
         self.num_tiles_x = grid_size
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
+        self.grid = {}
         if generate:
             self.generate_map()
-        else:
-            self.grid = {}
 
-    def add_entity(self, grid, x, y, entity):
+    def add_entity(self, entity, x, y):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
             return False
-
+        rounded_x, rounded_y = round(x), round(y)
         for i in range(entity.size):
             for j in range(entity.size):
-                pos = (x + i, y + j)
-                if pos in grid:
+                pos = (rounded_x + i, rounded_y + j)
+                if pos in self.grid:
                     return False
 
         for i in range(entity.size):
             for j in range(entity.size):
-                pos = (x + i, y + j)
-                grid[pos] = set()
-                grid[pos].add(entity)
+                pos = (rounded_x + i, rounded_y + j)
+                self.grid[pos] = set()
+                self.grid[pos].add(entity)
         entity.x = x + (entity.size - 1)/2
         entity.y = y + (entity.size - 1)/2
         return True
 
-    def remove_entity(self, grid, x, y, entity):
+    def remove_entity(self, entity, x, y):
         if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
             return False
-
+        rounded_x, rounded_y = round(x), round(y)
         for i in range(entity.size):
             for j in range(entity.size):
-                pos = (x + i, y + j)
-                if pos not in grid or entity not in grid[pos]:
+                pos = (rounded_x + i, rounded_y + j)
+                if pos not in self.grid or entity not in self.grid[pos]:
                     return False  # Entity not present at the position
 
         for i in range(entity.size):
             for j in range(entity.size):
-                pos = (x + i, y + j)
-                grid[pos].remove(entity)
-                if not grid[pos]:  # clean up the position if there is an empty set
-                    del grid[pos]
+                pos = (rounded_x + i, rounded_y + j)
+                self.grid[pos].remove(entity)
+                if not self.grid[pos]:  
+                    del self.grid[pos]
         return True
 
     def generate_zones(self, num_players):
@@ -80,7 +79,7 @@ class GameMap:
             zones.append((x_start, x_end, y_start, y_end))
         return zones
 
-    def generate_buildings(self, grid, players):
+    def generate_buildings(self, players):
         num_players = len(players)
         global zones
         zones = self.generate_zones(num_players)
@@ -94,7 +93,7 @@ class GameMap:
                 while attempts < max_attempts:
                     x = random.randint(x_start, max(x_start, x_end - building.size))
                     y = random.randint(y_start, max(y_start, y_end - building.size))
-                    placed = self.add_entity(grid, x, y, building)
+                    placed = self.add_entity(building, x, y)
                     if placed:
                         if (isinstance(building, TownCentre) or isinstance(building, House)):
                             player.maximum_population += building.population
@@ -104,7 +103,7 @@ class GameMap:
                 if not placed:
                     for tile_y in range(self.num_tiles_y - building.size):
                         for tile_x in range(self.num_tiles_x - building.size):
-                            placed = self.add_entity(grid, tile_x, tile_y, building)
+                            placed = self.add_entity(building, tile_x, tile_y, building)
                             if placed:
                                 break
                         if placed:
@@ -112,7 +111,7 @@ class GameMap:
                     if not placed:
                         raise ValueError("Unable to deploy building for a player; map too crowded?")
 
-    def generate_units(self, grid, players):
+    def generate_units(self, players):
         num_players = len(players)
         zones = self.generate_zones(num_players)
 
@@ -125,27 +124,24 @@ class GameMap:
                 while not placed and attempts < 1000:
                     x_unit = random.randint(x_start, x_end - 1)
                     y_unit = random.randint(y_start, y_end - 1)
-                    placed = self.add_entity(grid, x_unit, y_unit, unit)
+                    placed = self.add_entity(unit, x_unit, y_unit)
                     attempts += 1
                 if not placed:
                     attempts = 0
                     while not placed and attempts < 1000:
                         x_unit = random.randint(0, self.num_tiles_x - 1)
                         y_unit = random.randint(0, self.num_tiles_y - 1)
-                        placed = self.add_entity(grid, x_unit, y_unit, unit)
+                        placed = self.add_entity(unit, x_unit, y_unit)
                         attempts += 1
                     if not placed:
                         print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
     def generate_map(self):
-        grid = {}
-        self.generate_resources(grid)
-        self.generate_buildings(grid, self.players)
-        self.generate_units(grid, self.players)
-        self.grid = grid
-        return grid
+        #self.generate_resources(grid)
+        self.generate_buildings(self.players)
+        self.generate_units(self.players)
 
-    def generate_resources(self, grid):
+    def generate_resources(self):
         resource_classes = {
             'gold': Gold,
             'wood': Tree
@@ -161,9 +157,9 @@ class GameMap:
                     for dy in range(-layer, layer + 1):
                         x = center_x + dx
                         y = center_y + dy
-                        if 0 <= x < self.num_tiles_x and 0 <= y < self.num_tiles_y and (x, y) not in grid:
-                            grid[(x, y)] = set()
-                            grid[(x, y)].add(resource_classes['gold'](x, y))
+                        if 0 <= x < self.num_tiles_x and 0 <= y < self.num_tiles_y and (x, y) not in self.grid:
+                            self.grid[(x, y)] = set()
+                            self.grid[(x, y)].add(resource_classes['gold'](x, y))
                             gold_count += 1
                             if gold_count >= NUM_GOLD_TILES:
                                 break
@@ -179,7 +175,7 @@ class GameMap:
                     x = random.randint(0, self.num_tiles_x - 1)
                     y = random.randint(0, self.num_tiles_y - 1)
                     resource = resource_classes['gold'](x, y)
-                    placed = self.add_entity(grid, x, y, resource)
+                    placed = self.add_entity(resource, x, y)
                     attempts += 1
 
         # Generate trees as groups instead of one by one
@@ -199,7 +195,7 @@ class GameMap:
                     placed = False
                     while not placed and attempts < 10:
                         resource = resource_classes['wood'](x, y)
-                        placed = self.add_entity(grid, x, y, resource)
+                        placed = self.add_entity(resource, x, y)
                         attempts += 1
                     if placed:
                         wood_placed += 1
@@ -254,10 +250,11 @@ class GameMap:
         except Exception as e:
             print(f"Error loading game map: {e}")
 
-    def display_map_in_terminal(self):
+    def update_terminal(self):
         """
         Affiche une représentation textuelle de la carte dans le terminal.
         """
+        os.system('cls' if os.name == 'nt' else 'clear')  # Clear the terminal
         for y in range(self.num_tiles_y):
             row = ''
             for x in range(self.num_tiles_x):
