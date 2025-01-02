@@ -1,4 +1,3 @@
-# Chemin de /home/cyril/Documents/INSA/Projet_python/Models/Map.py
 import math
 import random
 import os

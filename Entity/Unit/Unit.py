@@ -1,4 +1,3 @@
-# Chemin de /home/cyril/Documents/INSA/Projet_python/Entity/Unit/Unit.py
 import math
 import pygame
 from Entity.Entity import Entity
@@ -28,7 +27,6 @@ class Unit(Entity):
         super().__init__(x, y, team, acronym, 1, max_hp, cost)
         self.attack_power = attack_power
         self.attack_range = attack_range
-        # Vitesse en « tuiles par seconde » (ou toute autre unité si vous le désirez)
         self.speed = speed
         self.training_time = training_time
 
@@ -63,71 +61,28 @@ class Unit(Entity):
             return self.compute_distance((self.x, self.y),
                                          (self.target.x, self.target.y))
 
-    # ---------------- Movement (no target) ----------------
-    def move(self, game_map, dt):
-        """
-        Méthode appelée si l'unité se déplace sans cible d'attaque.
-        dt est le temps écoulé (en secondes) depuis la dernière update.
-        """
-        if self.target:
-            # if we have a target => we do attack-based movement
-            return
-        if not self.path or len(self.path) == 0:
+    def move(self, game_map, dt, ALLOWED_ANGLES=ALLOWED_ANGLES):
+        if not self.path:
             self.state = 0
             return
 
         self.state = 1
-        # On déplace l'unité d'une fraction correspondant à dt
-        self.do_move_step(game_map, dt)
-
-    def do_move_step(self, game_map, dt):
-        """
-        On ne met à jour la grille (tile) que lorsque la tuile est entièrement atteinte.
-        Entre-temps, on effectue un déplacement partiel (l'unité est alors « entre » deux tuiles).
-        
-        - speed => tuiles par seconde
-        - dt => temps écoulé en secondes depuis la dernière update
-        """
-        if not self.path:
-            return
-
-        tile_dest = self.path[0]
-        dx = tile_dest[0] - self.x
-        dy = tile_dest[1] - self.y
-        dist = math.sqrt(dx*dx + dy*dy)
-        if dist < 1e-7:
-            # Déjà au centre de la tuile => on passe à la suivante
+        target_tile = self.path[0]
+        dx = target_tile[0] - self.x
+        dy = target_tile[1] - self.y
+        angle = math.degrees(math.atan2(dy, dx))
+        angle = (angle + 360) % 360
+        snapped_angle = min(ALLOWED_ANGLES, key=lambda x: abs(x - angle))
+        snapped_angle_rad = math.radians(snapped_angle)
+        step = ( dt *  self.speed * math.cos(snapped_angle_rad), dt * self.speed * math.sin(snapped_angle_rad))
+        self.x += step[0]
+        self.y += step[1]
+        if abs(dx) < abs(step[0]) or abs(dy) < abs(step[1]):
             self.path.pop(0)
-            return
-
-        angle = math.atan2(dy, dx)
-        step_len = self.speed * dt  # distance à parcourir dans ce laps de temps
-
-        # Anciennes positions réelles (pas arrondies)
-        old_x, old_y = self.x, self.y
-
-        # Vérifie si l’on atteint (ou dépasse) la tuile
-        if step_len >= dist:
-            # On arrive sur tile_dest (centre de la tuile)
-            self.x, self.y = tile_dest[0], tile_dest[1]
-            self.path.pop(0)
-            # On met à jour la grille seulement maintenant, quand on est effectivement au centre
-            old_ix, old_iy = round(old_x), round(old_y)
-            new_ix, new_iy = round(self.x), round(self.y)
-            if (old_ix, old_iy) != (new_ix, new_iy):
-                game_map.remove_entity(self, old_ix, old_iy)
-                game_map.add_entity(self, new_ix, new_iy)
-        else:
-            # Déplacement partiel
-            self.x += step_len * math.cos(angle)
-            self.y += step_len * math.sin(angle)
-            # **Ne pas** mettre à jour la grille ici, 
-            # car on n’est pas encore arrivé au centre de tile_dest
-
-        # Mise à jour de la direction du sprite
-        deg = math.degrees(angle) % 360
-        snapped_angle = min(ALLOWED_ANGLES, key=lambda a: abs(a - deg))
-        self.direction = int((snapped_angle // 45) % 8)
+            game_map.remove_entity(self, self.x, self.y)
+            game_map.add_entity(self, self.x, self.y)
+        self.direction = ((snapped_angle // 45 )+1)%8 # +1 to match the sprite sheet and %8 because tere are 8 directions
+        return self.path
 
     # ---------------- Attack Logic ----------------
     def attack(self, attacker_team, game_map, dt):
@@ -248,18 +203,10 @@ class Unit(Entity):
 
     # -------------- Display --------------
     def display(self, screen, screen_width, screen_height, camera):
-        """
-        Animation de l'unité, inchangée, 
-        sauf qu'on considère qu'ailleurs dans votre code,
-        vous appelez move(...) ou attack(...) avec le bon dt.
-        """
-        now = pygame.time.get_ticks()
-        if now - self.last_frame_time > self.frame_duration:
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_frame_time > self.frame_duration:
             self.current_frame = (self.current_frame + 1) % self.frames + self.frames * self.direction
-            self.last_frame_time = now
+            self.last_frame_time = current_time
 
-        sx, sy = tile_to_screen(self.x, self.y,
-                                HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
-                                camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, 'units', sx, sy,
-                    camera.zoom, state=self.state, frame=self.current_frame)
+        sx, sy = tile_to_screen(self.x, self.y,HA LF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
