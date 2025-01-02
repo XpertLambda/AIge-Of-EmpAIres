@@ -2,9 +2,9 @@ import math
 import pygame
 from Entity.Entity import Entity
 from Entity.Building import Building
-from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES
+from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, UNIT_HITBOX
 from Controller.isometric_utils import tile_to_screen
-from Controller.init_assets import draw_sprite
+from Controller.init_assets import draw_sprite, draw_hitbox
 
 class Unit(Entity):
     id = 0
@@ -24,7 +24,7 @@ class Unit(Entity):
         speed,
         training_time
     ):
-        super().__init__(x, y, team, acronym, 1, max_hp, cost)
+        super().__init__(x=x, y=y, team=team, acronym=acronym, size=1, max_hp=max_hp, cost=cost)
         self.attack_power = attack_power
         self.attack_range = attack_range
         self.speed = speed
@@ -210,3 +210,22 @@ class Unit(Entity):
 
         sx, sy = tile_to_screen(self.x, self.y,HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
+
+    def display_hitbox(self, screen, screen_width, screen_height, camera):
+        x_center, y_center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+
+        corner_distance = UNIT_HITBOX
+        
+        corners = [
+            (self.x - corner_distance, self.y - corner_distance),  # corner3
+            (self.x - corner_distance, self.y + corner_distance),  # corner1
+            (self.x + corner_distance, self.y + corner_distance),  # corner2
+            (self.x + corner_distance, self.y - corner_distance)   # corner4
+        ]
+        
+        screen_corners = []
+        for corner in corners:
+            x_screen, y_screen = tile_to_screen(corner[0], corner[1], HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            screen_corners.append((x_screen, y_screen))
+        
+        draw_hitbox(screen, screen_corners, camera.zoom)

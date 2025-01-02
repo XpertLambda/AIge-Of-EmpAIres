@@ -150,7 +150,7 @@ class GameMap:
                         print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
     def generate_map(self):
-        #self.generate_resources(grid)
+        self.generate_resources()
         self.generate_buildings(self.players)
         self.generate_units(self.players)
 

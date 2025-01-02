@@ -104,6 +104,7 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     visible_list.sort(key=lambda e: (e.y, e.x))
 
     for entity in visible_list:
+        entity.display_hitbox(screen, screen_width, screen_height, camera)
         entity.display(screen, screen_width, screen_height, camera)
         sx, sy = tile_to_screen(entity.x, entity.y,
                                 HALF_TILE_SIZE, HALF_TILE_SIZE/2,

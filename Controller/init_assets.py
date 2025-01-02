@@ -207,3 +207,10 @@ def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None,
 
 def fill_grass(screen, screen_x, screen_y, camera):
     draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)
+
+def draw_hitbox(screen, corners, zoom):
+    if len(corners) != 4:
+        raise ValueError("Hitbox must have exactly 4 corners.")
+    scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
+    pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
+    
