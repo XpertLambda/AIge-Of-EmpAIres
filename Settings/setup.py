@@ -114,7 +114,12 @@ gui_config = {
 
     'food':{
         'directory' : 'assets/UI/Resources/food',
-    }
+    },
+
+    'pointer':{
+        'directory' : 'assets/UI/Pointer/',
+    },
+
 }
 
 BAR_HEIGHT = 30

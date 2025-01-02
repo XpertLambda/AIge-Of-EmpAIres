@@ -100,6 +100,7 @@ def load_sprites(screen, screen_width, screen_height):
                 loaded_sprite = load_sprite(filepath, gui_scale, gui_adjust_scale)
                 gui_elements[gui_key].append(loaded_sprite)
                 loaded_files += 1
+                print(f'Appended {gui_key}')
                 progress = loaded_files / total_files
                 draw_progress_bar(screen, progress, screen_width, screen_height, gui_key, loading_screen)
 

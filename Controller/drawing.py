@@ -19,6 +19,9 @@ from Controller.init_assets import fill_grass
 from Entity.Building import Building
 from Entity.Resource.Gold import Gold
 
+from Controller.gui import get_scaled_gui
+
+
 def generate_team_colors(nb_players):
     colors = []
     step = 1.0 / nb_players
@@ -256,3 +259,14 @@ def display_fps(screen, clock):
     fps = int(clock.get_fps())
     fps_text = font.render(f'FPS: {fps}', True, pygame.Color('white'))
     screen.blit(fps_text, (10, 10))
+
+
+def draw_pointer(screen):
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    pointer = get_scaled_gui('pointer', 0, target_width=30)
+    # Center the crosshair image
+    pointer_rect = pointer.get_rect(center=(mouse_x, mouse_y))
+
+    # Draw the crosshair
+    screen.blit(pointer, pygame.mouse.get_pos())
+

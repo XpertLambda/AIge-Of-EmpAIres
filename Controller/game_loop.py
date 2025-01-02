@@ -14,7 +14,8 @@ from Controller.drawing import (
     display_fps,
     update_minimap_entities,
     draw_minimap_viewport,
-    generate_team_colors
+    generate_team_colors,
+    draw_pointer
 )
 import copy
 from Controller.event_handler import handle_events
@@ -41,6 +42,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     pygame.key.set_repeat(0, 0)
     camera = Camera(screen_width, screen_height)
     team_colors = generate_team_colors(len(players))
+    pygame.mouse.set_visible(False)
 
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
@@ -260,6 +262,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         # FPS
         display_fps(screen, clock)
+        draw_pointer(screen)
 
         if game_state.get('force_full_redraw', False):
             pygame.display.flip()
