@@ -10,7 +10,7 @@ class Resource(Entity):
         self.storage = storage
         self.variant = variant
 
-    def display(self, screen, screen_width, screen_height, camera):
+    def display(self, screen, screen_width, screen_height, camera, dt):
         category = 'resources'
         screen_x, screen_y = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom, variant=self.variant)

@@ -68,7 +68,6 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     pygame.display.flip()
 
-
 def load_sprites(screen, screen_width, screen_height):
     global gui_elements
     gui_elements.clear()
@@ -162,7 +161,6 @@ def load_sprites(screen, screen_width, screen_height):
 
     print("Sprites loaded successfully.")
     
-# Function to get a scaled sprite, handling both static and animated sprites
 def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
     # same as before except we clamp scaled_width, scaled_height >=1
     if name not in zoom_cache:
@@ -191,7 +189,6 @@ def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
     return scaled_image
-
 
 def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0):
     name = Entity_Acronym[category][acronym]

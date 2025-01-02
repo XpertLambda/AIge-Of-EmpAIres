@@ -8,8 +8,6 @@ from Controller.init_assets import draw_sprite, draw_hitbox
 
 class Unit(Entity):
     id = 0
-
-
     def __init__(
         self,
         x,
@@ -34,10 +32,9 @@ class Unit(Entity):
 
         self.path = None
         self.state = 0  # 0=idle,1=walk,2=attack
-        self.last_frame_time = pygame.time.get_ticks()
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
-        self.frame_duration = 1000 / self.frames
+        self.frame_duration = 0
         self.direction = 0
 
         self.target = None
@@ -186,13 +183,14 @@ class Unit(Entity):
         return True
 
     # -------------- Display --------------
-    def display(self, screen, screen_width, screen_height, camera):
-        current_time = pygame.time.get_ticks()
-        if current_time - self.last_frame_time > self.frame_duration:
+    def display(self, screen, screen_width, screen_height, camera, dt):
+        self.frame_duration += dt
+        frame_time = 1.0 / self.frames
+        if self.frame_duration >= frame_time:
+            self.frame_duration -= frame_time
             self.current_frame = (self.current_frame + 1) % self.frames + self.frames * self.direction
-            self.last_frame_time = current_time
 
-        sx, sy = tile_to_screen(self.x, self.y,HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
 
     def display_hitbox(self, screen, screen_width, screen_height, camera):

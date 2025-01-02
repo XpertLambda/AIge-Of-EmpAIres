@@ -124,7 +124,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # ----------------------------------------------------------------
         raw_dt = clock.tick(120) / 1000.0
         if game_state['paused']:
-            # Force dt to 0 when paused to ensure no time-accumulation
             dt = 0
         else:
             dt = raw_dt
@@ -155,7 +154,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         camera = game_state['camera']
 
         # Periodic terminal update
-        import time
         if time.time() - game_state.get('last_terminal_update', 0) >= 2:
             start_time = time.time()
             game_map.update_terminal()
@@ -195,7 +193,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         screen.fill((0, 0, 0))
 
         # Draw the map with all entities
-        draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state)
+        draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state, dt)
 
         # Minimap
         screen.blit(game_state['minimap_panel_sprite'], game_state['minimap_panel_rect'].topleft)

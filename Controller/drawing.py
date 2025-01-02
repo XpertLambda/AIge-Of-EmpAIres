@@ -61,7 +61,7 @@ def draw_health_bar(screen, screen_x, screen_y, entity, team_colors, game_state)
     fill_rect = pygame.Rect(screen_x - bar_width//2, screen_y - 30, fill_width, bar_height)
     pygame.draw.rect(screen, team_color, fill_rect)
 
-def draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state):
+def draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state, dt):
     corners_screen = [
         (0, 0),
         (screen_width, 0),
@@ -105,7 +105,7 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
 
     for entity in visible_list:
         entity.display_hitbox(screen, screen_width, screen_height, camera)
-        entity.display(screen, screen_width, screen_height, camera)
+        entity.display(screen, screen_width, screen_height, camera, dt)
         sx, sy = tile_to_screen(entity.x, entity.y,
                                 HALF_TILE_SIZE, HALF_TILE_SIZE/2,
                                 camera, screen_width, screen_height)
