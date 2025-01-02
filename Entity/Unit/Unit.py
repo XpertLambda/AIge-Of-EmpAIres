@@ -2,14 +2,13 @@ import math
 import pygame
 from Entity.Entity import Entity
 from Entity.Building import Building
-from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, UNIT_HITBOX
+from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON
 from Controller.isometric_utils import tile_to_screen
 from Controller.init_assets import draw_sprite, draw_hitbox
 
 class Unit(Entity):
     id = 0
-    # Increase the "fudge factor" => diagonal is about sqrt(2) ~1.41 => let's do 0.5
-    ATTACK_RANGE_EPSILON = 0.5
+
 
     def __init__(
         self,
@@ -42,16 +41,13 @@ class Unit(Entity):
         self.direction = 0
 
         self.target = None
+        self.attack_range_epsilon = ATTACK_RANGE_EPSILON
 
     @staticmethod
     def compute_distance(pos1, pos2):
         return math.dist(pos1, pos2)
 
     def distance_to_target(self, game_map):
-        """
-        If target is building => gather building tiles => min distance
-        Otherwise => distance to target.x,y
-        """
         if not self.target:
             return None
         if isinstance(self.target, Building):
@@ -86,24 +82,20 @@ class Unit(Entity):
 
     # ---------------- Attack Logic ----------------
     def attack(self, attacker_team, game_map, dt):
-        """
-        If in range => do damage, else => approach
-        On passe ici également le dt pour que si l'unité doit se déplacer,
-        ce soit cohérent avec sa vitesse. 
-        """
+
         if not self.target or self.target.hp <= 0:
             self.target = None
             return
         if self.target.team == self.team:
             return
 
-        dist = self.distance_to_target(game_map)
-        if dist is None:
+        distance = self.distance_to_target(game_map)
+        if distance is None:
             self.target = None
             return
 
-        effective_range = self.attack_range + self.ATTACK_RANGE_EPSILON
-        if dist <= effective_range:
+        effective_range = self.attack_range + self.attack_range_epsilon
+        if distance <= effective_range:
             self.state = 2
             self.target.hp -= self.attack_power
             if hasattr(self.target, "notify_damage"):
@@ -113,11 +105,6 @@ class Unit(Entity):
             self.move_towards_target(game_map, dt)
 
     def move_towards_target(self, game_map, dt):
-        """
-        Attack-based movement => recalc path if we have none
-        Au lieu de forcer dt=0.016, on récupère ici le dt réel, 
-        afin que la vitesse respecte self.speed et le temps écoulé.
-        """
         if not self.target:
             return
 
@@ -136,9 +123,6 @@ class Unit(Entity):
             self.state = 0
             return
 
-        # On déplace d'après le dt réel
-        self.do_move_step(game_map, dt)
-
     # ---------------- Building Distances ----------------
     def get_building_tiles(self, building, game_map):
         tiles = []
@@ -153,42 +137,42 @@ class Unit(Entity):
                     tiles.append((xx, yy))
         return tiles
 
-    def distance_to_any_tile(self, upos, tile_list):
+    def distance_to_any_tile(self, unit_position, tile_list):
         if not tile_list:
             return None
-        best = float('inf')
-        for (tx, ty) in tile_list:
-            d = math.dist(upos, (tx, ty))
-            if d < best:
-                best = d
-        return best if best < float('inf') else None
+        best_distance = float('inf')
+        for (tile_x, tile_y) in tile_list:
+            distance = math.dist(unit_position, (tile_x, tile_y))
+            if distance < best_distance:
+                best_distance = distance
+        return best_distance if best_distance < float('inf') else None
 
     def find_best_adjacent_spot_to_building(self, building, game_map):
-        btiles = self.get_building_tiles(building, game_map)
-        if not btiles:
+        # Direction from building center to the unit
+        dx = self.x - building.x
+        dy = self.y - building.y
+        distance = math.sqrt(dx*dx + dy*dy)
+        if distance < 1e-7:
             return (round(building.x), round(building.y))
 
-        neighbors = []
-        directions = [(1, 0), (0, 1), (-1, 0), (0, -1),
-                      (1, 1), (1, -1), (-1, 1), (-1, -1)]
-        for (bx, by) in btiles:
-            for dx, dy in directions:
-                nx, ny = bx + dx, by + dy
-                if 0 <= nx < game_map.num_tiles_x and 0 <= ny < game_map.num_tiles_y:
-                    if self.is_tile_walkable(game_map, nx, ny):
-                        neighbors.append((nx, ny))
-
-        if not neighbors:
+        # Near edge offset
+        offset = building.size / 2.0 + 0.5
+        if distance <= offset:
+            # Fallback if the unit is already too close
             return (round(building.x), round(building.y))
 
-        best = None
-        best_sq = float('inf')
-        for (cx, cy) in neighbors:
-            dsq = (self.x - cx)**2 + (self.y - cy)**2
-            if dsq < best_sq:
-                best_sq = dsq
-                best = (cx, cy)
-        return best
+        # Find the point near the edge closest to the unit
+        ratio = offset / distance
+        near_x = building.x + ratio * dx
+        near_y = building.y + ratio * dy
+        tile_x, tile_y = round(near_x), round(near_y)
+
+        # Check if walkable
+        if self.is_tile_walkable(game_map, tile_x, tile_y):
+            return (tile_x, tile_y)
+
+        # Optional: check surrounding tiles or simply fallback
+        return (round(building.x), round(building.y))
 
     # ---------------- Map Walkability ----------------
     def is_tile_walkable(self, game_map, tx, ty):

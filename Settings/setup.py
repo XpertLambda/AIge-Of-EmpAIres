@@ -23,6 +23,7 @@ UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
 UNIT_HITBOX = 0.3
+ATTACK_RANGE_EPSILON = 0.5
 
 # -------------------
 # Difficulty Settings
