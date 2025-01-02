@@ -2,7 +2,7 @@ import math
 import pygame
 from Entity.Entity import Entity
 from Entity.Building import Building
-from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON
+from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
 from Controller.isometric_utils import tile_to_screen
 from Controller.init_assets import draw_sprite, draw_hitbox
 
