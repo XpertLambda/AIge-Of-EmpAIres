@@ -62,52 +62,6 @@ def draw_gui_elements(screen, screen_width, screen_height):
     food_x = wood_x + wood_img.get_width() + (2 * wood_img.get_width())
     screen.blit(food_img, (food_x, ph // 15))
 
-user_choices = {
-    "grid_size":      120,
-    "num_bots":       2,
-    "bot_level":      "lean",
-    "gold_at_center": False,
-    "load_game":      False,
-    "chosen_save":    None,
-    "validated":      False
-}
-
-VALID_GRID_SIZES = [i for i in range(100, 1000, 10)]
-VALID_BOTS_COUNT = [i for i in range(1, 56)]
-VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
-
-# Pour la gestion du scroll dans chaque combo
-combo_scroll_positions = {
-    "grid": 0,
-    "nbot": 0,
-    "lvl":  0
-}
-MAX_VISIBLE_ITEMS = 5
-ITEM_HEIGHT = 25
-
-gui_cache = {}
-def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
-    global gui_cache
-    key = (ui_name, variant, target_width, target_height)
-    if key in gui_cache:
-        return gui_cache[key]
-
-    original = gui_elements[ui_name][variant]
-    ow, oh = original.get_width(), original.get_height()
-    if target_width and not target_height:
-        ratio = target_width / ow
-        target_height = int(oh * ratio)
-    elif target_height and not target_width:
-        ratio = target_height / oh
-        target_width = int(ow * ratio)
-    elif not target_width and not target_height:
-        gui_cache[key] = original
-        return original
-
-    scaled = pygame.transform.smoothscale(original, (target_width, target_height))
-    gui_cache[key] = scaled
-    return scaled
-
 def run_gui_menu(screen, sw, sh):
     """
     Menu GUI bloquant : boucle Pygame jusqu'à ce que user_choices["validated"] == True

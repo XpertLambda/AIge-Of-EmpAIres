@@ -212,6 +212,7 @@ sprite_config = {
         },
         'tree': {
             'directory': 'assets/resources/tree/',
+            'scale': (TILE_SIZE, TILE_SIZE),
             'variant': 4
         }
     },
@@ -255,8 +256,31 @@ sprite_config = {
     }
 }
 
+# ----
+# Menu
+# ----
 
+user_choices = {
+    "grid_size":      120,
+    "num_bots":       2,
+    "bot_level":      "lean",
+    "gold_at_center": False,
+    "load_game":      False,
+    "chosen_save":    None,
+    "validated":      False
+}
 
+VALID_GRID_SIZES = [i for i in range(100, 1000, 10)]
+VALID_BOTS_COUNT = [i for i in range(1, 56)]
+VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
 
+# Pour la gestion du scroll dans chaque combo
+combo_scroll_positions = {
+    "grid": 0,
+    "nbot": 0,
+    "lvl":  0
+}
+MAX_VISIBLE_ITEMS = 5
+ITEM_HEIGHT = 25
 
 

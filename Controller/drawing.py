@@ -21,7 +21,6 @@ from Entity.Resource.Gold import Gold
 
 from Controller.gui import get_scaled_gui
 
-
 def generate_team_colors(nb_players):
     colors = []
     step = 1.0 / nb_players
