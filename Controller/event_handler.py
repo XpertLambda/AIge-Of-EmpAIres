@@ -100,7 +100,7 @@ def handle_events(event, game_state):
             else:
                 # Vérifie si l'utilisateur clique sur une entité
                 clicked_entity = find_entity_for_building_or_unit(game_state, mx, my)
-                if clicked_entity and hasattr(clicked_entity, "notify_clicked"):
+                if clicked_entity:
                     clicked_entity.notify_clicked()
                 else:
                     # Sinon => soit sélection de joueur, soit box selection
@@ -263,24 +263,28 @@ def finalize_box_selection(game_state):
     game_state['selection_start'] = None
     game_state['selection_end'] = None
 
-def find_entity_for_building_or_unit(game_state, mx, my, radius_tiles=0):
-    from Controller.isometric_utils import screen_to_tile
+def find_entity_for_building_or_unit(game_state, mx, my, pixel_radius=15):
     camera = game_state['camera']
     sw = game_state['screen_width']
     sh = game_state['screen_height']
-    tile_x, tile_y = screen_to_tile(mx, my, sw, sh, camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
     gmap = game_state['game_map']
 
-    candidates = []
-    for dx in range(-radius_tiles, radius_tiles + 1):
-        for dy in range(-radius_tiles, radius_tiles + 1):
+    tile_x, tile_y = screen_to_tile(mx, my, sw, sh, camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
+    search_radius = 2  # Check around 2 tiles in each direction
+    closest_entity = None
+    closest_dist = float('inf')
+
+    for dx in range(-search_radius, search_radius + 1):
+        for dy in range(-search_radius, search_radius + 1):
             nx, ny = tile_x + dx, tile_y + dy
             if 0 <= nx < gmap.num_tiles_x and 0 <= ny < gmap.num_tiles_y:
-                candidates.append((nx, ny))
-
-    for pos in candidates:
-        ent_set = gmap.grid.get(pos, None)
-        if ent_set:
-            for e in ent_set:
-                return e
-    return None
+                ent_set = gmap.grid.get((nx, ny), [])
+                for e in ent_set:
+                    sx, sy = tile_to_screen(e.x, e.y,
+                                            HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
+                                            camera, sw, sh)
+                    dist = ((mx - sx)**2 + (my - sy)**2) ** 0.5
+                    if dist <= pixel_radius and dist < closest_dist:
+                        closest_dist = dist
+                        closest_entity = e
+    return closest_entity
