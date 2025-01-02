@@ -5,7 +5,7 @@ import os
 from tkinter import Tk, filedialog
 
 from Entity.Building import Building, TownCentre
-from Controller.isometric_utils import screen_to_tile, tile_to_screen
+from Controller.isometric_utils import screen_to_tile, tile_to_screen, to_isometric
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY
 from Controller.drawing import compute_map_bounds, generate_team_colors
 from Models.html import write_full_html
@@ -24,14 +24,17 @@ def handle_events(event, game_state):
     if event.type == pygame.QUIT:
         try:
             os.remove('full_snapshot.html')
-        except:
+        except FileNotFoundError:
             pass
         pygame.quit()
         sys.exit()
 
     elif event.type == pygame.KEYDOWN:
+        # Affichage barres de vie
         if event.key == pygame.K_F2:
             game_state['show_all_health_bars'] = not game_state['show_all_health_bars']
+
+        # Sauvegarde / chargement
         elif event.key == pygame.K_F11:
             game_state['game_map'].save_map()
             print("Game saved.")
@@ -54,26 +57,29 @@ def handle_events(event, game_state):
                     else:
                         game_state['selected_player'] = None
                     game_state['team_colors'] = generate_team_colors(len(game_state['players']))
-                    camera.offset_x=0
-                    camera.offset_y=0
-                    camera.zoom=1.0
+                    camera.offset_x = 0
+                    camera.offset_y = 0
+                    camera.zoom = 1.0
 
                     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_state['game_map'])
                     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
                     game_state['force_full_redraw'] = True
             except Exception as e:
                 print(f"Error loading: {e}")
+
         # Zoom
-        elif event.key == pygame.K_PLUS or event.key== pygame.K_KP_PLUS:
+        elif event.key in (pygame.K_PLUS, pygame.K_KP_PLUS):
             camera.set_zoom(camera.zoom * 1.1)
-        elif event.key == pygame.K_MINUS or event.key== pygame.K_KP_MINUS:
+        elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
             camera.set_zoom(camera.zoom / 1.1)
         elif event.key == pygame.K_m:
             camera.zoom_out_to_global()
+
+        # Quit
         elif event.key == pygame.K_ESCAPE:
             try:
                 os.remove('full_snapshot.html')
-            except:
+            except FileNotFoundError:
                 pass
             pygame.quit()
             sys.exit()
@@ -85,145 +91,196 @@ def handle_events(event, game_state):
                 write_full_html(game_state['players'], game_state['game_map'])
 
     elif event.type == pygame.MOUSEBUTTONDOWN:
-        mx,my= event.pos
-        if event.button== 1:
-            # left => selection only
-            if game_state['minimap_background_rect'].collidepoint(mx,my):
-                game_state['minimap_dragging']=True
+        mx, my = event.pos
+        if event.button == 1:
+            # Clic gauche
+            if game_state['minimap_background_rect'].collidepoint(mx, my):
+                # Démarre le dragging de la minimap
+                game_state['minimap_dragging'] = True
             else:
-                clicked_entity = find_entity_for_building_or_unit(game_state, mx,my)
-                if clicked_entity:
-                    if hasattr(clicked_entity, "notify_clicked"):
-                        clicked_entity.notify_clicked()
+                # Vérifie si l'utilisateur clique sur une entité
+                clicked_entity = find_entity_for_building_or_unit(game_state, mx, my)
+                if clicked_entity and hasattr(clicked_entity, "notify_clicked"):
+                    clicked_entity.notify_clicked()
                 else:
-                    handle_left_click_panels_or_box(mx,my, game_state)
-        elif event.button==3:
-            # right => move or attack
-            if selected_player and len(game_state['selected_units'])>0:
-                # Clear old target
+                    # Sinon => soit sélection de joueur, soit box selection
+                    handle_left_click_panels_or_box(mx, my, game_state)
+
+        elif event.button == 3:
+            # Clic droit => move ou attack
+            if selected_player and len(game_state['selected_units']) > 0:
+                # On vide l'ancien target/path
                 for u in game_state['selected_units']:
-                    u.target=None
-                    u.path=None
+                    u.target = None
+                    u.path = None
 
-                ent = find_entity_for_building_or_unit(game_state,mx,my)
+                ent = find_entity_for_building_or_unit(game_state, mx, my)
                 if ent:
-                    # if enemy => attack
-                    if ent.team!= selected_player.teamID:
+                    # S'il s'agit d'une entité ennemie
+                    if ent.team != selected_player.teamID:
                         for u in game_state['selected_units']:
-                            u.target= ent
+                            u.target = ent
                     else:
-                        # same team => move
-                        tile_x, tile_y= screen_to_tile(mx,my, screen_width,screen_height,
-                                                       camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
+                        # Sinon => move normal
+                        tile_x, tile_y = screen_to_tile(
+                            mx, my, screen_width, screen_height,
+                            camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4
+                        )
                         for u in game_state['selected_units']:
-                            a_star(u, (tile_x,tile_y), game_state['game_map'])
+                            a_star(u, (tile_x, tile_y), game_state['game_map'])
                 else:
-                    # empty => normal move
-                    tile_x, tile_y= screen_to_tile(mx,my, screen_width, screen_height,
-                                                   camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
+                    # case vide => move normal
+                    tile_x, tile_y = screen_to_tile(
+                        mx, my, screen_width, screen_height,
+                        camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4
+                    )
                     for u in game_state['selected_units']:
-                        a_star(u, (tile_x,tile_y), game_state['game_map'])
+                        a_star(u, (tile_x, tile_y), game_state['game_map'])
 
-        elif event.button==4:
+        # Molette haut => zoom in
+        elif event.button == 4:
             camera.set_zoom(camera.zoom * 1.1)
-        elif event.button==5:
+        # Molette bas => zoom out
+        elif event.button == 5:
             camera.set_zoom(camera.zoom / 1.1)
 
     elif event.type == pygame.MOUSEMOTION:
+        # Drag de la minimap
         if game_state['minimap_dragging']:
-            pass
+            mouse_x, mouse_y = event.pos
+            minimap_rect = game_state['minimap_background_rect']
+            local_x = mouse_x - minimap_rect.x
+            local_y = mouse_y - minimap_rect.y
+
+            minimap_scale = game_state['minimap_scale']
+            minimap_offset_x = game_state['minimap_offset_x']
+            minimap_offset_y = game_state['minimap_offset_y']
+            minimap_min_iso_x = game_state['minimap_min_iso_x']
+            minimap_min_iso_y = game_state['minimap_min_iso_y']
+
+            iso_x = (local_x - minimap_offset_x) / minimap_scale + minimap_min_iso_x
+            iso_y = (local_y - minimap_offset_y) / minimap_scale + minimap_min_iso_y
+
+            camera.offset_x = -iso_x
+            camera.offset_y = -iso_y
+            camera.limit_camera()
         else:
+            # Si on sélectionne au rectangle
             if game_state['selecting_units']:
                 game_state['selection_end'] = event.pos
 
     elif event.type == pygame.MOUSEBUTTONUP:
-        if event.button==1:
-            game_state['minimap_dragging']=False
+        # Fin de drag de la minimap
+        if event.button == 1:
+            game_state['minimap_dragging'] = False
             if game_state['selecting_units']:
                 finalize_box_selection(game_state)
 
-def handle_left_click_panels_or_box(mx,my, game_state):
-    # either user clicked player selection or do a box selection
-    players= game_state['players']
-    screen_h= game_state['screen_height']
-    minimap_rect= game_state['minimap_background_rect']
-    selection_height=30
-    padding=5
-    max_height= screen_h/3
-    columns=1
-    while columns<=4:
-        rows=(len(players)+ columns-1)//columns
-        total_h= selection_height*rows+ padding*(rows-1)
-        if total_h<= max_height or columns==4:
+def handle_left_click_panels_or_box(mx, my, game_state):
+    """
+    Soit l'utilisateur clique sur un "bouton de joueur" (pour sélectionner 
+    un joueur et se TP sur son TownCentre), soit on démarre une box selection.
+    """
+    players = game_state['players']
+    screen_h = game_state['screen_height']
+    minimap_rect = game_state['minimap_background_rect']
+    selection_height = 30
+    padding = 5
+    max_height = screen_h / 3
+    columns = 1
+    while columns <= 4:
+        rows = (len(players) + columns - 1) // columns
+        total_h = selection_height * rows + padding * (rows - 1)
+        if total_h <= max_height or columns == 4:
             break
-        columns+=1
+        columns += 1
 
-    but_w= (minimap_rect.width- padding*(columns-1))//columns
-    rows=(len(players)+ columns-1)//columns
-    surface_h= selection_height* rows+ padding*(rows-1)
-    but_x= minimap_rect.x
-    but_y= minimap_rect.y- surface_h- padding
+    but_w = (minimap_rect.width - padding * (columns - 1)) // columns
+    rows = (len(players) + columns - 1) // columns
+    surface_h = selection_height * rows + padding * (rows - 1)
+    but_x = minimap_rect.x
+    but_y = minimap_rect.y - surface_h - padding
 
-    clicked_player=False
+    camera = game_state['camera']
+    clicked_player = False
+
+    from Controller.isometric_utils import to_isometric
     for index, p in enumerate(reversed(players)):
-        col= index%columns
-        row= index//columns
-        rx= but_x+ col*(but_w+ padding)
-        ry= but_y+ row*(selection_height+ padding)
-        r= pygame.Rect(rx,ry, but_w, selection_height)
-        if r.collidepoint(mx,my):
-            if game_state['selected_player']!= p:
-                game_state['selected_player']= p
-                game_state['player_selection_updated']= True
-                game_state['player_info_updated']=True
-            clicked_player=True
+        col = index % columns
+        row = index // columns
+        rx = but_x + col*(but_w + padding)
+        ry = but_y + row*(selection_height + padding)
+        r = pygame.Rect(rx, ry, but_w, selection_height)
+        if r.collidepoint(mx, my):
+            # On change le joueur sélectionné
+            if game_state['selected_player'] != p:
+                game_state['selected_player'] = p
+                game_state['player_selection_updated'] = True
+                game_state['player_info_updated'] = True
+
+                # => On cherche un TownCentre pour recentrer la caméra
+                for bld in p.buildings:
+                    if isinstance(bld, TownCentre):
+                        # Convert (bld.x, bld.y) en isométrique
+                        iso_x, iso_y = to_isometric(
+                            bld.x, bld.y,
+                            HALF_TILE_SIZE, HALF_TILE_SIZE / 2
+                        )
+                        camera.offset_x = -iso_x
+                        camera.offset_y = -iso_y
+                        camera.limit_camera()
+                        break
+            clicked_player = True
             break
 
+    # Sinon => box selection
     if not clicked_player:
-        game_state['selecting_units']= True
-        game_state['selection_start']= (mx,my)
-        game_state['selection_end']= (mx,my)
+        game_state['selecting_units'] = True
+        game_state['selection_start'] = (mx, my)
+        game_state['selection_end'] = (mx, my)
 
 def finalize_box_selection(game_state):
     import pygame
     from Controller.isometric_utils import tile_to_screen
-    x1,y1= game_state['selection_start']
-    x2,y2= game_state['selection_end']
-    rect= pygame.Rect(x1,y1, x2-x1, y2-y1)
+    x1, y1 = game_state['selection_start']
+    x2, y2 = game_state['selection_end']
+    rect = pygame.Rect(x1, y1, x2 - x1, y2 - y1)
     rect.normalize()
 
     game_state['selected_units'].clear()
     if game_state['selected_player']:
-        all_u= game_state['selected_player'].units
-        for u in all_u:
-            sx,sy= tile_to_screen(u.x,u.y,
-                                  HALF_TILE_SIZE, HALF_TILE_SIZE/2,
-                                  game_state['camera'],
-                                  game_state['screen_width'], game_state['screen_height'])
-            if rect.collidepoint(sx,sy):
+        for u in game_state['selected_player'].units:
+            sx, sy = tile_to_screen(
+                u.x, u.y,
+                HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
+                game_state['camera'],
+                game_state['screen_width'], game_state['screen_height']
+            )
+            if rect.collidepoint(sx, sy):
                 game_state['selected_units'].append(u)
 
-    game_state['selecting_units']=False
-    game_state['selection_start']= None
-    game_state['selection_end']= None
+    game_state['selecting_units'] = False
+    game_state['selection_start'] = None
+    game_state['selection_end'] = None
 
-def find_entity_for_building_or_unit(game_state, mx,my, radius_tiles=0):
+def find_entity_for_building_or_unit(game_state, mx, my, radius_tiles=0):
     from Controller.isometric_utils import screen_to_tile
-    camera= game_state['camera']
-    sw,sh= game_state['screen_width'], game_state['screen_height']
-    tile_x, tile_y= screen_to_tile(mx,my, sw,sh, camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
-    gmap= game_state['game_map']
+    camera = game_state['camera']
+    sw = game_state['screen_width']
+    sh = game_state['screen_height']
+    tile_x, tile_y = screen_to_tile(mx, my, sw, sh, camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
+    gmap = game_state['game_map']
 
-    candidates=[]
-    for dx in range(-radius_tiles, radius_tiles+1):
-        for dy in range(-radius_tiles, radius_tiles+1):
-            nx, ny= tile_x+dx, tile_y+dy
-            if 0<=nx< gmap.num_tiles_x and 0<=ny< gmap.num_tiles_y:
-                candidates.append((nx,ny))
+    candidates = []
+    for dx in range(-radius_tiles, radius_tiles + 1):
+        for dy in range(-radius_tiles, radius_tiles + 1):
+            nx, ny = tile_x + dx, tile_y + dy
+            if 0 <= nx < gmap.num_tiles_x and 0 <= ny < gmap.num_tiles_y:
+                candidates.append((nx, ny))
 
     for pos in candidates:
-        es= gmap.grid.get(pos,None)
-        if es:
-            for e in es:
+        ent_set = gmap.grid.get(pos, None)
+        if ent_set:
+            for e in ent_set:
                 return e
     return None

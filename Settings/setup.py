@@ -22,7 +22,8 @@ ALLOWED_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
 UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
-
+# Increase the "fudge factor" => diagonal is about sqrt(2) ~1.41 => let's do 0.5
+ATTACK_RANGE_EPSILON = 0.5
 
 # -------------------
 # Difficulty Settings
