@@ -1,12 +1,16 @@
+# Chemin de /home/cyril/Documents/INSA/Projet_python/Entity/Unit/Unit.py
 import math
 import pygame
 from Entity.Entity import Entity
-from Settings.setup import FRAMES_PER_UNIT, TILE_SIZE, HALF_TILE_SIZE, UPDATE_EVERY_N_MILLISECOND, ONE_SECOND, ALLOWED_ANGLES
-from Controller.isometric_utils import tile_to_screen, angle_with_x_axis
+from Entity.Building import Building
+from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES
+from Controller.isometric_utils import tile_to_screen
 from Controller.init_assets import draw_sprite
 
 class Unit(Entity):
     id = 0
+    # Increase the "fudge factor" => diagonal is about sqrt(2) ~1.41 => let's do 0.5
+    ATTACK_RANGE_EPSILON = 0.5
 
     def __init__(
         self,
@@ -21,175 +25,241 @@ class Unit(Entity):
         speed,
         training_time
     ):
-        super().__init__(x=x, y=y, team=team, acronym=acronym, size=1, max_hp=max_hp, cost=cost)
+        super().__init__(x, y, team, acronym, 1, max_hp, cost)
         self.attack_power = attack_power
         self.attack_range = attack_range
+        # Vitesse en « tuiles par seconde » (ou toute autre unité si vous le désirez)
         self.speed = speed
         self.training_time = training_time
 
         self.unit_id = Unit.id
+        Unit.id += 1
 
-        # Movement
         self.path = None
-        self.last_step_time = pygame.time.get_ticks()
-
-        # State variables
-        self.state = 0
+        self.state = 0  # 0=idle,1=walk,2=attack
         self.last_frame_time = pygame.time.get_ticks()
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
-        self.frame_duration = 1000/self.frames
+        self.frame_duration = 1000 / self.frames
         self.direction = 0
 
         self.target = None
-        Unit.id += 1
 
     @staticmethod
     def compute_distance(pos1, pos2):
-        x1, y1 = pos1
-        x2, y2 = pos2
-        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+        return math.dist(pos1, pos2)
 
-    def attack(self, attacker_team, game_map):
-        target_found = True
-
-        if self.target is None or self.target.hp <= 0:
-            target_found = self.search_for_target(attacker_team)
-
-        if target_found and self.target is not None:
-            distance_to_target = self.compute_distance((self.x, self.y), (self.target.x, self.target.y))
-            if distance_to_target < 100:
-                # Perform the attack
-                self.current_frame = 0
-                self.target.hp -= self.attack_power
-                if hasattr(self.target, "notify_damage"):
-                    self.target.notify_damage()
-            else:
-                # Move closer to the target
-                # We'll pass 0 dt if paused => no movement
-                self.move(game_map, 0.016)  # example dt if we want forced step
-        return target_found
-
-    def search_for_target(self, enemy_team, attack_mode=True):
+    def distance_to_target(self, game_map):
         """
-        Searches for the closest enemy unit or building depending on the mode.
+        If target is building => gather building tiles => min distance
+        Otherwise => distance to target.x,y
         """
-        closest_distance = float("inf")
-        closest_entity = None
-
-        # Suppose enemy_team has a list of units in "army" or "units"
-        # This example code might differ from your production code
-        if hasattr(enemy_team, 'army'):
-            enemy_units_list = enemy_team.army
+        if not self.target:
+            return None
+        if isinstance(self.target, Building):
+            tiles = self.get_building_tiles(self.target, game_map)
+            return self.distance_to_any_tile((self.x, self.y), tiles)
         else:
-            enemy_units_list = enemy_team.units
+            return self.compute_distance((self.x, self.y),
+                                         (self.target.x, self.target.y))
 
-        for enemy_unit in enemy_units_list:
-            dist = self.compute_distance((self.x, self.y), (enemy_unit.x, enemy_unit.y))
-            if attack_mode or dist < 100:
-                if dist < closest_distance:
-                    closest_distance = dist
-                    closest_entity = enemy_unit
-
-        if attack_mode and hasattr(enemy_team, 'buildings'):
-            for enemy_building in enemy_team.buildings:
-                dist = self.compute_distance((self.x, self.y), (enemy_building.x, enemy_building.y))
-                if dist < closest_distance:
-                    closest_distance = dist
-                    closest_entity = enemy_building
-
-        self.target = closest_entity
-        return self.target is not None
-
-    def is_tile_walkable(self, game_map, tile_x, tile_y):
-        if (
-            tile_x < 0 or
-            tile_y < 0 or
-            tile_x >= game_map.num_tiles_x or
-            tile_y >= game_map.num_tiles_y
-        ):
-            return False
-
-        tile_pos = (tile_x, tile_y)
-        entities_on_tile = game_map.grid.get(tile_pos, None)
-
-        if entities_on_tile:
-            for entity in entities_on_tile:
-                # For example, if that tile is occupied by a non-walkable building
-                if hasattr(entity, "walkable") and not entity.walkable:
-                    return False
-        return True
-
-    def move(self, game_map, dt, ALLOWED_ANGLES=ALLOWED_ANGLES):
+    # ---------------- Movement (no target) ----------------
+    def move(self, game_map, dt):
         """
-        Move with dt-based increments. If dt <= 0 => skip to avoid
-        accumulation or 'jump' after unpause.
+        Méthode appelée si l'unité se déplace sans cible d'attaque.
+        dt est le temps écoulé (en secondes) depuis la dernière update.
         """
-        if not self.path or dt <= 0:
+        if self.target:
+            # if we have a target => we do attack-based movement
+            return
+        if not self.path or len(self.path) == 0:
             self.state = 0
-            self.last_step_time = pygame.time.get_ticks()
             return
 
         self.state = 1
-        # Time since last step
-        ms_since_last = pygame.time.get_ticks() - self.last_step_time
-        # If enough ms have passed => do a step
-        if ms_since_last > UPDATE_EVERY_N_MILLISECOND:
-            self.last_step_time = pygame.time.get_ticks()
+        # On déplace l'unité d'une fraction correspondant à dt
+        self.do_move_step(game_map, dt)
 
-            # Target tile is self.path[0]
-            target_tile = self.path[0]
-            dx = target_tile[0] - self.x
-            dy = target_tile[1] - self.y
-            angle = math.degrees(math.atan2(dy, dx))
-            angle = (angle + 360) % 360
-            snapped_angle = min(ALLOWED_ANGLES, key=lambda x: abs(x - angle))
-            snapped_angle_rad = math.radians(snapped_angle)
+    def do_move_step(self, game_map, dt):
+        """
+        On ne met à jour la grille (tile) que lorsque la tuile est entièrement atteinte.
+        Entre-temps, on effectue un déplacement partiel (l'unité est alors « entre » deux tuiles).
+        
+        - speed => tuiles par seconde
+        - dt => temps écoulé en secondes depuis la dernière update
+        """
+        if not self.path:
+            return
 
-            # distance per second => use dt
-            step_x = (dt * self.speed) * math.cos(snapped_angle_rad)
-            step_y = (dt * self.speed) * math.sin(snapped_angle_rad)
+        tile_dest = self.path[0]
+        dx = tile_dest[0] - self.x
+        dy = tile_dest[1] - self.y
+        dist = math.sqrt(dx*dx + dy*dy)
+        if dist < 1e-7:
+            # Déjà au centre de la tuile => on passe à la suivante
+            self.path.pop(0)
+            return
 
-            self.x += step_x
-            self.y += step_y
+        angle = math.atan2(dy, dx)
+        step_len = self.speed * dt  # distance à parcourir dans ce laps de temps
 
-            # If we've passed or reached the target tile => remove it from path
-            # We check if the new step is overshooting
-            if (abs(dx) < abs(step_x)) or (abs(dy) < abs(step_y)):
-                # Remove the tile from path
-                self.path.pop(0)
-                # Update game_map to reflect new position
-                game_map.remove_entity(self, self.x, self.y)
-                game_map.add_entity(self, self.x, self.y)
+        # Anciennes positions réelles (pas arrondies)
+        old_x, old_y = self.x, self.y
 
-            # Direction for sprite
-            # e.g. snapped_angle // 45 => direction in [0..7]
-            self.direction = int((snapped_angle // 45) % 8)
+        # Vérifie si l’on atteint (ou dépasse) la tuile
+        if step_len >= dist:
+            # On arrive sur tile_dest (centre de la tuile)
+            self.x, self.y = tile_dest[0], tile_dest[1]
+            self.path.pop(0)
+            # On met à jour la grille seulement maintenant, quand on est effectivement au centre
+            old_ix, old_iy = round(old_x), round(old_y)
+            new_ix, new_iy = round(self.x), round(self.y)
+            if (old_ix, old_iy) != (new_ix, new_iy):
+                game_map.remove_entity(self, old_ix, old_iy)
+                game_map.add_entity(self, new_ix, new_iy)
+        else:
+            # Déplacement partiel
+            self.x += step_len * math.cos(angle)
+            self.y += step_len * math.sin(angle)
+            # **Ne pas** mettre à jour la grille ici, 
+            # car on n’est pas encore arrivé au centre de tile_dest
 
+        # Mise à jour de la direction du sprite
+        deg = math.degrees(angle) % 360
+        snapped_angle = min(ALLOWED_ANGLES, key=lambda a: abs(a - deg))
+        self.direction = int((snapped_angle // 45) % 8)
+
+    # ---------------- Attack Logic ----------------
+    def attack(self, attacker_team, game_map, dt):
+        """
+        If in range => do damage, else => approach
+        On passe ici également le dt pour que si l'unité doit se déplacer,
+        ce soit cohérent avec sa vitesse. 
+        """
+        if not self.target or self.target.hp <= 0:
+            self.target = None
+            return
+        if self.target.team == self.team:
+            return
+
+        dist = self.distance_to_target(game_map)
+        if dist is None:
+            self.target = None
+            return
+
+        effective_range = self.attack_range + self.ATTACK_RANGE_EPSILON
+        if dist <= effective_range:
+            self.state = 2
+            self.target.hp -= self.attack_power
+            if hasattr(self.target, "notify_damage"):
+                self.target.notify_damage()
+        else:
+            self.state = 1
+            self.move_towards_target(game_map, dt)
+
+    def move_towards_target(self, game_map, dt):
+        """
+        Attack-based movement => recalc path if we have none
+        Au lieu de forcer dt=0.016, on récupère ici le dt réel, 
+        afin que la vitesse respecte self.speed et le temps écoulé.
+        """
+        if not self.target:
+            return
+
+        if isinstance(self.target, Building):
+            near_tile = self.find_best_adjacent_spot_to_building(self.target, game_map)
+            if not self.path:
+                from AiUtils.aStar import a_star
+                a_star(self, near_tile, game_map)
+        else:
+            # unit
+            if not self.path:
+                from AiUtils.aStar import a_star
+                a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+
+        if not self.path:
+            self.state = 0
+            return
+
+        # On déplace d'après le dt réel
+        self.do_move_step(game_map, dt)
+
+    # ---------------- Building Distances ----------------
+    def get_building_tiles(self, building, game_map):
+        tiles = []
+        x_min = max(0, round(building.x) - building.size)
+        x_max = min(game_map.num_tiles_x, round(building.x) + building.size)
+        y_min = max(0, round(building.y) - building.size)
+        y_max = min(game_map.num_tiles_y, round(building.y) + building.size)
+        for xx in range(x_min, x_max + 1):
+            for yy in range(y_min, y_max + 1):
+                entset = game_map.grid.get((xx, yy), None)
+                if entset and building in entset:
+                    tiles.append((xx, yy))
+        return tiles
+
+    def distance_to_any_tile(self, upos, tile_list):
+        if not tile_list:
+            return None
+        best = float('inf')
+        for (tx, ty) in tile_list:
+            d = math.dist(upos, (tx, ty))
+            if d < best:
+                best = d
+        return best if best < float('inf') else None
+
+    def find_best_adjacent_spot_to_building(self, building, game_map):
+        btiles = self.get_building_tiles(building, game_map)
+        if not btiles:
+            return (round(building.x), round(building.y))
+
+        neighbors = []
+        directions = [(1, 0), (0, 1), (-1, 0), (0, -1),
+                      (1, 1), (1, -1), (-1, 1), (-1, -1)]
+        for (bx, by) in btiles:
+            for dx, dy in directions:
+                nx, ny = bx + dx, by + dy
+                if 0 <= nx < game_map.num_tiles_x and 0 <= ny < game_map.num_tiles_y:
+                    if self.is_tile_walkable(game_map, nx, ny):
+                        neighbors.append((nx, ny))
+
+        if not neighbors:
+            return (round(building.x), round(building.y))
+
+        best = None
+        best_sq = float('inf')
+        for (cx, cy) in neighbors:
+            dsq = (self.x - cx)**2 + (self.y - cy)**2
+            if dsq < best_sq:
+                best_sq = dsq
+                best = (cx, cy)
+        return best
+
+    # ---------------- Map Walkability ----------------
+    def is_tile_walkable(self, game_map, tx, ty):
+        if tx < 0 or ty < 0 or tx >= game_map.num_tiles_x or ty >= game_map.num_tiles_y:
+            return False
+        entset = game_map.grid.get((tx, ty), None)
+        if entset:
+            for e in entset:
+                if hasattr(e, 'walkable') and not e.walkable:
+                    return False
+        return True
+
+    # -------------- Display --------------
     def display(self, screen, screen_width, screen_height, camera):
-        dt = pygame.time.get_ticks() - self.last_frame_time
-        if dt > self.frame_duration:
-            self.current_frame = (self.current_frame + 1) % self.frames + self.frames*self.direction
-            self.last_frame_time = pygame.time.get_ticks()
+        """
+        Animation de l'unité, inchangée, 
+        sauf qu'on considère qu'ailleurs dans votre code,
+        vous appelez move(...) ou attack(...) avec le bon dt.
+        """
+        now = pygame.time.get_ticks()
+        if now - self.last_frame_time > self.frame_duration:
+            self.current_frame = (self.current_frame + 1) % self.frames + self.frames * self.direction
+            self.last_frame_time = now
 
-        screen_x, screen_y = tile_to_screen(
-            self.x,
-            self.y,
-            HALF_TILE_SIZE,
-            HALF_TILE_SIZE / 2,
-            camera,
-            screen_width,
-            screen_height
-        )
-
-        # Draw the unit sprite
-        draw_sprite(
-            screen,
-            self.acronym,
-            category='units',
-            screen_x=screen_x,
-            screen_y=screen_y,
-            zoom=camera.zoom,
-            state=self.state,
-            frame=self.current_frame
-        )
+        sx, sy = tile_to_screen(self.x, self.y,
+                                HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
+                                camera, screen_width, screen_height)
+        draw_sprite(screen, self.acronym, 'units', sx, sy,
+                    camera.zoom, state=self.state, frame=self.current_frame)

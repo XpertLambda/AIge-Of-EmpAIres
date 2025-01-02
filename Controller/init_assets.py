@@ -164,28 +164,34 @@ def load_sprites(screen, screen_width, screen_height):
     
 # Function to get a scaled sprite, handling both static and animated sprites
 def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
-    cache_key = (zoom, state, frame_id, variant)
+    # same as before except we clamp scaled_width, scaled_height >=1
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
+    cache_key = (zoom, state, frame_id, variant)
     if cache_key in zoom_cache[name]:
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
-    # Load and scale the sprite
-    if category == 'resources' or category == 'buildings':
+
+    if category in ['resources', 'buildings']:
         original_image = sprites[category][name][variant]
     elif category == 'units':
         original_image = sprites[category][name][state][frame_id]
 
     scaled_width = int(original_image.get_width() * zoom)
-    scaled_height = int(original_image.get_height() * zoom)
+    scaled_height= int(original_image.get_height()* zoom)
+
+    # clamp
+    if scaled_width <1: scaled_width=1
+    if scaled_height<1: scaled_height=1
+
     scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
-    
+
     zoom_cache[name][cache_key] = scaled_image
     zoom_cache[name].move_to_end(cache_key)
-    
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
     return scaled_image
+
 
 def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0):
     name = Entity_Acronym[category][acronym]

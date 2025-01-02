@@ -1,3 +1,4 @@
+# Chemin de /home/cyril/Documents/INSA/Projet_python/Models/Map.py
 import math
 import random
 import os
@@ -39,25 +40,36 @@ class GameMap:
                 pos = (rounded_x + i, rounded_y + j)
                 self.grid[pos] = set()
                 self.grid[pos].add(entity)
-        entity.x = x + (entity.size - 1)/2
-        entity.y = y + (entity.size - 1)/2
+        # Centre l'entité dans la zone couverte
+        entity.x = x + (entity.size - 1) / 2
+        entity.y = y + (entity.size - 1) / 2
         return True
 
     def remove_entity(self, entity, x, y):
-        if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
-            return False
-        rounded_x, rounded_y = round(x), round(y)
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (rounded_x + i, rounded_y + j)
-                if pos not in self.grid or entity not in self.grid[pos]:
-                    return False  # Entity not present at the position
+        """
+        Corrigé : On recalcule le "coin haut-gauche" exact
+        pour retomber sur les mêmes tuiles qu'au add_entity.
+        """
+        # Coordonnées de base pour la bounding box
+        start_x = round(x - (entity.size - 1) / 2)
+        start_y = round(y - (entity.size - 1) / 2)
 
+        if start_x < 0 or start_y < 0 or (start_x + entity.size) > self.num_tiles_x or (start_y + entity.size) > self.num_tiles_y:
+            return False
+
+        # Vérifie que l'entité est bien présente partout
         for i in range(entity.size):
             for j in range(entity.size):
-                pos = (rounded_x + i, rounded_y + j)
+                pos = (start_x + i, start_y + j)
+                if pos not in self.grid or entity not in self.grid[pos]:
+                    return False  # L'entité n'est pas présente dans au moins une des tuiles attendues
+
+        # Puis on la retire
+        for i in range(entity.size):
+            for j in range(entity.size):
+                pos = (start_x + i, start_y + j)
                 self.grid[pos].remove(entity)
-                if not self.grid[pos]:  
+                if not self.grid[pos]:
                     del self.grid[pos]
         return True
 
@@ -103,8 +115,10 @@ class GameMap:
                 if not placed:
                     for tile_y in range(self.num_tiles_y - building.size):
                         for tile_x in range(self.num_tiles_x - building.size):
-                            placed = self.add_entity(building, tile_x, tile_y, building)
+                            placed = self.add_entity(building, tile_x, tile_y)
                             if placed:
+                                if (isinstance(building, TownCentre) or isinstance(building, House)):
+                                    player.maximum_population += building.population
                                 break
                         if placed:
                             break
@@ -267,9 +281,9 @@ class GameMap:
                     row += ' '
             print(row)
 
-   #ne marche pas
-    def place_building(self,building,team):
-        #placer un building au hasard
+   # ne marche pas
+    def place_building(self, building, team):
+        # placer un building au hasard
         x_start, x_end, y_start, y_end = zones[team.teamID]
         max_attempts = (x_end - x_start) * (y_end - y_start)
         attempts = 0
@@ -277,7 +291,7 @@ class GameMap:
         while attempts < max_attempts:
             x = random.randint(x_start, max(x_start, x_end - building.size))
             y = random.randint(y_start, max(y_start, y_end - building.size))
-            placed = self.add_entity(self.grid, x, y, building)
+            placed = self.add_entity(building, x, y)
             if placed:
                 return True
             attempts += 1
@@ -286,10 +300,8 @@ class GameMap:
             # On essaie juste sur la carte complète en dernier recours
             for ty in range(self.num_tiles_y - building.size):
                 for tx in range(self.num_tiles_x - building.size):
-                    placed = self.add_entity(grid, tx, ty, building)
+                    placed = self.add_entity(building, tx, ty)
                     if placed:
-                        break
-            if placed:
-                return True
+                        return True
             if not placed:
                 return False
