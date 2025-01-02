@@ -208,5 +208,5 @@ class Unit(Entity):
             self.current_frame = (self.current_frame + 1) % self.frames + self.frames * self.direction
             self.last_frame_time = current_time
 
-        sx, sy = tile_to_screen(self.x, self.y,HA LF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        sx, sy = tile_to_screen(self.x, self.y,HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
