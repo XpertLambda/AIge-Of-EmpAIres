@@ -26,6 +26,7 @@ from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLIS
 
 PANEL_RATIO = 0.25
 BG_RATIO    = 0.20
+draw_call_time = 0
 
 def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height, margin=10):
     """
@@ -38,6 +39,7 @@ def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height
     return rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
+    global draw_call_time
     clock = pygame.time.Clock()
     pygame.key.set_repeat(0, 0)
     camera = Camera(screen_width, screen_height)
@@ -192,6 +194,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # -----------------------------------------------------------
         # Rendering
         # -----------------------------------------------------------
+        draw_call_time += dt        
+        if draw_call_time < 1/30 : 
+            continue
+        draw_call_time = 0
         screen.fill((0, 0, 0))
 
         # Draw the map with all entities
