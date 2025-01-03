@@ -95,9 +95,9 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                                         camera, screen_width, screen_height)
                 fill_grass(screen, sx, sy, camera)
 
-            ents = game_map.grid.get((tx, ty), None)
-            if ents:
-                for e in ents:
+            entities = game_map.grid.get((tx, ty), None)
+            if entities:
+                for e in entities:
                     visible_entities.add(e)
 
     # Convert set to list

@@ -195,7 +195,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # Rendering
         # -----------------------------------------------------------
         draw_call_time += dt        
-        if draw_call_time < 1/30 : 
+        if draw_call_time < 1/40 : 
             continue
         draw_call_time = 0
         screen.fill((0, 0, 0))

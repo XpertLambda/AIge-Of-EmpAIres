@@ -44,33 +44,18 @@ class GameMap:
         entity.y = y + (entity.size - 1) / 2
         return True
 
-    def remove_entity(self, entity, x, y):
-        """
-        Corrigé : On recalcule le "coin haut-gauche" exact
-        pour retomber sur les mêmes tuiles qu'au add_entity.
-        """
-        # Coordonnées de base pour la bounding box
-        start_x = round(x - (entity.size - 1) / 2)
-        start_y = round(y - (entity.size - 1) / 2)
-
-        if start_x < 0 or start_y < 0 or (start_x + entity.size) > self.num_tiles_x or (start_y + entity.size) > self.num_tiles_y:
-            return False
-
-        # Vérifie que l'entité est bien présente partout
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (start_x + i, start_y + j)
-                if pos not in self.grid or entity not in self.grid[pos]:
-                    return False  # L'entité n'est pas présente dans au moins une des tuiles attendues
-
-        # Puis on la retire
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (start_x + i, start_y + j)
-                self.grid[pos].remove(entity)
-                if not self.grid[pos]:
-                    del self.grid[pos]
-        return True
+    def remove_entity(self, entity):
+        remove_counter = 0
+        for pos, matrix_entities in self.grid.items():
+            for matrix_entity in matrix_entities:
+                if matrix_entity.entity_id == entity.entity_id:
+                    self.grid[pos].remove(entity)
+                    remove_counter+=1
+                    if not self.grid[pos]:
+                        del self.grid[pos]
+                if remove_counter >= entity.size * entity.size:
+                    return True
+        return False
 
     def generate_zones(self, num_players):
         cols = int(math.ceil(math.sqrt(num_players)))

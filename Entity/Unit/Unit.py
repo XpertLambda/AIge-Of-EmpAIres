@@ -7,7 +7,6 @@ from Controller.isometric_utils import tile_to_screen
 from Controller.init_assets import draw_sprite, draw_hitbox
 
 class Unit(Entity):
-    id = 0
     def __init__(
         self,
         x,
@@ -20,18 +19,16 @@ class Unit(Entity):
         attack_range,
         speed,
         training_time
-    ):
+        ):
         super().__init__(x=x, y=y, team=team, acronym=acronym, size=1, max_hp=max_hp, cost=cost)
+        
         self.attack_power = attack_power
         self.attack_range = attack_range
         self.speed = speed
         self.training_time = training_time
 
-        self.unit_id = Unit.id
-        Unit.id += 1
-
         self.path = None
-        self.state = 0  # 0=idle,1=walk,2=attack
+        self.state = 0
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
         self.frame_duration = 0
@@ -40,7 +37,6 @@ class Unit(Entity):
         self.target = None
         self.attack_range_epsilon = ATTACK_RANGE_EPSILON
 
-    @staticmethod
     def compute_distance(pos1, pos2):
         return math.dist(pos1, pos2)
 
@@ -72,7 +68,7 @@ class Unit(Entity):
         self.y += step[1]
         if abs(dx) < abs(step[0]) or abs(dy) < abs(step[1]):
             self.path.pop(0)
-            game_map.remove_entity(self, self.x, self.y)
+            game_map.remove_entity(self)
             game_map.add_entity(self, self.x, self.y)
         self.direction = ((snapped_angle // 45 )+1)%8 # +1 to match the sprite sheet and %8 because tere are 8 directions
         return self.path

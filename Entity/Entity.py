@@ -8,7 +8,7 @@ import pygame
 
 class Entity:
     HEALTH_BAR_DISPLAY_DURATION = 5
-
+    id = 0
     def __init__(self, 
         x, 
         y, 
@@ -30,6 +30,9 @@ class Entity:
         self.hp = max_hp
         self.last_damage_time = 0
         self.last_clicked_time = 0
+
+        self.entity_id = Entity.id
+        Entity.id += 1
 
     def notify_damage(self):
         self.last_damage_time = time.time()
