@@ -80,7 +80,7 @@ def run_gui_menu(screen, sw, sh):
     
     toggle_button = {
         "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
-        "texts": ["Terminal Display ONLY", "Gui ONLY", "Terminal and Gui Display"],
+        "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
         "index": 0  # État actuel
     }
 
@@ -254,6 +254,8 @@ def run_gui_menu(screen, sw, sh):
             draw_load_menu(screen, sw, sh, save_files)
 
         pygame.display.flip()
+        
+        user_choices["index_terminal_display"] = toggle_button["index"]
 
 def draw_choose_display(screen, toggle_button):
     pygame.draw.rect(screen, (0, 122, 255), toggle_button["rect"])

@@ -164,7 +164,8 @@ def main():
 
     # Lance la GUI dans ce thread principal
     run_gui_menu(screen, screen_width, screen_height)
-
+    
+    
     # Quand la GUI est fermée ou validée, on attend la fin du thread Terminal
     if terminal_thread.is_alive():
         terminal_thread.join()
@@ -178,8 +179,13 @@ def main():
     chosen_save   = user_choices["chosen_save"]
 
     # Lance le jeu
-    if load_game and chosen_save:
+    if user_choices["index_terminal_display"] == 0 or user_choices["index_terminal_display"] == 2:
         screen, screen_width, screen_height = init_pygame()
+    else:
+        screen, screen_width, screen_height = init_pygame()
+        screen = None
+            
+    if load_game and chosen_save:
         game_map = GameMap(0, False, [], generate=False)
         game_map.load_map(chosen_save)
         print("Carte chargée :", chosen_save)
@@ -189,6 +195,7 @@ def main():
         players = init_players(number_of_bots)
         game_map = GameMap(grid_size, gold_at_center, players)
         game_loop(screen, game_map, screen_width, screen_height, players)
+
 
 if __name__ == "__main__":
     main()

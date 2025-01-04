@@ -267,7 +267,8 @@ user_choices = {
     "gold_at_center": False,
     "load_game":      False,
     "chosen_save":    None,
-    "validated":      False
+    "validated":      False,
+    "index_terminal_display" : 0 # 0: GUI, 1: Terminal, 2: Both
 }
 
 VALID_GRID_SIZES = [i for i in range(100, 1000, 10)]
@@ -282,5 +283,6 @@ combo_scroll_positions = {
 }
 MAX_VISIBLE_ITEMS = 5
 ITEM_HEIGHT = 25
+
 
 
