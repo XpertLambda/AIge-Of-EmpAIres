@@ -3,13 +3,6 @@ import pygame
 from Models.html import write_full_html
 
 def update_game_state(game_state, dt):
-    """
-    Each frame:
-    1) camera movement
-    2) if unit.target => unit.attack
-    3) remove dead
-    4) done
-    """
     camera = game_state['camera']
     players= game_state['players']
     game_map= game_state['game_map']
@@ -17,15 +10,21 @@ def update_game_state(game_state, dt):
     if not game_state.get('paused', False):
         handle_camera(camera, dt)
 
-        # Attack logic
-        for p in players:
-            for u in p.units:
-                if u.target:
-                    u.attack(p, game_map, dt)
-
-        # Remove dead
-        for p in players:
-            p.manage_life(game_map)
+        for player in players:
+            for unit in player.units:
+                if unit.isAlive():
+                    unit.setIdle()
+                    if unit.target:
+                            unit.attack(game_map, dt)
+                    if unit.path:
+                        unit.move(game_map, dt)
+                else:
+                    unit.kill(game_map)
+        # Create a copy of the set/list
+        for inactive_entities in list(game_map.inactive_matrix.values()):
+            if inactive_entities:
+                for entity in list(inactive_entities):
+                    entity.death(game_map)  
 
 def handle_camera(camera, dt):
     import pygame

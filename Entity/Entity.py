@@ -16,7 +16,8 @@ class Entity:
         acronym, 
         size, 
         max_hp, 
-        cost=Resources(food=0, gold=0, wood=0)
+        cost=Resources(food=0, gold=0, wood=0),
+        walkable=False
     ):
 
         self.x = x
@@ -26,6 +27,7 @@ class Entity:
         self.size = size
         self.max_hp = max_hp
         self.cost = cost
+        self.walkable = walkable
         
         self.hp = max_hp
         self.last_damage_time = 0
@@ -33,6 +35,11 @@ class Entity:
 
         self.entity_id = Entity.id
         Entity.id += 1
+
+    def isAlive(self):
+        if self.hp > 0:
+            return True
+        return False
 
     def notify_damage(self):
         self.last_damage_time = time.time()

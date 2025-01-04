@@ -13,5 +13,5 @@ class Farm(Building):
             cost=Resources(food=0, gold=0, wood=60),
             buildTime=10,
             containsFood=True,
-            walkable=True
+            walkable=False
         )

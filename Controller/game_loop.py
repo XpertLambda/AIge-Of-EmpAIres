@@ -191,13 +191,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 )
                 game_state['player_info_updated'] = False
 
+
         # -----------------------------------------------------------
         # Rendering
         # -----------------------------------------------------------
-        draw_call_time += dt        
-        if draw_call_time < 1/40 : 
-            continue
-        draw_call_time = 0
+        #draw_call_time += dt        
+        #if draw_call_time < 1/60 : 
+         #   continue
         screen.fill((0, 0, 0))
 
         # Draw the map with all entities
@@ -220,13 +220,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         # GUI elements on top
         draw_gui_elements(screen, screen_width, screen_height)
-
-        # Example movement demonstration (now requires dt)
-        # We integrate dt inside unit's move method
-        if not game_state['paused']:
-            for player in players:
-                for unit in player.units:
-                    unit.move(game_map, dt)
 
         # Draw path debug
         for player in players:
@@ -284,5 +277,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if selected_player.resources["wood"] >= barrack.cost.wood:
                 selected_player.buildBatiment(barrack, time.time(), 3, game_map)
             selected_player.manage_creation(time.time())
+        draw_call_time = 0
 
     # End main loop

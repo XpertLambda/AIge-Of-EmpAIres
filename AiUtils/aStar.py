@@ -1,4 +1,3 @@
-# Chemin de /home/cyril/Documents/INSA/Projet_python/AiUtils/aStar.py
 import heapq
 import math
 
@@ -10,7 +9,7 @@ def get_neighbors(unit, game_map, pos):
                  (1,1),(1,-1),(-1,1),(-1,-1)]
     for dx, dy in directions:
         nx, ny= pos[0]+ dx, pos[1]+ dy
-        if unit.is_tile_walkable(game_map, nx, ny):
+        if game_map.walkable_position((nx, ny)):
             yield (nx, ny)
 
 def a_star(unit, goal, game_map):

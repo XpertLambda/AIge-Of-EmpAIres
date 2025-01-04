@@ -100,7 +100,6 @@ def load_sprites(screen, screen_width, screen_height):
                 loaded_sprite = load_sprite(filepath, gui_scale, gui_adjust_scale)
                 gui_elements[gui_key].append(loaded_sprite)
                 loaded_files += 1
-                print(f'Appended {gui_key}')
                 progress = loaded_files / total_files
                 draw_progress_bar(screen, progress, screen_width, screen_height, gui_key, loading_screen)
 
@@ -141,7 +140,7 @@ def load_sprites(screen, screen_width, screen_height):
                         state_path = os.path.join(sprite_path, state_dir)
                         if not os.path.isdir(state_path):
                             continue
-                        sprites[category][sprite_name].setdefault(state_dir, [])
+                        sprites[category][sprite_name].setdefault(state_dir, {})
                         sheets = os.listdir(state_path)
                         for sheetname in sheets:
                             if sheetname.lower().endswith("webp"):
@@ -149,10 +148,13 @@ def load_sprites(screen, screen_width, screen_height):
                                 try:
                                     sprite_sheet = load_sprite(filepath, scale, adjust)
                                     frames = extract_frames(sprite_sheet, sheet_rows, sheet_cols)
-                                    sprites[category][sprite_name][state_dir].extend(frames)
+                                    print(f"frames : {len(frames)} for {sprite_name} : {state_dir}")
+                                    for direction_index in range(len(frames) // FRAMES_PER_UNIT):
+                                        direction_frames = frames[direction_index * FRAMES_PER_UNIT : (direction_index + 1) * FRAMES_PER_UNIT]
+                                        sprites[category][sprite_name][state_dir][direction_index] = direction_frames
+                                        print(f'{len(direction_frames)} for direction : {direction_index} : {state_dir}')
                                 except Exception as e:
                                     print(f"Error loading sprite sheet {filepath}: {e}")
-                                    exit()
                                 loaded_files += 1
                                 progress = loaded_files / total_files
                                 draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
@@ -162,11 +164,11 @@ def load_sprites(screen, screen_width, screen_height):
 
     print("Sprites loaded successfully.")
     
-def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
+def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant):
     # same as before except we clamp scaled_width, scaled_height >=1
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
-    cache_key = (zoom, state, frame_id, variant)
+    cache_key = (zoom, state, frame_id, variant, direction)
     if cache_key in zoom_cache[name]:
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
@@ -174,7 +176,7 @@ def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
     if category in ['resources', 'buildings']:
         original_image = sprites[category][name][variant]
     elif category == 'units':
-        original_image = sprites[category][name][state][frame_id]
+        original_image = sprites[category][name][state][direction][frame_id]
 
     scaled_width = int(original_image.get_width() * zoom)
     scaled_height= int(original_image.get_height()* zoom)
@@ -191,12 +193,12 @@ def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
         zoom_cache[name].popitem(last=False)
     return scaled_image
 
-def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0):
+def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
     name = Entity_Acronym[category][acronym]
     if state is not None:
         state = states[state]
 
-    scaled_sprite = get_scaled_sprite(name, category, zoom, state, frame, variant)
+    scaled_sprite = get_scaled_sprite(name, category, zoom, state, direction, frame, variant)
     if scaled_sprite is None:
         return
     scaled_width = scaled_sprite.get_width()
@@ -211,4 +213,3 @@ def draw_hitbox(screen, corners, zoom):
         raise ValueError("Hitbox must have exactly 4 corners.")
     scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
     pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
-    

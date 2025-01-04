@@ -21,27 +21,33 @@ class GameMap:
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
+        self.inactive_matrix = {}
         if generate:
             self.generate_map()
 
     def add_entity(self, entity, x, y):
-        if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
-            return False
         rounded_x, rounded_y = round(x), round(y)
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (rounded_x + i, rounded_y + j)
-                if pos in self.grid:
-                    return False
+        if rounded_x < 0 or rounded_y < 0 or rounded_x + entity.size - 1 >= self.num_tiles_x or rounded_y + entity.size - 1 >= self.num_tiles_y:
+            return False
 
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
-                self.grid[pos] = set()
+                if pos in self.grid:
+                    for existing_entity in self.grid[pos]:
+                        if not self.walkable_position(pos):
+                            return False
+
+        for i in range(entity.size):
+            for j in range(entity.size):
+                pos = (rounded_x + i, rounded_y + j)
+                if pos not in self.grid:
+                    self.grid[pos] = set()
                 self.grid[pos].add(entity)
-        # Centre l'entité dans la zone couverte
+
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
+
         return True
 
     def remove_entity(self, entity):
@@ -56,6 +62,19 @@ class GameMap:
                 if remove_counter >= entity.size * entity.size:
                     return True
         return False
+
+    def walkable_position(self, position):
+        #x, y = round(position[0]), round(position[1])
+        x, y = position
+        if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
+            return False
+        
+        entities = self.grid.get((x, y), None)
+        if entities:
+            for entity in entities:
+                if not entity.walkable:
+                    return False
+        return True
 
     def generate_zones(self, num_players):
         cols = int(math.ceil(math.sqrt(num_players)))
@@ -200,7 +219,6 @@ class GameMap:
                 if wood_placed >= NUM_WOOD_TILES:
                     break
 
-
     def print_map(self):
         for y in range(self.num_tiles_y):
             row_display = []
@@ -264,6 +282,19 @@ class GameMap:
                 else:
                     row += ' '
             print(row)
+
+    def move_to_inactive(self, entity):
+        self.remove_entity(entity)
+        pos = (round(entity.x), round(entity.y))
+        if pos not in self.inactive_matrix:
+            self.inactive_matrix[pos] = set()
+        self.inactive_matrix[pos].add(entity)
+
+    def remove_inactive(self, entity):
+        pos = (round(entity.x), round(entity.y))
+        self.inactive_matrix[pos].remove(entity)
+        if not self.inactive_matrix[pos]:
+            del self.inactive_matrix[pos]
 
    # ne marche pas
     def place_building(self, building, team):

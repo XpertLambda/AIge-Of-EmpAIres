@@ -86,24 +86,29 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     max_tile_y = min(game_map.num_tiles_y - 1, max(y_indices) + margin)
 
     visible_entities = set()
-    for ty in range(min_tile_y, max_tile_y):
-        for tx in range(min_tile_x, max_tile_x):
-            # Gazon
-            if tx % 10 == 0 and ty % 10 == 0:
-                sx, sy = tile_to_screen(tx+4.5, ty+4.5,
+    for y in range(min_tile_y, max_tile_y):
+        for x in range(min_tile_x, max_tile_x):
+            if x % 10 == 0 and y % 10 == 0:
+                sx, sy = tile_to_screen(x+4.5, y+4.5,
                                         HALF_TILE_SIZE, HALF_TILE_SIZE/2,
                                         camera, screen_width, screen_height)
                 fill_grass(screen, sx, sy, camera)
 
-            entities = game_map.grid.get((tx, ty), None)
+            entities = game_map.grid.get((x, y), None)
+            inactive_entities = game_map.inactive_matrix.get((x, y), None)
+
             if entities:
-                for e in entities:
-                    visible_entities.add(e)
+                for entity in entities:
+                    visible_entities.add(entity)
+                    
+            if inactive_entities:
+                for entity in inactive_entities:
+                    visible_entities.add(entity)
 
     # Convert set to list
     visible_list = list(visible_entities)
     # Sort them by isometric layering
-    visible_list.sort(key=lambda e: (e.y, e.x))
+    visible_list.sort(key=lambda entity: (entity.y, entity.x))
 
     for entity in visible_list:
         entity.display_hitbox(screen, screen_width, screen_height, camera)
@@ -258,7 +263,6 @@ def display_fps(screen, clock):
     fps = int(clock.get_fps())
     fps_text = font.render(f'FPS: {fps}', True, pygame.Color('white'))
     screen.blit(fps_text, (10, 10))
-
 
 def draw_pointer(screen):
     mouse_x, mouse_y = pygame.mouse.get_pos()

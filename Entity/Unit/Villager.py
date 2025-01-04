@@ -11,8 +11,9 @@ class Villager(Unit):
             acronym="v", 
             max_hp=40, 
             cost=Resources(food=50, gold=0, wood=25), 
-            attack_power=0,
+            attack_power=2,
             attack_range=1, 
+            attack_speed=2.03,
             speed=1, 
             training_time=20, 
         )

@@ -111,7 +111,7 @@ def handle_events(event, game_state):
             if selected_player and len(game_state['selected_units']) > 0:
                 # On vide l'ancien target/path
                 for u in game_state['selected_units']:
-                    u.target = None
+                    u.set_target(None)
                     u.path = None
 
                 ent = find_entity_for_building_or_unit(game_state, mx, my)
@@ -128,6 +128,11 @@ def handle_events(event, game_state):
                         )
                         for u in game_state['selected_units']:
                             a_star(u, (tile_x, tile_y), game_state['game_map'])
+                            if (tile_x, tile_y) in game_state['game_map'].grid:
+                                entity = next(iter(game_state['game_map'].grid[(tile_x, tile_y)]))
+                                u.set_target(entity)
+                            else:
+                                u.set_target(None)
                 else:
                     # case vide => move normal
                     tile_x, tile_y = screen_to_tile(

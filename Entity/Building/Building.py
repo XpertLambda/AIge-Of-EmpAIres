@@ -20,9 +20,9 @@ class Building(Entity):
         containsFood=False, 
         walkable=False,
         attack_power=0, 
-        attack_range=0
+        attack_range=0,
     ):
-        super().__init__(x=x, y=y, team=team, acronym=acronym, size=size, max_hp=max_hp, cost=cost)
+        super().__init__(x=x, y=y, team=team, acronym=acronym, size=size, max_hp=max_hp, cost=cost, walkable=walkable)
         self.buildTime = buildTime
         self.population = population
         self.resourceDropPoint = resourceDropPoint
