@@ -3,6 +3,7 @@ import random
 import os
 import pickle
 import time
+from collections import Counter
 from collections import defaultdict
 from datetime import datetime
 from Entity.Building import *
@@ -279,7 +280,28 @@ class GameMap:
                 else:
                     row += ' '
             print(row)
+            
+        # Print players resources
+        self.print_players_information()
 
+    def print_players_information(self):
+        print("\n-----------------------------------\n")
+        for player in self.players:
+            print(f"Player {player.teamID} resources: {player.resources}")
+            unit_counts = Counter(unit.acronym for unit in player.units)
+            units_text = "Units - " + ", ".join([f"{acronym}: {count}" for acronym, count in unit_counts.items()])
+            print(units_text)
+
+            building_counts = Counter(building.acronym for building in player.buildings)
+            buildings_text = "Buildings - " + ", ".join([f"{acronym}: {count}" for acronym, count in building_counts.items()])
+            print(buildings_text)
+
+            maximum_population_text = f"Maximum population: {player.maximum_population}"
+            print(maximum_population_text)
+            
+            print("\n-----------------------------------\n")
+            
+            
    # ne marche pas
     def place_building(self, building, team):
         # placer un building au hasard

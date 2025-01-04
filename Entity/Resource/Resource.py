@@ -9,6 +9,9 @@ class Resource(Entity):
         
         self.storage = storage
         self.variant = variant
+        
+    def __str__(self):
+        return f"Gold: {self.gold}, Wood: {self.wood}, Food: {self.food}"
 
     def display(self, screen, screen_width, screen_height, camera, dt):
         category = 'resources'

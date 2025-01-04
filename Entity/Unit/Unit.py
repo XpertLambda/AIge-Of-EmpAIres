@@ -40,6 +40,8 @@ class Unit(Entity):
         self.target = None
         self.attack_range_epsilon = ATTACK_RANGE_EPSILON
 
+    
+
     @staticmethod
     def compute_distance(pos1, pos2):
         return math.dist(pos1, pos2)
