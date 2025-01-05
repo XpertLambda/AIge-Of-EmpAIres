@@ -28,9 +28,6 @@ PANEL_RATIO = 0.25
 BG_RATIO    = 0.20
 
 def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height, margin=10):
-    """
-    Centre un rectangle (width x height) dans le coin inférieur droit de l'écran
-    """
     rect = pygame.Rect(0, 0, width, height)
     center_x = screen_width - margin - (width // 2)
     center_y = screen_height - margin - (height // 2)
@@ -38,6 +35,7 @@ def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height
     return rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
+    """Main game loop handling updates, drawing, and event processing."""
     clock = pygame.time.Clock()
     pygame.key.set_repeat(0, 0)
     camera = Camera(screen_width, screen_height)
@@ -100,14 +98,14 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'player_selection_updated': True,
         'player_info_updated': True,
         'last_terminal_update': 0,
-        'selecting_units': False,
+        'selected_entities': [],
+        'selecting_entities': False,
         'selection_start': None,
         'selection_end': None,
-        'selected_units': [],
-        'show_all_health_bars': False,
-        'minimap_margin': MINIMAP_MARGIN,
+        'rectangle_additive': False,
+        'paused': False,
         'force_full_redraw': False,
-        'paused': False
+        'show_all_health_bars': False
     }
 
     player_selection_surface = None
@@ -117,33 +115,16 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     update_interval = 60
     frame_counter = 0
 
-    # ----------------------------------------------------------------
-    # Main loop
-    # ----------------------------------------------------------------
     while running:
-        # ----------------------------------------------------------------
-        # Guarantee dt = 0 if paused => avoid "teleportation" on unpause
-        # ----------------------------------------------------------------
         raw_dt = clock.tick(120) / 1000.0
-        if game_state['paused']:
-            dt = 0
-        else:
-            dt = raw_dt
-
+        dt = 0 if game_state['paused'] else raw_dt
         frame_counter += 1
 
-        # -----------------------------------------------------------
-        # Handle events
-        # -----------------------------------------------------------
         for event in pygame.event.get():
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
                 running = False
 
-        # -----------------------------------------------------------
-        # Update game state
-        #  (camera, units, etc.) - skipping logic if dt=0
-        # -----------------------------------------------------------
         update_game_state(game_state, dt)
 
         screen = game_state['screen']
@@ -155,7 +136,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         game_map = game_state['game_map']
         camera = game_state['camera']
 
-        # Periodic terminal update
         if time.time() - game_state.get('last_terminal_update', 0) >= 2:
             start_time = time.time()
             game_map.update_terminal()
@@ -166,38 +146,28 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
             game_state['recompute_camera'] = False
 
-        # -------------------------------------
-        # Update the minimap from time to time
-        # -------------------------------------
         if (not game_state.get('paused', False)) and (frame_counter % update_interval == 0):
             update_minimap_entities(game_state)
 
-        # Update side panels
-        if not game_state.get('paused', False):
-            if game_state.get('player_selection_updated', False):
-                player_selection_surface = create_player_selection_surface(
-                    players,
-                    selected_player,
-                    game_state['minimap_background_rect'],
-                    team_colors
-                )
-                game_state['player_selection_updated'] = False
+        if game_state.get('player_selection_updated', False):
+            player_selection_surface = create_player_selection_surface(
+                players,
+                selected_player,
+                game_state['minimap_background_rect'],
+                team_colors
+            )
+            game_state['player_selection_updated'] = False
 
-            if game_state.get('player_info_updated', False):
-                player_info_surface = create_player_info_surface(
-                    selected_player, screen_width, team_colors
-                )
-                game_state['player_info_updated'] = False
+        if game_state.get('player_info_updated', False):
+            player_info_surface = create_player_info_surface(
+                selected_player, screen_width, team_colors
+            )
+            game_state['player_info_updated'] = False
 
-        # -----------------------------------------------------------
-        # Rendering
-        # -----------------------------------------------------------
         screen.fill((0, 0, 0))
 
-        # Draw the map with all entities
         draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state, dt)
 
-        # Minimap
         screen.blit(game_state['minimap_panel_sprite'], game_state['minimap_panel_rect'].topleft)
         screen.blit(game_state['minimap_background'], game_state['minimap_background_rect'].topleft)
         screen.blit(game_state['minimap_entities_surface'], game_state['minimap_background_rect'].topleft)
@@ -212,55 +182,31 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             game_state['minimap_min_iso_y']
         )
 
-        # GUI elements on top
         draw_gui_elements(screen, screen_width, screen_height)
 
-        # Example movement demonstration (now requires dt)
-        # We integrate dt inside unit's move method
         if not game_state['paused']:
-            for player in players:
-                for unit in player.units:
-                    unit.move(game_map, dt)
+            for p in players:
+                for u in p.units:
+                    u.move(game_map, dt)
 
-        # Draw path debug
-        for player in players:
-            for unit in player.units:
-                if unit.path:
-                    for x, y in unit.path:
-                        screen_x, screen_y = tile_to_screen(
-                            x,
-                            y,
-                            HALF_TILE_SIZE,
-                            HALF_TILE_SIZE / 2,
-                            camera,
-                            screen_width,
-                            screen_height
-                        )
-                        pygame.draw.circle(screen, (255, 23, 0), (screen_x, screen_y), 5*camera.zoom)
-                    # mark unit position
-                    ux, uy = tile_to_screen(
-                        unit.x,
-                        unit.y,
-                        HALF_TILE_SIZE,
-                        HALF_TILE_SIZE / 2,
-                        camera,
-                        screen_width,
-                        screen_height
-                    )
-                    pygame.draw.circle(screen, (99, 0, 255), (ux, uy), 5*camera.zoom)
+        for p in players:
+            for u in p.units:
+                if u.path:
+                    for (px, py) in u.path:
+                        sx, sy = tile_to_screen(px, py, HALF_TILE_SIZE, HALF_TILE_SIZE/2, camera, screen_width, screen_height)
+                        pygame.draw.circle(screen, (255,0,0), (sx, sy), 3)
+                    ux, uy = tile_to_screen(u.x, u.y, HALF_TILE_SIZE, HALF_TILE_SIZE/2, camera, screen_width, screen_height)
+                    pygame.draw.circle(screen, (0,0,255), (ux, uy), 3)
 
-        # Player selection panel
         if player_selection_surface:
             sel_h = player_selection_surface.get_height()
             bg_rect = game_state['minimap_background_rect']
             screen.blit(player_selection_surface, (bg_rect.x, bg_rect.y - sel_h - 20))
 
-        # Player info panel
         if player_info_surface:
             inf_h = player_info_surface.get_height()
             screen.blit(player_info_surface, (0, screen_height - inf_h))
 
-        # FPS
         display_fps(screen, clock)
         draw_pointer(screen)
 
@@ -270,13 +216,4 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         else:
             pygame.display.flip()
 
-        # This is just an example usage for building/training
-        # (unchanged logic, but we might skip it if paused)
-        if not game_state['paused']:
-            barrack = Barracks(selected_player)
-            # Try building it with 3 villagers, in case resources suffice
-            if selected_player.resources["wood"] >= barrack.cost.wood:
-                selected_player.buildBatiment(barrack, time.time(), 3, game_map)
-            selected_player.manage_creation(time.time())
-
-    # End main loop
+    # End of loop
