@@ -130,6 +130,10 @@ PROGRESS_BAR_Y_RATIO = 0.7
 BUILDING_RATIO = 200
 UNIT_RATIO = 100
 
+HEALTH_BAR_WIDTH = 40
+HEALTH_BAR_HEIGHT = 5
+HEALTH_BAR_OFFSET_Y = 30
+
 Entity_Acronym = {
     'resources': {
         ' ': 'grass',

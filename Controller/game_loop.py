@@ -28,9 +28,6 @@ PANEL_RATIO = 0.25
 BG_RATIO    = 0.20
 
 def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height, margin=10):
-    """
-    Centre un rectangle (width x height) dans le coin inférieur droit de l'écran
-    """
     rect = pygame.Rect(0, 0, width, height)
     center_x = screen_width - margin - (width // 2)
     center_y = screen_height - margin - (height // 2)
@@ -38,9 +35,8 @@ def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height
     return rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
-    # Remove the pygame clock usage
-    # clock = pygame.time.Clock()
-    last_time = time.time()
+    """Main game loop handling updates, drawing, and event processing."""
+    clock = pygame.time.Clock()
     pygame.key.set_repeat(0, 0)
     camera = Camera(screen_width, screen_height)
     team_colors = generate_team_colors(len(players))
@@ -102,14 +98,14 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'player_selection_updated': True,
         'player_info_updated': True,
         'last_terminal_update': 0,
-        'selecting_units': False,
+        'selected_entities': [],
+        'selecting_entities': False,
         'selection_start': None,
         'selection_end': None,
-        'selected_units': [],
-        'show_all_health_bars': False,
-        'minimap_margin': MINIMAP_MARGIN,
+        'rectangle_additive': False,
+        'paused': False,
         'force_full_redraw': False,
-        'paused': False
+        'show_all_health_bars': False
     }
 
     player_selection_surface = None
@@ -119,20 +115,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     update_interval = 60
     frame_counter = 0
 
-    # ----------------------------------------------------------------
-    # Main loop
-    # ----------------------------------------------------------------
     while running:
-        current_time = time.time()
-        raw_dt = current_time - last_time
-        last_time = current_time
-        if game_state['paused']:
-            dt = 0
-        else:
-            dt = raw_dt
-
+        raw_dt = clock.tick(120) / 1000.0
+        dt = 0 if game_state['paused'] else raw_dt
         frame_counter += 1
-        
+
+        for event in pygame.event.get():
+            handle_events(event, game_state)
+            if event.type == pygame.QUIT:
+                running = False
+
+        update_game_state(game_state, dt)
+
         screen = game_state['screen']
         screen_width = game_state['screen_width']
         screen_height = game_state['screen_height']
@@ -278,16 +272,4 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             else:
                 pygame.display.flip()
 
-        # This is just an example usage for building/training
-        # (unchanged logic, but we might skip it if paused)
-        if not game_state['paused']:
-            barrack = Barracks(selected_player)
-            # Try building it with 3 villagers, in case resources suffice
-            if selected_player.resources["wood"] >= barrack.cost.wood:
-                selected_player.buildBatiment(barrack, time.time(), 3, game_map)
-            selected_player.manage_creation(time.time())
-
-    # End main loop
-        if screen is None:
-            pygame.display.quit()
-            pygame.quit()
+    # End of loop

@@ -31,7 +31,7 @@ class Unit(Entity):
         Unit.id += 1
 
         self.path = None
-        self.state = 0  # 0=idle,1=walk,2=attack
+        self.state = 0
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
         self.frame_duration = 0
@@ -76,10 +76,9 @@ class Unit(Entity):
             self.path.pop(0)
             game_map.remove_entity(self, self.x, self.y)
             game_map.add_entity(self, self.x, self.y)
-        self.direction = ((snapped_angle // 45 )+1)%8 # +1 to match the sprite sheet and %8 because tere are 8 directions
+        self.direction = ((snapped_angle // 45 )+1)%8
         return self.path
 
-    # ---------------- Attack Logic ----------------
     def attack(self, attacker_team, game_map, dt):
 
         if not self.target or self.target.hp <= 0:
@@ -113,7 +112,6 @@ class Unit(Entity):
                 from AiUtils.aStar import a_star
                 a_star(self, near_tile, game_map)
         else:
-            # unit
             if not self.path:
                 from AiUtils.aStar import a_star
                 a_star(self, (round(self.target.x), round(self.target.y)), game_map)
@@ -122,7 +120,6 @@ class Unit(Entity):
             self.state = 0
             return
 
-    # ---------------- Building Distances ----------------
     def get_building_tiles(self, building, game_map):
         tiles = []
         x_min = max(0, round(building.x) - building.size)
@@ -147,33 +144,26 @@ class Unit(Entity):
         return best_distance if best_distance < float('inf') else None
 
     def find_best_adjacent_spot_to_building(self, building, game_map):
-        # Direction from building center to the unit
         dx = self.x - building.x
         dy = self.y - building.y
         distance = math.sqrt(dx*dx + dy*dy)
         if distance < 1e-7:
             return (round(building.x), round(building.y))
 
-        # Near edge offset
         offset = building.size / 2.0 + 0.5
         if distance <= offset:
-            # Fallback if the unit is already too close
             return (round(building.x), round(building.y))
 
-        # Find the point near the edge closest to the unit
         ratio = offset / distance
         near_x = building.x + ratio * dx
         near_y = building.y + ratio * dy
         tile_x, tile_y = round(near_x), round(near_y)
 
-        # Check if walkable
         if self.is_tile_walkable(game_map, tile_x, tile_y):
             return (tile_x, tile_y)
 
-        # Optional: check surrounding tiles or simply fallback
         return (round(building.x), round(building.y))
 
-    # ---------------- Map Walkability ----------------
     def is_tile_walkable(self, game_map, tx, ty):
         if tx < 0 or ty < 0 or tx >= game_map.num_tiles_x or ty >= game_map.num_tiles_y:
             return False
@@ -184,7 +174,6 @@ class Unit(Entity):
                     return False
         return True
 
-    # -------------- Display --------------
     def display(self, screen, screen_width, screen_height, camera, dt):
         self.frame_duration += dt
         frame_time = 1.0 / self.frames
@@ -201,10 +190,10 @@ class Unit(Entity):
         corner_distance = UNIT_HITBOX
         
         corners = [
-            (self.x - corner_distance, self.y - corner_distance),  # corner3
-            (self.x - corner_distance, self.y + corner_distance),  # corner1
-            (self.x + corner_distance, self.y + corner_distance),  # corner2
-            (self.x + corner_distance, self.y - corner_distance)   # corner4
+            (self.x - corner_distance, self.y - corner_distance),
+            (self.x - corner_distance, self.y + corner_distance),
+            (self.x + corner_distance, self.y + corner_distance),
+            (self.x + corner_distance, self.y - corner_distance)
         ]
         
         screen_corners = []
