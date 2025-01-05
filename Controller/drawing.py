@@ -1,6 +1,7 @@
 import pygame
 import math
 import colorsys
+import time
 from Settings.setup import (
     HALF_TILE_SIZE,
     MINIMAP_WIDTH,
@@ -253,12 +254,23 @@ def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_
     rect_h = rect_bottom - rect_top
     pygame.draw.rect(screen, (255,255,255), (rect_left, rect_top, rect_w, rect_h), 2)
 
-def display_fps(screen, clock):
-    font = pygame.font.SysFont(None, 24)
-    fps = int(clock.get_fps())
-    fps_text = font.render(f'FPS: {fps}', True, pygame.Color('white'))
-    screen.blit(fps_text, (10, 10))
+def display_fps(screen):
+    if not hasattr(display_fps, "last_time"):
+        display_fps.last_time = time.time()
+        display_fps.frame_count = 0
+        display_fps.fps = 0
+    
+    display_fps.frame_count += 1
+    now = time.time()
+    elapsed = now - display_fps.last_time
+    if elapsed >= 1.0:
+        display_fps.fps = display_fps.frame_count / elapsed
+        display_fps.frame_count = 0
+        display_fps.last_time = now
 
+    font = pygame.font.SysFont(None, 24)
+    fps_text = font.render(f'FPS: {int(display_fps.fps)}', True, pygame.Color('white'))
+    screen.blit(fps_text, (10, 10))
 
 def draw_pointer(screen):
     mouse_x, mouse_y = pygame.mouse.get_pos()

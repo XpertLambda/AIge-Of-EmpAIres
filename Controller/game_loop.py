@@ -38,7 +38,9 @@ def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height
     return rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
-    clock = pygame.time.Clock()
+    # Remove the pygame clock usage
+    # clock = pygame.time.Clock()
+    last_time = time.time()
     pygame.key.set_repeat(0, 0)
     camera = Camera(screen_width, screen_height)
     team_colors = generate_team_colors(len(players))
@@ -121,10 +123,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     # Main loop
     # ----------------------------------------------------------------
     while running:
-        # ----------------------------------------------------------------
-        # Guarantee dt = 0 if paused => avoid "teleportation" on unpause
-        # ----------------------------------------------------------------
-        raw_dt = clock.tick(120) / 1000.0
+        current_time = time.time()
+        raw_dt = current_time - last_time
+        last_time = current_time
         if game_state['paused']:
             dt = 0
         else:
@@ -268,7 +269,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 screen.blit(player_info_surface, (0, screen_height - inf_h))
 
             # FPS
-            display_fps(screen, clock)
+            display_fps(screen)
             draw_pointer(screen)
 
             if game_state.get('force_full_redraw', False):
