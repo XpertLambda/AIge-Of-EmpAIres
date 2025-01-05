@@ -179,10 +179,8 @@ def main():
     chosen_save   = user_choices["chosen_save"]
 
     # Lance le jeu
-    if user_choices["index_terminal_display"] == 0 or user_choices["index_terminal_display"] == 2:
-        screen, screen_width, screen_height = init_pygame()
-    else:
-        screen, screen_width, screen_height = init_pygame()
+    screen, screen_width, screen_height = init_pygame()
+    if user_choices["index_terminal_display"] == 1:
         screen = None
             
     if load_game and chosen_save:
