@@ -142,16 +142,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         camera = game_state['camera']
 
         # Periodic terminal update
-        if user_choices["index_terminal_display"] == 1 or user_choices["index_terminal_display"] == 2:
-            if time.time() - game_state.get('last_terminal_update', 0) >= 2:
-                start_time = time.time()
+        if user_choices["index_terminal_display"] in {1, 2}:
+            game_state['last_terminal_update'] = game_state.get('last_terminal_update', 0)
+            if not game_state['paused']:
+                game_state['last_terminal_update'] += dt
+            if game_state['last_terminal_update'] >= 2:
                 game_map.update_terminal()
-                game_state['last_terminal_update'] = start_time
+                game_state['last_terminal_update'] = 0  # Reset the timer
 
         
 
 
-        # Affichage de l'écran uniquement si mode GUI ou Both
+        # Display the screen only if in "GUI" or "Both" mode
         if screen is not None:
             # -----------------------------------------------------------
             # Update game state
