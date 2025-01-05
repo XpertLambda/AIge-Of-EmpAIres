@@ -6,9 +6,10 @@ from Settings.setup import (
     MINIMAP_WIDTH,
     MINIMAP_HEIGHT,
     MAP_PADDING,
+    HEALTH_BAR_WIDTH,
+    HEALTH_BAR_HEIGHT,
+    HEALTH_BAR_OFFSET_Y
 )
-from Entity.Unit import Unit
-from Entity.Building import Building
 from Controller.isometric_utils import (
     to_isometric,
     get_color_for_terrain,
@@ -16,9 +17,6 @@ from Controller.isometric_utils import (
     tile_to_screen,
 )
 from Controller.init_assets import fill_grass
-from Entity.Building import Building
-from Entity.Resource.Gold import Gold
-
 from Controller.gui import get_scaled_gui
 
 def generate_team_colors(nb_players):
@@ -188,6 +186,8 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     return minimap_surface, scale, offset_x, offset_y, min_iso_x, min_iso_y
 
 def update_minimap_entities(game_state):
+    from Entity.Building import Building
+    from Entity.Resource.Gold import Gold
     camera = game_state['camera']
     game_map = game_state['game_map']
     team_colors = game_state['team_colors']
@@ -265,3 +265,12 @@ def draw_pointer(screen):
     pointer = get_scaled_gui('pointer', 0, target_width=30)
     rect = pointer.get_rect(center=(mx, my))
     screen.blit(pointer, rect.topleft)
+
+def draw_healthBar(screen, sx, sy, ratio, color):
+    import pygame
+    bg_rect = pygame.Rect(sx - HEALTH_BAR_WIDTH//2, sy - HEALTH_BAR_OFFSET_Y,
+                          HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
+    pygame.draw.rect(screen, (50, 50, 50), bg_rect)
+    fill_width = int(HEALTH_BAR_WIDTH * ratio)
+    fill_rect = pygame.Rect(bg_rect.x, bg_rect.y, fill_width, HEALTH_BAR_HEIGHT)
+    pygame.draw.rect(screen, color, fill_rect)

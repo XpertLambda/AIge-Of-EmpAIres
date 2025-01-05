@@ -3,6 +3,7 @@ import math
 from Settings.setup import Resources
 from Controller.init_assets import draw_hitbox, HALF_TILE_SIZE
 from Controller.isometric_utils import tile_to_screen
+from Controller.drawing import draw_healthBar
 import pygame
 
 class Entity:
@@ -80,12 +81,4 @@ class Entity:
             screen_height
         )
 
-        # Health bar
-        bar_width = 40
-        bar_height = 5
-        bar_offset_y = 30  # above the entity
-        bg_rect = pygame.Rect(sx - bar_width//2, sy - bar_offset_y, bar_width, bar_height)
-        pygame.draw.rect(screen, (50, 50, 50), bg_rect)
-        fill_width = int(bar_width * ratio)
-        fill_rect = pygame.Rect(bg_rect.x, bg_rect.y, fill_width, bar_height)
-        pygame.draw.rect(screen, color, fill_rect)
+        draw_healthBar(screen, sx, sy, ratio, color)
