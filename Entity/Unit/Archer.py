@@ -12,6 +12,7 @@ class Archer(Unit):
             cost=Resources(food=0, gold=45, wood=25),
             attack_power=4,
             attack_range=4,
+            attack_speed=2.03,
             speed=1,
             training_time=35
         )

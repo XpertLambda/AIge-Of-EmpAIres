@@ -26,6 +26,7 @@ from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLIS
 
 PANEL_RATIO = 0.25
 BG_RATIO    = 0.20
+draw_call_time = 0
 
 def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height, margin=10):
     rect = pygame.Rect(0, 0, width, height)
@@ -35,7 +36,7 @@ def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height
     return rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
-    """Main game loop handling updates, drawing, and event processing."""
+    global draw_call_time
     clock = pygame.time.Clock()
     pygame.key.set_repeat(0, 0)
     camera = Camera(screen_width, screen_height)
@@ -145,9 +146,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_map.update_terminal()
                 game_state['last_terminal_update'] = 0  # Reset the timer
 
-        
-
-
         # Display the screen only if in "GUI" or "Both" mode
         if screen is not None:
             # -----------------------------------------------------------
@@ -219,38 +217,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
             # Example movement demonstration (now requires dt)
             # We integrate dt inside unit's move method
-            if not game_state['paused']:
-                for player in players:
-                    for unit in player.units:
-                        unit.move(game_map, dt)
-
-            # Draw path debug
-            for player in players:
-                for unit in player.units:
-                    if unit.path:
-                        for x, y in unit.path:
-                            screen_x, screen_y = tile_to_screen(
-                                x,
-                                y,
-                                HALF_TILE_SIZE,
-                                HALF_TILE_SIZE / 2,
-                                camera,
-                                screen_width,
-                                screen_height
-                            )
-                            pygame.draw.circle(screen, (255, 23, 0), (screen_x, screen_y), 5*camera.zoom)
-                        # mark unit position
-                        ux, uy = tile_to_screen(
-                            unit.x,
-                            unit.y,
-                            HALF_TILE_SIZE,
-                            HALF_TILE_SIZE / 2,
-                            camera,
-                            screen_width,
-                            screen_height
-                        )
-                        pygame.draw.circle(screen, (99, 0, 255), (ux, uy), 5*camera.zoom)
-
             # Player selection panel
             if player_selection_surface:
                 sel_h = player_selection_surface.get_height()
@@ -272,4 +238,15 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             else:
                 pygame.display.flip()
 
-    # End of loop
+        # This is just an example usage for building/training
+        # (unchanged logic, but we might skip it if paused)
+        if not game_state['paused']:
+            barrack = Barracks(selected_player)
+            # Try building it with 3 villagers, in case resources suffice
+            if selected_player.resources["wood"] >= barrack.cost.wood:
+                selected_player.buildBatiment(barrack, time.time(), 3, game_map)
+            selected_player.manage_creation(time.time())
+        draw_call_time = 0
+
+    # End main loop
+

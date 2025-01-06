@@ -70,26 +70,29 @@ def draw_map(
     max_tile_y = min(game_map.num_tiles_y - 1, max(y_indices) + margin)
 
     visible_entities = set()
-    for ty in range(min_tile_y, max_tile_y):
-        for tx in range(min_tile_x, max_tile_x):
-            if tx % 10 == 0 and ty % 10 == 0:
-                sx, sy = tile_to_screen(
-                    tx+4.5, 
-                    ty+4.5,
-                    HALF_TILE_SIZE, 
-                    HALF_TILE_SIZE/2,
-                    camera, 
-                    screen_width, 
-                    screen_height
-                )
+
+    for y in range(min_tile_y, max_tile_y):
+        for x in range(min_tile_x, max_tile_x):
+            if x % 10 == 0 and y % 10 == 0:
+                sx, sy = tile_to_screen(x+4.5, y+4.5,
+                                        HALF_TILE_SIZE, HALF_TILE_SIZE/2,
+                                        camera, screen_width, screen_height)
                 fill_grass(screen, sx, sy, camera)
-            ents = game_map.grid.get((tx, ty), None)
-            if ents:
-                for e in ents:
-                    visible_entities.add(e)
+
+            entities = game_map.grid.get((x, y), None)
+            inactive_entities = game_map.inactive_matrix.get((x, y), None)
+
+            if entities:
+                for entity in entities:
+                    visible_entities.add(entity)
+                    
+            if inactive_entities:
+                for entity in inactive_entities:
+                    visible_entities.add(entity)
 
     visible_list = list(visible_entities)
-    visible_list.sort(key=lambda e: (e.y, e.x))
+    # Sort them by isometric layering
+    visible_list.sort(key=lambda entity: (entity.y, entity.x))
 
     for e in visible_list:
         e.display_hitbox(screen, screen_width, screen_height, camera)

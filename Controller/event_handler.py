@@ -105,24 +105,19 @@ def handle_events(event, game_state):
                     handle_left_click_panels_or_box(mx, my, game_state, ctrl_pressed)
 
         elif event.button == 3:
-            if selected_player and len(game_state.get('selected_units', [])) > 0:
-                valid_units = game_state['selected_units']
-                if len(valid_units) > 0:
-                    for u in valid_units:
-                        u.target = None
-                        u.path = None
-                    ent = find_entity_for_building_or_unit(game_state, mx, my)
-                    if ent:
-                        if (ent.team is not None) and (ent.team != selected_player.teamID):
-                            for u in valid_units:
-                                u.target = ent
-                        else:
-                            tile_x, tile_y = screen_to_tile(
-                                mx, my, screen_width, screen_height,
-                                camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4
-                            )
-                            for u in valid_units:
-                                a_star(u, (tile_x, tile_y), game_state['game_map'])
+            # Clic droit => move ou attack
+            if selected_player and len(game_state['selected_units']) > 0:
+                # On vide l'ancien target/path
+                for u in game_state['selected_units']:
+                    u.set_target(None)
+                    u.path = None
+
+                ent = find_entity_for_building_or_unit(game_state, mx, my)
+                if ent:
+                    # S'il s'agit d'une entité ennemie
+                    if ent.team != selected_player.teamID:
+                        for u in game_state['selected_units']:
+                            u.target = ent
                     else:
                         tile_x, tile_y = screen_to_tile(
                             mx, my, screen_width, screen_height,
@@ -130,6 +125,19 @@ def handle_events(event, game_state):
                         )
                         for u in valid_units:
                             a_star(u, (tile_x, tile_y), game_state['game_map'])
+                            if (tile_x, tile_y) in game_state['game_map'].grid:
+                                entity = next(iter(game_state['game_map'].grid[(tile_x, tile_y)]))
+                                u.set_target(entity)
+                            else:
+                                u.set_target(None)
+                else:
+                    # case vide => move normal
+                    tile_x, tile_y = screen_to_tile(
+                        mx, my, screen_width, screen_height,
+                        camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4
+                    )
+                    for u in game_state['selected_units']:
+                        a_star(u, (tile_x, tile_y), game_state['game_map'])
 
         elif event.button == 4:
             camera.set_zoom(camera.zoom * 1.1)

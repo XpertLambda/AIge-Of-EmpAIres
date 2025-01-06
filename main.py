@@ -152,7 +152,6 @@ def ask_terminal_inputs_non_blocking():
         # Pause légère pour ne pas saturer le CPU
         time.sleep(0.01)
 
-
 def main():
     # Init pygame
     screen, screen_width, screen_height = init_pygame()

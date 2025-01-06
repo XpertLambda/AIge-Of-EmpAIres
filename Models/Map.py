@@ -22,55 +22,57 @@ class GameMap:
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
+        self.inactive_matrix = {}
         if generate:
             self.generate_map()
 
     def add_entity(self, entity, x, y):
-        if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
-            return False
         rounded_x, rounded_y = round(x), round(y)
+        if rounded_x < 0 or rounded_y < 0 or rounded_x + entity.size - 1 >= self.num_tiles_x or rounded_y + entity.size - 1 >= self.num_tiles_y:
+            return False
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
                 if pos in self.grid:
-                    return False
+                    for existing_entity in self.grid[pos]:
+                        if not self.walkable_position(pos):
+                            return False
 
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
-                self.grid[pos] = set()
+                if pos not in self.grid:
+                    self.grid[pos] = set()
                 self.grid[pos].add(entity)
-        # Centre l'entité dans la zone couverte
+
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
         return True
 
-    def remove_entity(self, entity, x, y):
-        """
-        Corrigé : On recalcule le "coin haut-gauche" exact
-        pour retomber sur les mêmes tuiles qu'au add_entity.
-        """
-        # Coordonnées de base pour la bounding box
-        start_x = round(x - (entity.size - 1) / 2)
-        start_y = round(y - (entity.size - 1) / 2)
+    def remove_entity(self, entity):
+        remove_counter = 0
+        for pos, matrix_entities in self.grid.items():
+            for matrix_entity in matrix_entities:
+                if matrix_entity.entity_id == entity.entity_id:
+                    self.grid[pos].remove(entity)
+                    remove_counter+=1
+                    if not self.grid[pos]:
+                        del self.grid[pos]
+                if remove_counter >= entity.size * entity.size:
+                    return True
+        return False
 
-        if start_x < 0 or start_y < 0 or (start_x + entity.size) > self.num_tiles_x or (start_y + entity.size) > self.num_tiles_y:
+    def walkable_position(self, position):
+        x, y = round(position[0]), round(position[1])
+        if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
             return False
-
-        # Vérifie que l'entité est bien présente partout
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (start_x + i, start_y + j)
-                if pos not in self.grid or entity not in self.grid[pos]:
-                    return False  # L'entité n'est pas présente dans au moins une des tuiles attendues
-
-        # Puis on la retire
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (start_x + i, start_y + j)
-                self.grid[pos].remove(entity)
-                if not self.grid[pos]:
-                    del self.grid[pos]
+        
+        entities = self.grid.get((x, y), None)
+        if entities:
+            for entity in entities:
+                if not entity.walkable:
+                    return False
         return True
 
     def generate_zones(self, num_players):
@@ -216,7 +218,6 @@ class GameMap:
                 if wood_placed >= NUM_WOOD_TILES:
                     break
 
-
     def print_map(self):
         for y in range(self.num_tiles_y):
             row_display = []
@@ -301,7 +302,19 @@ class GameMap:
             
             print("\n-----------------------------------\n")
             
-            
+    def move_to_inactive(self, entity):
+        self.remove_entity(entity)
+        pos = (round(entity.x), round(entity.y))
+        if pos not in self.inactive_matrix:
+            self.inactive_matrix[pos] = set()
+        self.inactive_matrix[pos].add(entity)
+
+    def remove_inactive(self, entity):
+        pos = (round(entity.x), round(entity.y))
+        self.inactive_matrix[pos].remove(entity)
+        if not self.inactive_matrix[pos]:
+            del self.inactive_matrix[pos]
+
    # ne marche pas
     def place_building(self, building, team):
         # placer un building au hasard
