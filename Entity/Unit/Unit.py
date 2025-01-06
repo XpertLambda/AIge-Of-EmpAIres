@@ -1,10 +1,11 @@
 import math
 import pygame
+import random
 from AiUtils.aStar import a_star
 from Entity.Entity import Entity
 from Entity.Building import Building
 from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
-from Controller.isometric_utils import tile_to_screen, get_direction, get_snapped_angle
+from Controller.isometric_utils import tile_to_screen, get_direction, get_snapped_angle, normalize
 from Controller.init_assets import draw_sprite, draw_hitbox, draw_path
 
 class Unit(Entity):
@@ -53,25 +54,40 @@ class Unit(Entity):
         if not self.path:
             return
         self.state = 1
-        rounded_position = (round(self.x), round(self.y))
-        target_tile = self.path[0]
 
+        target_tile = self.path[0]        
         snapped_angle = get_snapped_angle(((self.x, self.y)), (target_tile[0], target_tile[1]))
         self.direction = get_direction(snapped_angle)
-
         step = ( dt *  self.speed * math.cos(math.radians(snapped_angle)), dt * self.speed * math.sin(math.radians(snapped_angle)))
+        
         self.x += step[0]
         self.y += step[1]
 
         dx = target_tile[0] - self.x
         dy = target_tile[1] - self.y
-        
+            
         if abs(dx) <= abs(step[0]) or abs(dy) <= abs(step[1]):
             self.path.pop(0)
             game_map.remove_entity(self)
             game_map.add_entity(self, self.x, self.y)
 
         return self.path
+
+    def collisionTest(self, game_map):
+        rounded_position = (round(self.x), round(self.y))
+        entities = game_map.grid.get(rounded_position, None)
+        force = [0, 0]        
+        if entities:
+            for entity in entities:
+                if entity.entity_id != self.entity_id:
+                    distance = math.dist((entity.x, entity.y), (self.x, self.y))
+                    if distance <= 2*UNIT_HITBOX and distance != 0:
+                        diff = [self.x - entity.x, self.y - entity.y]
+                        diff = normalize(diff)
+                        scaled_diff = [component * UNIT_HITBOX / abs(component) for component in diff]
+                        self.path = [(self.x + scaled_diff[0], self.y + scaled_diff[1])]
+        return True
+
 
     # ---------------- Attack Logic ----------------
     def set_target(self, target):

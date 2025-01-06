@@ -40,3 +40,15 @@ def get_direction(snapped_angle_rad):
     direction = ((snapped_angle_rad // 45 )+1)%8 
     return direction 
     # +1 to match the sprite sheet and %8 because tere are 8 directions
+
+def cos_sign(snapped_angle):
+    return 1 - 2 * ((math.floor(snapped_angle / 180)) % 2)
+
+def sin_sign(snapped_angle):
+    return 1 - 2 * ((math.floor((snapped_angle + 90) / 180)) % 2)
+
+def normalize(v):
+    magnitude = math.sqrt(sum(x**2 for x in v))
+    if magnitude != 0:
+        return [x / magnitude for x in v]
+    return 0

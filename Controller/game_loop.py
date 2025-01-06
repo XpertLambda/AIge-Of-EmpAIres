@@ -120,7 +120,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         raw_dt = clock.tick(120) / 1000.0
         dt = 0 if game_state['paused'] else raw_dt
         frame_counter += 1
-
+        dt *= 2
         for event in pygame.event.get():
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
