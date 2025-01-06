@@ -169,35 +169,6 @@ class GameMap:
                     placed = True
                 attempts += 1
 
-    def place_random_gold_clusters(self, grid):
-        resource_classes = {
-            'gold': Gold,
-            'wood': Tree
-        }
-
-        resources = ['gold'] * NUM_GOLD_TILES
-        random.shuffle(resources)
-
-        for resource_type in resources:
-            placed = False
-            attempts = 0
-            while not placed and attempts < 1000:
-                x = random.randint(0, self.num_tiles_x - 1)
-                y = random.randint(0, self.num_tiles_y - 1)
-
-                if resource_type == 'gold' and self.can_place_group(grid, x, y):
-                    for dx in range(2):
-                        for dy in range(2):
-                            gold = Gold(x + dx, y + dy)
-                            self.add_entity(gold, x + dx, y + dy)
-                    placed = True
-                elif (x, y) not in grid:
-                    resource = resource_classes[resource_type](x, y)
-                    self.add_entity(resource, x, y)
-                    placed = True
-
-                attempts += 1
-
     def can_place_group(self, grid, x, y):
         if x + 1 < self.num_tiles_x and y + 1 < self.num_tiles_y:
             return all((x + dx, y + dy) not in grid for dx in range(2) for dy in range(2))
@@ -206,7 +177,6 @@ class GameMap:
     def generate_map(self):
         self.generate_resources()
         self.place_gold_near_town_centers(self.grid)
-        self.place_random_gold_clusters(self.grid)
         self.generate_buildings(self.grid, self.players)
         self.generate_units(self.grid, self.players)
         return self.grid
@@ -217,36 +187,29 @@ class GameMap:
             'wood': Tree
         }
         if self.center_gold_flag:
-            center_x = self.num_tiles_x // 2
-            center_y = self.num_tiles_y // 2
-            gold_count = 0
-            layer = 0
-            max_layer = max(self.num_tiles_x, self.num_tiles_y)
-            while gold_count < NUM_GOLD_TILES and layer < max_layer:
-                for dx in range(-layer, layer + 1):
-                    for dy in range(-layer, layer + 1):
-                        x = center_x + dx
-                        y = center_y + dy
-                        if 0 <= x < self.num_tiles_x and 0 <= y < self.num_tiles_y and (x, y) not in self.grid:
-                            self.grid[(x, y)] = set()
-                            self.grid[(x, y)].add(resource_classes['gold'](x, y))
-                            gold_count += 1
-                            if gold_count >= NUM_GOLD_TILES:
-                                break
-                    if gold_count >= NUM_GOLD_TILES:
-                        break
-                layer += 1
+            self.place_gold_near_town_centers(self.grid)
         else:
-            # Place gold randomly
-            for _ in range(NUM_GOLD_TILES):
-                placed = False
-                attempts = 0
-                while not placed and attempts < 1000:
-                    x = random.randint(0, self.num_tiles_x - 1)
-                    y = random.randint(0, self.num_tiles_y - 1)
-                    resource = resource_classes['gold'](x, y)
-                    placed = self.add_entity(resource, x, y)
-                    attempts += 1
+            # Generate gold as groups of 4
+            gold_placed = 0
+            while gold_placed < NUM_GOLD_TILES:
+                x_start = random.randint(0, self.num_tiles_x - 2)
+                y_start = random.randint(0, self.num_tiles_y - 2)
+                for i in range(2):
+                    for j in range(2):
+                        if gold_placed >= NUM_GOLD_TILES:
+                            break
+                        x = x_start + i
+                        y = y_start + j
+                        attempts = 0
+                        placed = False
+                        while not placed and attempts < 10:
+                            resource = resource_classes['gold'](x, y)
+                            placed = self.add_entity(resource, x, y)
+                            attempts += 1
+                        if placed:
+                            gold_placed += 1
+                    if gold_placed >= NUM_GOLD_TILES:
+                        break
 
         # Generate trees as groups instead of one by one
         cluster_size_min, cluster_size_max = 2, 4
