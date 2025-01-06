@@ -61,7 +61,6 @@ class Unit(Entity):
         self.y += step[1]
         distance = math.dist((round(self.x), round(self.y)), (target_tile[0], target_tile[1]))
         if distance == 0:
-            print('popping tile')
             self.path.pop(0)
             game_map.remove_entity(self)
             game_map.add_entity(self, self.x, self.y)
@@ -71,7 +70,6 @@ class Unit(Entity):
     def set_target(self, target):
         if target:
             self.target = target
-            print(f'set target : {target.x}, {target.y}')
 
     def attack(self, game_map, dt):
         if not self.target or not self.target.isAlive() or self.target.entity_id == self.entity_id or self.target.team == self.team:

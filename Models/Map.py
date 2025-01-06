@@ -59,9 +59,7 @@ class GameMap:
                     if not self.grid[pos]:
                         del self.grid[pos]
                 if remove_counter >= entity.size * entity.size:
-                    print(f'Removed entity from {pos}')
                     return True
-        print(f'Failed to remove entity from {pos}')
         return False
 
     def walkable_position(self, position):

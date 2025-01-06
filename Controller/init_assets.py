@@ -148,11 +148,10 @@ def load_sprites(screen, screen_width, screen_height):
                                 try:
                                     sprite_sheet = load_sprite(filepath, scale, adjust)
                                     frames = extract_frames(sprite_sheet, sheet_rows, sheet_cols)
-                                    print(f"frames : {len(frames)} for {sprite_name} : {state_dir}")
+                                    print(f"{len(frames)} frames for {sprite_name} in {state_dir} state with {len(frames) // FRAMES_PER_UNIT} directions")
                                     for direction_index in range(len(frames) // FRAMES_PER_UNIT):
                                         direction_frames = frames[direction_index * FRAMES_PER_UNIT : (direction_index + 1) * FRAMES_PER_UNIT]
                                         sprites[category][sprite_name][state_dir][direction_index] = direction_frames
-                                        print(f'{len(direction_frames)} for direction : {direction_index} : {state_dir}')
                                 except Exception as e:
                                     print(f"Error loading sprite sheet {filepath}: {e}")
                                 loaded_files += 1
