@@ -20,9 +20,9 @@ class Building(Entity):
         containsFood=False, 
         walkable=False,
         attack_power=0, 
-        attack_range=0
+        attack_range=0,
     ):
-        super().__init__(x=x, y=y, team=team, acronym=acronym, size=size, max_hp=max_hp, cost=cost)
+        super().__init__(x=x, y=y, team=team, acronym=acronym, size=size, max_hp=max_hp, cost=cost, walkable=walkable)
         self.buildTime = buildTime
         self.population = population
         self.resourceDropPoint = resourceDropPoint
@@ -33,7 +33,7 @@ class Building(Entity):
         self.attack_range = attack_range
         self.constructors=[] #liste des villageois qui construisent le batiment
 
-    def display(self, screen, screen_width, screen_height, camera):
+    def display(self, screen, screen_width, screen_height, camera, dt):
         category = 'buildings'
         screen_x, screen_y = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom)

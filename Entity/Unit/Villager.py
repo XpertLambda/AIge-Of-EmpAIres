@@ -8,13 +8,15 @@ class Villager(Unit):
             x=x,
             y=y,
             team=team,
-            acronym="v",
-            max_hp=40,
-            cost=Resources(food=50, gold=0, wood=25),
-            attack_power=0,
-            attack_range=1,
-            speed=1,
-            training_time=20,
+            acronym="v", 
+            max_hp=40, 
+            cost=Resources(food=50, gold=0, wood=25), 
+            attack_power=2,
+            attack_range=1, 
+            attack_speed=2.03,
+            speed=1, 
+            training_time=20, 
+
         )
         self.resources = Resources(food=0, gold=0, wood=0)
         self.carry_capacity = RESOURCE_CAPACITY

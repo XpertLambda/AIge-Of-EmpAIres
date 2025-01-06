@@ -12,7 +12,7 @@ def get_neighbors(unit, game_map, position):
     neighbors = []
     for dx, dy in directions:
         neighbor = (position[0] + dx, position[1] + dy)
-        if unit.is_tile_walkable(game_map, neighbor[0], neighbor[1]):
+        if game_map.walkable_position(neighbor):
             neighbors.append(neighbor)
     return neighbors
 
@@ -23,7 +23,7 @@ def find_nearest_walkable_tile(unit, goal, game_map):
     while open_set:
         _, current = heapq.heappop(open_set)
 
-        if unit.is_tile_walkable(game_map, current[0], current[1]):
+        if game_map.walkable_position(current):
             return current
 
         visited.add(current)
@@ -35,7 +35,7 @@ def find_nearest_walkable_tile(unit, goal, game_map):
     return None
 
 def a_star(unit, goal, game_map):
-    if not unit.is_tile_walkable(game_map, goal[0], goal[1]):
+    if not game_map.walkable_position(goal):
         goal = find_nearest_walkable_tile(unit, goal, game_map)
         if not goal:
             unit.path = None

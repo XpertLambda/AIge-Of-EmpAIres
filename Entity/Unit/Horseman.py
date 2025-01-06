@@ -10,8 +10,9 @@ class Horseman(Unit):
             acronym="h",
             max_hp=45,
             cost=Resources(food=80, gold=20, wood=0),
-            attack_power=4,
+            attack_power=10,
             attack_range=1,
+            attack_speed=1.90,
             speed=1.2,
             training_time=30
         )
