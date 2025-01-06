@@ -13,13 +13,10 @@ def get_neighbors(unit, game_map, pos):
             yield (nx, ny)
 
 def a_star(unit, goal, game_map):
-    """
-    If found => unit.path is list of tile coords (excl current).
-    If none => unit.path=None
-    """
-    start= (round(unit.x), round(unit.y))
-    if start== goal:
-        unit.path=[]
+   
+    start = (round(unit.x), round(unit.y))
+    if not game_map.walkable_position(goal) or start == goal:
+        unit.path = None
         return
 
     open_set=[]
@@ -55,4 +52,4 @@ def a_star(unit, goal, game_map):
                 f_score[neighbor]= newg+ heuristic(neighbor, goal)
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
-    unit.path= None
+    unit.path = None

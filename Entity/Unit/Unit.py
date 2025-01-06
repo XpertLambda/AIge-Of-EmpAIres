@@ -53,26 +53,34 @@ class Unit(Entity):
         if not self.path:
             return
         self.state = 1
+        rounded_position = (round(self.x), round(self.y))
         target_tile = self.path[0]
-        snapped_angle = get_snapped_angle((self.x, self.y), (target_tile[0], target_tile[1]))
+
+        snapped_angle = get_snapped_angle(((self.x, self.y)), (target_tile[0], target_tile[1]))
         self.direction = get_direction(snapped_angle)
+
         step = ( dt *  self.speed * math.cos(math.radians(snapped_angle)), dt * self.speed * math.sin(math.radians(snapped_angle)))
         self.x += step[0]
         self.y += step[1]
-        distance = math.dist((round(self.x), round(self.y)), (target_tile[0], target_tile[1]))
-        if distance == 0:
+
+        dx = target_tile[0] - self.x
+        dy = target_tile[1] - self.y
+        
+        if abs(dx) <= abs(step[0]) or abs(dy) <= abs(step[1]):
             self.path.pop(0)
             game_map.remove_entity(self)
             game_map.add_entity(self, self.x, self.y)
+
         return self.path
 
     # ---------------- Attack Logic ----------------
     def set_target(self, target):
-        if target:
-            self.target = target
+        self.target = target
+        print(f'set target {target}')
 
     def attack(self, game_map, dt):
         if not self.target or not self.target.isAlive() or self.target.entity_id == self.entity_id or self.target.team == self.team:
+            print(f'setting target {target}')
             self.target = None
 
         else :
@@ -94,7 +102,6 @@ class Unit(Entity):
                     self.cooldown_frame = None
             else:
                 a_star(self, (round(self.target.x), round(self.target.y)), game_map)
-                self.state = 1
                 self.attack_timer = 0
 
     # ---------------- Death Logic ----------------
