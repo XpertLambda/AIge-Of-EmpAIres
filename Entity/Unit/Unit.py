@@ -76,11 +76,9 @@ class Unit(Entity):
     # ---------------- Attack Logic ----------------
     def set_target(self, target):
         self.target = target
-        print(f'set target {target}')
 
     def attack(self, game_map, dt):
-        if not self.target or not self.target.isAlive() or self.target.entity_id == self.entity_id or self.target.team == self.team:
-            print(f'setting target {target}')
+        if not self.target.team or not self.target.isAlive() or self.target.entity_id == self.entity_id or self.target.team == self.team:
             self.target = None
 
         else :
