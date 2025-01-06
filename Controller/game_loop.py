@@ -22,11 +22,8 @@ from Controller.event_handler import handle_events
 from Controller.update import update_game_state
 from Controller.isometric_utils import tile_to_screen
 from Controller.gui import create_player_selection_surface, create_player_info_surface, get_scaled_gui, draw_gui_elements
-from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices
+from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices, GAME_SPEED, PANEL_RATIO, BG_RATIO
 
-PANEL_RATIO = 0.25
-BG_RATIO    = 0.20
-draw_call_time = 0
 
 def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height, margin=10):
     rect = pygame.Rect(0, 0, width, height)
@@ -36,7 +33,6 @@ def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height
     return rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
-    global draw_call_time
     clock = pygame.time.Clock()
     pygame.key.set_repeat(0, 0)
     camera = Camera(screen_width, screen_height)
@@ -120,7 +116,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         raw_dt = clock.tick(120) / 1000.0
         dt = 0 if game_state['paused'] else raw_dt
         frame_counter += 1
-        dt *= 2
+        dt = dt*GAME_SPEED
         for event in pygame.event.get():
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
@@ -250,7 +246,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if selected_player.resources["wood"] >= barrack.cost.wood:
                 selected_player.buildBatiment(barrack, time.time(), 3, game_map)
             selected_player.manage_creation(time.time())
-        draw_call_time = 0
 
     # End main loop
 

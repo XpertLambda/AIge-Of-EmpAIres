@@ -96,7 +96,7 @@ def handle_events(event, game_state):
             if game_state['minimap_background_rect'].collidepoint(mx, my):
                 game_state['minimap_dragging'] = True
             else:
-                clicked_entity = find_entity_for_building_or_unit(game_state, mx, my)
+                clicked_entity = closest_entity(game_state, mx, my)
                 if clicked_entity:
                     select_single_entity(clicked_entity, game_state, ctrl_pressed)
                     if hasattr(clicked_entity, "notify_clicked"):
@@ -112,24 +112,12 @@ def handle_events(event, game_state):
                     u.set_target(None)
                     u.path = None
 
-                ent = find_entity_for_building_or_unit(game_state, mx, my)
+                ent = closest_entity(game_state, mx, my)
                 if ent:
                     # S'il s'agit d'une entité ennemie
-                    if ent.team != selected_player.teamID:
-                        for u in game_state['selected_units']:
-                            u.target = ent
-                    else:
-                        tile_x, tile_y = screen_to_tile(
-                            mx, my, screen_width, screen_height,
-                            camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4
-                        )
-                        for u in valid_units:
-                            a_star(u, (tile_x, tile_y), game_state['game_map'])
-                            if (tile_x, tile_y) in game_state['game_map'].grid:
-                                entity = next(iter(game_state['game_map'].grid[(tile_x, tile_y)]))
-                                u.set_target(entity)
-                            else:
-                                u.set_target(None)
+                    for u in game_state['selected_units']:
+                        u.set_target(ent)
+
                 else:
                     # case vide => move normal
                     tile_x, tile_y = screen_to_tile(
@@ -312,35 +300,14 @@ def finalize_box_selection(game_state):
                 if e not in game_state['selected_units']:
                     game_state['selected_units'].append(e)
 
-def find_entity_for_building_or_unit(game_state, mx, my, pixel_radius=15):
-    """
-    Renvoie l'entité la plus proche du clic (mx,my) dans un rayon pixel_radius,
-    qu'il s'agisse d'une unité, bâtiment, ressource, etc.
-    """
-    from Controller.isometric_utils import tile_to_screen, screen_to_tile
+def closest_entity(game_state, mx, my, search_radius=2):
     gmap = game_state['game_map']
     camera = game_state['camera']
     sw = game_state['screen_width']
     sh = game_state['screen_height']
-
+    entity = None
     tile_x, tile_y = screen_to_tile(mx, my, sw, sh, camera, HALF_TILE_SIZE/2, HALF_TILE_SIZE/4)
-    search_radius = 2
-    closest_entity = None
-    closest_dist = float('inf')
-
-    for dx in range(-search_radius, search_radius + 1):
-        for dy in range(-search_radius, search_radius + 1):
-            nx, ny = tile_x + dx, tile_y + dy
-            if 0 <= nx < gmap.num_tiles_x and 0 <= ny < gmap.num_tiles_y:
-                ent_set = gmap.grid.get((nx, ny), [])
-                for e in ent_set:
-                    effective_radius = pixel_radius + (e.size if isinstance(e, Building) else 0)
-                    sx, sy = tile_to_screen(e.x, e.y,
-                                            HALF_TILE_SIZE, HALF_TILE_SIZE / 2,
-                                            camera, sw, sh)
-                    dist = ((mx - sx)**2 + (my - sy)**2) ** 0.5
-                    if dist < effective_radius and dist < closest_dist:
-                        closest_dist = dist
-                        closest_entity = e
-
-    return closest_entity
+    entites = gmap.grid.get((tile_x, tile_y), [])
+    if entites:
+        entity = next(iter(entites))
+    return entity
