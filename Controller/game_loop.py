@@ -22,7 +22,7 @@ from Controller.event_handler import handle_events
 from Controller.update import update_game_state
 from Controller.isometric_utils import tile_to_screen
 from Controller.gui import create_player_selection_surface, create_player_info_surface, get_scaled_gui, draw_gui_elements
-from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices
+from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices, GAME_SPEED
 
 PANEL_RATIO = 0.25
 BG_RATIO    = 0.20
@@ -120,7 +120,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         raw_dt = clock.tick(120) / 1000.0
         dt = 0 if game_state['paused'] else raw_dt
         frame_counter += 1
-
+        dt = dt*GAME_SPEED
         for event in pygame.event.get():
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
