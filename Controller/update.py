@@ -14,13 +14,13 @@ def update_game_state(game_state, dt):
             for unit in player.units:
                 if unit.isAlive():
                     unit.setIdle()
-                    if unit.target:
-                            unit.attack(game_map, dt)
                     if unit.path:
                         unit.move(game_map, dt)
+                        unit.display_path(game_state['screen'], game_state['screen_width'], game_state['screen_height'], game_state['camera'])
+                    if unit.target:
+                            unit.attack(game_map, dt)
                 else:
                     unit.kill(game_map)
-        # Create a copy of the set/list
         for inactive_entities in list(game_map.inactive_matrix.values()):
             if inactive_entities:
                 for entity in list(inactive_entities):

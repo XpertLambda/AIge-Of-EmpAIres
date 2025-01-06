@@ -213,3 +213,8 @@ def draw_hitbox(screen, corners, zoom):
         raise ValueError("Hitbox must have exactly 4 corners.")
     scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
     pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
+
+def draw_path(screen, unit_center, screenPath, zoom, color):
+    if len(screenPath) >= 2:
+        pygame.draw.lines(screen, color, False, screenPath, max(1, int(4 * zoom)))
+    pygame.draw.circle(screen, color, unit_center, int(5 * zoom))

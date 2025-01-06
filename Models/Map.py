@@ -47,7 +47,6 @@ class GameMap:
 
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
-
         return True
 
     def remove_entity(self, entity):
@@ -60,12 +59,13 @@ class GameMap:
                     if not self.grid[pos]:
                         del self.grid[pos]
                 if remove_counter >= entity.size * entity.size:
+                    print(f'Removed entity from {pos}')
                     return True
+        print(f'Failed to remove entity from {pos}')
         return False
 
     def walkable_position(self, position):
-        #x, y = round(position[0]), round(position[1])
-        x, y = position
+        x, y = round(position[0]), round(position[1])
         if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
             return False
         

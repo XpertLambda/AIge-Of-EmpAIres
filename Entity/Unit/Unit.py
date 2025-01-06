@@ -5,7 +5,7 @@ from Entity.Entity import Entity
 from Entity.Building import Building
 from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
 from Controller.isometric_utils import tile_to_screen, get_direction, get_snapped_angle
-from Controller.init_assets import draw_sprite, draw_hitbox
+from Controller.init_assets import draw_sprite, draw_hitbox, draw_path
 
 class Unit(Entity):
     def __init__(
@@ -59,9 +59,9 @@ class Unit(Entity):
         step = ( dt *  self.speed * math.cos(math.radians(snapped_angle)), dt * self.speed * math.sin(math.radians(snapped_angle)))
         self.x += step[0]
         self.y += step[1]
-        
-        distance = math.dist((self.x, self.y), (target_tile[0], target_tile[1]))
-        if distance < abs(step[0]) or distance < abs(step[1]):
+        distance = math.dist((round(self.x), round(self.y)), (target_tile[0], target_tile[1]))
+        if distance == 0:
+            print('popping tile')
             self.path.pop(0)
             game_map.remove_entity(self)
             game_map.add_entity(self, self.x, self.y)
@@ -152,3 +152,14 @@ class Unit(Entity):
             screen_corners.append((x_screen, y_screen))
         
         draw_hitbox(screen, screen_corners, camera.zoom)
+    
+    def display_path(self, screen, screen_width, screen_height, camera):
+        unit_position = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        color = ((self.entity_id * 30) % 255, (self.entity_id*20) % 255, (self.entity_id*2) % 255)
+        transformed_path = [unit_position, 
+        *[
+            tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            for x, y in self.path
+        ]
+    ]
+        draw_path(screen, unit_position, transformed_path, camera.zoom, color)

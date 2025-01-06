@@ -160,7 +160,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # Periodic terminal update
         if time.time() - game_state.get('last_terminal_update', 0) >= 2:
             start_time = time.time()
-            game_map.update_terminal()
+            #game_map.update_terminal()
             game_state['last_terminal_update'] = start_time
 
         if game_state.get('recompute_camera', False):
@@ -225,28 +225,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         for player in players:
             for unit in player.units:
                 if unit.path:
-                    for x, y in unit.path:
-                        screen_x, screen_y = tile_to_screen(
-                            x,
-                            y,
-                            HALF_TILE_SIZE,
-                            HALF_TILE_SIZE / 2,
-                            camera,
-                            screen_width,
-                            screen_height
-                        )
-                        pygame.draw.circle(screen, (255, 23, 0), (screen_x, screen_y), 5*camera.zoom)
-                    # mark unit position
-                    ux, uy = tile_to_screen(
-                        unit.x,
-                        unit.y,
-                        HALF_TILE_SIZE,
-                        HALF_TILE_SIZE / 2,
-                        camera,
-                        screen_width,
-                        screen_height
-                    )
-                    pygame.draw.circle(screen, (99, 0, 255), (ux, uy), 5*camera.zoom)
+                    unit.display_path(game_state['screen'], game_state['screen_width'], game_state['screen_height'], game_state['camera'])
+
 
         # Player selection panel
         if player_selection_surface:
