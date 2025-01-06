@@ -10,6 +10,7 @@ zoom_cache = {}
 MAX_ZOOM_CACHE_PER_SPRITE = 60
 
 gui_elements = {}
+gui_cache = {}
 
 def load_sprite(filepath=None, scale=None, adjust=None):
     if filepath:
@@ -46,7 +47,7 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
     return frames
 
 def draw_progress_bar(screen, progress, screen_width, screen_height, progress_text, loading_screen_image):
-    screen.blit(loading_screen_image, (0, 0))
+    screen.blit(loading_screen_image, (screen_width//2 - loading_screen_image.get_width()//2, screen_height//2 - loading_screen_image.get_height()//2))
 
     bar_width = screen_width * PROGRESS_BAR_WIDTH_RATIO
     bar_x = (screen_width - bar_width) / 2
@@ -59,6 +60,8 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     font = pygame.font.Font(None, 36)
     percentage_text = font.render(f"{int(progress * 100)}%", True, text_color)
+    if int(progress * 100) == 96:
+        time.sleep(2)
     percentage_text_rect = percentage_text.get_rect(center=(bar_x + bar_width / 2, bar_y + BAR_HEIGHT / 2))
     screen.blit(percentage_text, percentage_text_rect)
 
@@ -67,6 +70,30 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
     screen.blit(progress_text_surface, progress_text_rect)
 
     pygame.display.flip()
+
+def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
+    global gui_cache
+    key = (ui_name, variant, target_width, target_height)
+    if key in gui_cache:
+        return gui_cache[key]
+
+    original = gui_elements[ui_name][variant]
+    ow, oh = original.get_width(), original.get_height()
+
+    if target_width and not target_height:
+        ratio = target_width / ow
+        target_height = int(oh * ratio)
+    elif target_height and not target_width:
+        ratio = target_height / oh
+        target_width = int(ow * ratio)
+    elif not target_width and not target_height:
+        gui_cache[key] = original
+        return original  # Add this return statement for consistency
+
+    scaled = pygame.transform.smoothscale(original, (target_width, target_height))
+    gui_cache[key] = scaled
+    return scaled
+    
 
 def load_sprites(screen, screen_width, screen_height):
     global gui_elements
@@ -92,13 +119,12 @@ def load_sprites(screen, screen_width, screen_height):
         for filename in dir_content:
             if filename.lower().endswith("webp"):
                 filepath = os.path.join(directory, filename)
-                if gui_key == 'loading_screen':
-                    loading_screen = load_sprite(filepath, (screen_width, screen_height))
-                    screen.blit(loading_screen, (0, 0))
-                    pygame.display.flip()
-                    continue
                 loaded_sprite = load_sprite(filepath, gui_scale, gui_adjust_scale)
                 gui_elements[gui_key].append(loaded_sprite)
+                if gui_key == 'loading_screen':
+                    loading_screen = get_scaled_gui('loading_screen', variant=0, target_height=screen_height) 
+                    pygame.display.flip()
+                    continue
                 loaded_files += 1
                 progress = loaded_files / total_files
                 draw_progress_bar(screen, progress, screen_width, screen_height, gui_key, loading_screen)

@@ -4,18 +4,12 @@ import sys
 import time
 from collections import OrderedDict, Counter
 from Settings.setup import *
-from Controller.init_assets import gui_elements
+from Controller.init_assets import *
 
 pygame.init()
 font = pygame.font.SysFont(None, 32)
 
-gui_cache = {}
-
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
-    """
-    Charge et met à l'échelle un élément d'interface (GUI).
-    Mise en cache pour éviter les redimensionnements répétitifs.
-    """
     global gui_cache
     key = (ui_name, variant, target_width, target_height)
     if key in gui_cache:
