@@ -5,6 +5,7 @@ import os
 # Global Constants
 # Classe Villager / Team restriction
 # -------------------
+GAME_SPEED = 2
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_COLLECTION_RATE = 25
 RESOURCE_CAPACITY = 20
@@ -76,6 +77,8 @@ MAP_PADDING = 650
 MINIMAP_WIDTH = 600
 MINIMAP_HEIGHT = 280
 MINIMAP_MARGIN = 20
+PANEL_RATIO = 0.25
+BG_RATIO    = 0.20
 
 # -------------------
 # Save Directory
