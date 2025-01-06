@@ -1,9 +1,10 @@
 # Models/Team.py
-from Settings.setup import LEAN_STARTING_GOLD, LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_VILLAGERS, LEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_GOLD, MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_VILLAGERS, MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS, START_MAXIMUM_POPULATION
+from Settings.setup import LEAN_STARTING_GOLD, LEAN_STARTING_FOOD, LEAN_STARTING_WOOD, LEAN_STARTING_VILLAGERS, LEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_GOLD, MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_VILLAGERS, MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD, MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES, MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS, START_MAXIMUM_POPULATION, Resources
 from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
 from Models.Map import GameMap
+
 
 class Team:
     def __init__(self, difficulty, teamID, maximum_population = START_MAXIMUM_POPULATION):
@@ -150,30 +151,38 @@ class Team:
                 s.task=True
                 s.attaquer(True,t,map)
 
-    def collectResource(self, resource_tile, duration, game_map):
-       
-        if not isinstance(self, Villager):
+    def collectResource(self, villager, resource_tile, duration, game_map):
+        if not isinstance(villager, Villager):
             return
-        if not resource_tile or resource_tile.terrain_type not in ["gold", "wood", "food"]:
+        if not villager.isAvailable():
             return
-        self.task = True
-        self.move(resource_tile.x, resource_tile.y, game_map)
-        collected = min(self.resource_rate * duration, self.carry_capacity - self.resources)
-        resource_tile.amount -= collected
-        self.resources += collected
-        self.resource_type = resource_tile.terrain_type
-        if resource_tile.amount <= 0:
+        villager.task = True
+        villager.move(resource_tile.x, resource_tile.y, game_map)
+        collected = min(
+            villager.resource_rate * duration,
+            villager.carry_capacity - getattr(villager.resources, resource_tile.acronym.lower(), 0)
+        )
+        setattr(villager.resources, resource_tile.acronym.lower(), getattr(villager.resources, resource_tile.acronym.lower(), 0) + collected)
+        resource_tile.storage = Resources(
+            food=resource_tile.storage.food - (collected if resource_tile.acronym == "F" else 0),
+            gold=resource_tile.storage.gold - (collected if resource_tile.acronym == "G" else 0),
+            wood=resource_tile.storage.wood - (collected if resource_tile.acronym == "W" else 0),
+        )
+        if resource_tile.storage.food <= 0 and resource_tile.storage.gold <= 0 and resource_tile.storage.wood <= 0:
             game_map.remove_entity(resource_tile, resource_tile.x, resource_tile.y)
-        self.task = False
+        villager.task = False
 
-    def stockResources(self, building, game_map, team):
-        
-        if not isinstance(self, Villager) or not hasattr(building, 'resourceDropPoint') or not building.resourceDropPoint:
+    def stockResources(self, villager, building, game_map):
+        if not isinstance(villager, Villager):
             return
-        self.task = True
-        self.move(building.x, building.y, game_map)
-        if self.resource_type and self.resources > 0:
-            team.resources[self.resource_type] += self.resources
-        self.resources = 0
-        self.resource_type = None
-        self.task = False
+        if not villager.isAvailable() or not hasattr(building, 'resourceDropPoint') or not building.resourceDropPoint:
+            return
+        villager.task = True
+        villager.move(building.x, building.y, game_map)
+        self.resources = Resources(
+            food=self.resources["food"] + villager.resources.food,
+            gold=self.resources["gold"] + villager.resources.gold,
+            wood=self.resources["wood"] + villager.resources.wood,
+        )
+        villager.resources = Resources(food=0, gold=0, wood=0)
+        villager.task = False

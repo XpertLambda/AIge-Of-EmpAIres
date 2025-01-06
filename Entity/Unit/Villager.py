@@ -1,6 +1,7 @@
-
-from Settings.setup import RESOURCE_CAPACITY, RESOURCE_COLLECTION_RATE , Resources
+from Settings.setup import RESOURCE_CAPACITY, RESOURCE_COLLECTION_RATE, Resources
+from Entity.Resource.Resource import Resource
 from Entity.Unit.Unit import Unit
+
 class Villager(Unit):
     def __init__(self, team, x=0, y=0):
         super().__init__(
@@ -15,10 +16,9 @@ class Villager(Unit):
             speed=1,
             training_time=20,
         )
-        self.resources = 0
+        self.resources = Resources(food=0, gold=0, wood=0)
         self.carry_capacity = RESOURCE_CAPACITY
         self.resource_rate = RESOURCE_COLLECTION_RATE / 60
-        self.resource_type = None
 
     def isAvailable(self):
         return not self.task
@@ -26,15 +26,21 @@ class Villager(Unit):
     def collectResource(self, resource_tile, duration, game_map):
         if not self.isAvailable():
             return
-        if not resource_tile or resource_tile.terrain_type not in ["gold", "wood", "food"]:
+        if not isinstance(resource_tile, Resource):
             return
         self.task = True
         self.move(resource_tile.x, resource_tile.y, game_map)
-        collected = min(self.resource_rate * duration, self.carry_capacity - self.resources)
-        resource_tile.amount -= collected
-        self.resources += collected
-        self.resource_type = resource_tile.terrain_type
-        if resource_tile.amount <= 0:
+        collected = min(
+            self.resource_rate * duration,
+            self.carry_capacity - getattr(self.resources, resource_tile.acronym.lower(), 0)
+        )
+        setattr(self.resources, resource_tile.acronym.lower(), getattr(self.resources, resource_tile.acronym.lower(), 0) + collected)
+        resource_tile.storage = Resources(
+            food=resource_tile.storage.food - (collected if resource_tile.acronym == "F" else 0),
+            gold=resource_tile.storage.gold - (collected if resource_tile.acronym == "G" else 0),
+            wood=resource_tile.storage.wood - (collected if resource_tile.acronym == "W" else 0),
+        )
+        if resource_tile.storage.food <= 0 and resource_tile.storage.gold <= 0 and resource_tile.storage.wood <= 0:
             game_map.remove_entity(resource_tile, resource_tile.x, resource_tile.y)
         self.task = False
 
@@ -43,8 +49,10 @@ class Villager(Unit):
             return
         self.task = True
         self.move(building.x, building.y, game_map)
-        if self.resource_type and self.resources > 0:
-            team.resources[self.resource_type] += self.resources
-        self.resources = 0
-        self.resource_type = None
+        team.resources = Resources(
+            food=team.resources.food + self.resources.food,
+            gold=team.resources.gold + self.resources.gold,
+            wood=team.resources.wood + self.resources.wood,
+        )
+        self.resources = Resources(food=0, gold=0, wood=0)
         self.task = False
