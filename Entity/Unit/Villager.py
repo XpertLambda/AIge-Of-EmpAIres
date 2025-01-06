@@ -2,7 +2,7 @@
 from Settings.setup import RESOURCE_CAPACITY, RESOURCE_COLLECTION_RATE , Resources
 from Entity.Unit.Unit import Unit
 class Villager(Unit):
-    def __init__(self, team, x=0, y=0):
+    def __init__(self, team, x, y):
         super().__init__(
             x=x,
             y=y,
