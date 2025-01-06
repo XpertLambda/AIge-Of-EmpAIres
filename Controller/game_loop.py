@@ -152,7 +152,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             # Update game state
             #  (camera, units, etc.) - skipping logic if dt=0
             # -----------------------------------------------------------
-            update_game_state(game_state, dt)
             if game_state.get('recompute_camera', False):
                 min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
                 camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
@@ -231,6 +230,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             # FPS
             display_fps(screen)
             draw_pointer(screen)
+
+            for player in players:
+                for unit in player.units:
+                    if unit.path:
+                        unit.display_path(game_state['screen'], game_state['screen_width'], game_state['screen_height'], game_state['camera'])
 
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()

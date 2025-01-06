@@ -16,7 +16,6 @@ def update_game_state(game_state, dt):
                     unit.setIdle()
                     if unit.path:
                         unit.move(game_map, dt)
-                        unit.display_path(game_state['screen'], game_state['screen_width'], game_state['screen_height'], game_state['camera'])
                     if unit.target:
                             unit.attack(game_map, dt)
                 else:

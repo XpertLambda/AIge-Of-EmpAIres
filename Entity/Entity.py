@@ -7,7 +7,6 @@ from Controller.drawing import draw_healthBar
 import pygame
 
 class Entity:
-<<<<<<< HEAD
     id = 0
     def __init__(
         self, 
@@ -53,6 +52,7 @@ class Entity:
         current_time = time.time()
         return ((current_time - self.last_damage_time) < self.HEALTH_BAR_DISPLAY_DURATION) or \
                ((current_time - self.last_clicked_time) < self.HEALTH_BAR_DISPLAY_DURATION)
+
     def get_health_ratio(self):
         """Returns the ratio between current HP and max HP."""
         if not self.max_hp:
