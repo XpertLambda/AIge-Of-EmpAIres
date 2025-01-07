@@ -34,6 +34,9 @@ class Unit(Entity):
         
         self.speed = speed
         self.training_time = training_time
+        self.task=False
+
+        # Movement
         self.path = None
         
         self.state = 0

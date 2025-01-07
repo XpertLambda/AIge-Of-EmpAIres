@@ -19,9 +19,11 @@ class Barracks(Building):
     def build_time(self, num_villagers):
         return (3 * self.build_time) / (num_villagers + 2)
 
-    def train(self, team, clock):
-        swordsman = Swordsman(team)
-        if(team.resources["food"] >= swordsman.cost.food and team.resources["gold"] >= swordsman.cost.gold):
+    def train(self, team, clock,map):
+        swordsman = Swordsman(team.teamID)
+        if(team.resources["food"] >= swordsman.cost.food and team.resources["gold"] >= swordsman.cost.gold and team.maximum_population>len(team.units)):
             team.resources["food"] -= swordsman.cost.food
             team.resources["gold"] -= swordsman.cost.gold
             team.en_cours[swordsman] = clock
+        else:
+            print("not enough resssources or maximum poulation reached")

@@ -99,7 +99,7 @@ class GameMap:
         zones = self.generate_zones(num_players)
 
         for index, player in enumerate(players):
-            x_start, x_end, y_start, y_end = zones[index]
+            x_start, x_end, y_start, y_end = zones[player.teamID]
             for building in player.buildings:
                 max_attempts = (x_end - x_start) * (y_end - y_start)
                 attempts = 0
@@ -350,7 +350,7 @@ class GameMap:
         if not self.inactive_matrix[pos]:
             del self.inactive_matrix[pos]
 
-   # ne marche pas
+   
     def place_building(self, building, team):
         # placer un building au hasard
         x_start, x_end, y_start, y_end = zones[team.teamID]
