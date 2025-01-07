@@ -238,14 +238,5 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             else:
                 pygame.display.flip()
 
-        # This is just an example usage for building/training
-        # (unchanged logic, but we might skip it if paused)
-        '''if not game_state['paused']:
-            barrack = Barracks(selected_player)
-            # Try building it with 3 villagers, in case resources suffice
-            if selected_player.resources["wood"] >= barrack.cost.wood:
-                selected_player.buildBatiment(barrack, time.time(), 3, game_map)
-            selected_player.manage_creation(time.time())'''
-
     # End main loop
 
