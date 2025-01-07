@@ -1,6 +1,6 @@
 import heapq
 import math
-
+from Controller.isometric_utils import get_snapped_angle
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
@@ -34,12 +34,29 @@ def find_nearest_walkable_tile(unit, goal, game_map):
 
     return None
 
+def adjust_goal_to_walkable(unit, goal, game_map):
+    entities = game_map.grid.get(goal, None)
+    entity = list(entities)[0] if entities else None
+    if entity:
+        center_x = entity.x + (entity.size - 1) / 2
+        center_y = entity.y + (entity.size - 1) / 2
+        snapped_angle = get_snapped_angle((center_x, center_y), (unit.x, unit.y))
+        offset_distance = max(1, 2 / entity.size)  # Ensure a reasonable offset
+        offset_x = center_x + math.cos(math.radians(snapped_angle)) * offset_distance
+        offset_y = center_y + math.sin(math.radians(snapped_angle)) * offset_distance
+        offset_goal = (round(offset_x), round(offset_y))
+        if game_map.walkable_position(offset_goal):
+            return offset_goal
+        return find_nearest_walkable_tile(unit, offset_goal, game_map)
+    return goal
+
+
 def a_star(unit, goal, game_map):
     if not game_map.walkable_position(goal):
-        goal = find_nearest_walkable_tile(unit, goal, game_map)
-        if not goal:
-            unit.path = None
-            return
+        goal = adjust_goal_to_walkable(unit, goal, game_map)
+    if not goal or not game_map.walkable_position(goal):
+        unit.path = None
+        return
 
     open_set = []
     heapq.heappush(open_set, (0, (round(unit.x), round(unit.y))))
