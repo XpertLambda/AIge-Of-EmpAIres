@@ -6,7 +6,7 @@ from Settings.setup import (
     MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD,
     MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES,
     MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS,
-    MAXIMUM_POPULATION,
+    MARINES_NUMBER_OF_TOWER_CENTRE,
     Resources
 )
 from collections import Counter
@@ -95,6 +95,8 @@ class Team:
                 self.buildings.append(ArcheryRange(team=teamID))
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team=teamID))
+            for _ in range(MARINES_NUMBER_OF_TOWER_CENTRE):
+                self.buildings.append(TownCentre(team=teamID))
                 
 
     def manage_life(self, game_map):
