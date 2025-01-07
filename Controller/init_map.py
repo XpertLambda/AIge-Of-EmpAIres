@@ -2,7 +2,7 @@ import sys
 import pygame
 from Models.Map import GameMap
 from Models.Team import Team
-from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT, DIFFICULTY
+from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT
 from Controller.game_loop import game_loop
 from Controller.init_player import init_players
 

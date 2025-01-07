@@ -6,7 +6,6 @@ from Models.Map import *
 from Entity.Building import *
 from Entity.Unit import *
 from Models.Team import Team
-#from Models.Map import GameMap
 from Controller.camera import Camera
 from Controller.drawing import (
     draw_map,
@@ -244,13 +243,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         # This is just an example usage for building/training
         # (unchanged logic, but we might skip it if paused)
+        '''
         if not game_state['paused']:
             barrack = House(selected_player.teamID)
             # Try building it with 3 villagers, in case resources suffice
             if selected_player.resources["wood"] >= barrack.cost.wood:
                 selected_player.buildBuilding(barrack, time.time(), 3, game_map)
             selected_player.manage_creation(time.time())
-
             
             selected_player.modify_target(players[0],players_target)
             if players_target[selected_player.teamID]!=None:
@@ -258,5 +257,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             selected_player.manage_creation(time.time())
             for player in players:
                 player.manage_life()
+            '''
     # End main loop
 

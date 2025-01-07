@@ -38,7 +38,7 @@ def a_star(unit, goal, game_map):
     if not game_map.walkable_position(goal):
         goal = find_nearest_walkable_tile(unit, goal, game_map)
         if not goal:
-            unit.path = None
+            unit.path = []
             return
 
     open_set = []
@@ -67,4 +67,4 @@ def a_star(unit, goal, game_map):
                 f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goal)
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
-    unit.path = None
+    unit.path = []

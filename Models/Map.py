@@ -349,7 +349,6 @@ class GameMap:
         self.inactive_matrix[pos].remove(entity)
         if not self.inactive_matrix[pos]:
             del self.inactive_matrix[pos]
-
    
     def place_building(self, building, team):
         # placer un building au hasard

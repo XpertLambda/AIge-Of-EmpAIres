@@ -1,35 +1,10 @@
-# Chemin de /home/cyril/Documents/INSA/Projet_python/Models/Team.py
-from Settings.setup import (
-    LEAN_STARTING_GOLD, LEAN_STARTING_FOOD, LEAN_STARTING_WOOD,
-    LEAN_STARTING_VILLAGERS, LEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_GOLD,
-    MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_VILLAGERS,
-    MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD,
-    MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES,
-    MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS,
-    Resources
-)
+from Settings.setup import *
 from collections import Counter
+from Entity.Entity import *
 from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
 from Models.Map import GameMap
-
-def get_building_tiles(building, game_map):
-    """
-    Return all (x,y) tiles that 'building' occupies in game_map.grid.
-    """
-    results = []
-    x_min = max(0, round(building.x) - building.size)
-    x_max = min(game_map.num_tiles_x, round(building.x) + building.size)
-    y_min = max(0, round(building.y) - building.size)
-    y_max = min(game_map.num_tiles_y, round(building.y) + building.size)
-    for x in range(x_min, x_max + 1):
-        for y in range(y_min, y_max + 1):
-            tile_pos = (x, y)
-            ent_set = game_map.grid.get(tile_pos, None)
-            if ent_set and building in ent_set:
-                results.append((x, y))
-    return results
 
 class Team:
     def __init__(self, difficulty, teamID):
@@ -37,7 +12,7 @@ class Team:
         self.units = []
         self.buildings = []
         self.teamID = teamID
-        self.maximum_population = maximum_population
+        self.maximum_population = MAXIMUM_POPULATION
         self.en_cours = dict()
 
         if difficulty == 'DEBUG':
@@ -97,9 +72,8 @@ class Team:
             for _ in range(MARINES_NUMBER_OF_TOWER_CENTRE):
                 self.buildings.append(TownCentre(team=teamID))
                 
-
+    '''
     def manage_life(self):
-      
         # Non-Villager => .task=False
         for s in self.units:
             if not isinstance(s, Villager):
@@ -131,9 +105,6 @@ class Team:
             del self.en_cours[entity]
 
     def buildBuilding(self, building, clock, nb, game_map):
-        """
-        Up to nb villagers build a new building => cost wood => en_cours building
-        """
         if all([v.task for v in self.units if isinstance(v, Villager)]):
             print("All villagers are busy.")
             return False
@@ -150,9 +121,9 @@ class Team:
         i=0
         num_constructors=0
         while(i<len(self.units) and num_constructors<nb):
-            v=self.units[i]
-            if isinstance(v,Villager) and not(v.task):
-                v.build(map,building)
+            unit=self.units[i]
+            if isinstance(unit,Villager) and not(unit.task):
+                unit.build(map,building)
                 num_constructors +=1
                 v1=v
             i+=1
@@ -193,7 +164,6 @@ class Team:
                
                 soldier.task=True
                 soldier.attack(t,map)
-
 
     def battle_v2(self,t,map,nb):
         #attaque et l'adversaire ne défend pas
@@ -253,3 +223,4 @@ class Team:
         )
         villager.resources = Resources(food=0, gold=0, wood=0)
         villager.task = False
+    '''

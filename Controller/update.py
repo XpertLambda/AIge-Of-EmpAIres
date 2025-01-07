@@ -16,10 +16,10 @@ def update_game_state(game_state, dt):
                     unit.setIdle()
                     if unit.path:
                         unit.move(game_map, dt)
+                    else : 
+                        unit.collisionTest(game_map)
                     if unit.target:
                             unit.attack(game_map, dt)
-                    if not unit.path:
-                        unit.collisionTest(game_map)
                 else:
                     unit.kill(game_map)
         for inactive_entities in list(game_map.inactive_matrix.values()):

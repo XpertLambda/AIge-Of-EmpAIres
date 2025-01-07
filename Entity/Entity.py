@@ -17,7 +17,8 @@ class Entity:
         size, 
         max_hp, 
         cost=Resources(food=0, gold=0, wood=0),
-        walkable=False
+        walkable=False,
+        hitbox=0
     ):
         self.x = x
         self.y = y
@@ -29,6 +30,7 @@ class Entity:
         self.walkable = walkable
         
         self.hp = max_hp
+        self.hitbox = hitbox if hitbox > 0 else size/2
         self.last_damage_time = 0
         self.last_clicked_time = 0
 
