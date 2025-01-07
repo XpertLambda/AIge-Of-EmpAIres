@@ -20,7 +20,7 @@ class Barracks(Building):
         return (3 * self.build_time) / (num_villagers + 2)
 
     def train(self, team, clock,map):
-        swordsman = Swordsman(team)
+        swordsman = Swordsman(team.teamID)
         if(team.resources["food"] >= swordsman.cost.food and team.resources["gold"] >= swordsman.cost.gold and team.maximum_population>len(team.units)):
             team.resources["food"] -= swordsman.cost.food
             team.resources["gold"] -= swordsman.cost.gold

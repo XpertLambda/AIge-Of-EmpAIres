@@ -15,12 +15,3 @@ class ArcheryRange(Building):
             buildTime=50,
             spawnsUnits=True
         )
-
-    def train(self, team, clock,map):
-        archer = Archer(team)
-        if(team.resources["food"] >= archer.cost.food and team.resources["gold"] >= archer.cost.gold and team.maximum_population>len(team.units)):
-            team.resources["food"] -= archer.cost.food
-            team.resources["gold"] -= archer.cost.gold
-            team.en_cours[archer] = clock
-        else:
-            print("not enough resssources or maximum poulation reached")

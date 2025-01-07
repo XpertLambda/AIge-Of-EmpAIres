@@ -6,7 +6,6 @@ from Settings.setup import (
     MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD,
     MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES,
     MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS,
-    START_MAXIMUM_POPULATION,
     Resources
 )
 from Entity.Building import *
@@ -32,12 +31,12 @@ def get_building_tiles(building, game_map):
     return results
 
 class Team:
-    def __init__(self, difficulty, teamID, maximum_population=START_MAXIMUM_POPULATION):
+    def __init__(self, difficulty, teamID):
         self.resources = {"gold": 0, "wood": 0, "food": 0}
         self.units = []
         self.buildings = []
         self.teamID = teamID
-        self.maximum_population = maximum_population
+        self.maximum_population = 0
         self.en_cours = dict()
 
         if difficulty == 'DEBUG':
@@ -95,31 +94,8 @@ class Team:
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team=teamID))
 
-    def manage_life(self, game_map):
-        """
-        Removes dead units and buildings from both team-lists 
-        and from game_map.grid. 
-        Ensures building vanish from the map if hp <=0.
-        """
-        # Remove dead units
-        for u in self.units[:]:
-            if u.hp <= 0:
-                game_map.remove_entity(u, round(u.x), round(u.y))
-                self.units.remove(u)
-
-        # Remove dead buildings
-        for b in self.buildings[:]:
-            if b.hp <= 0:
-                # remove from all relevant tiles
-                tiles = get_building_tiles(b, game_map)
-                for (tx, ty) in tiles:
-                    ent_set = game_map.grid.get((tx, ty), None)
-                    if ent_set and b in ent_set:
-                        ent_set.remove(b)
-                    if ent_set and len(ent_set) == 0:
-                        del game_map.grid[(tx, ty)]
-                self.buildings.remove(b)
-
+    def manage_life(self):
+      
         # Non-Villager => .task=False
         for s in self.units:
             if not isinstance(s, Villager):
@@ -150,7 +126,7 @@ class Team:
         for entity in to_remove:
             del self.en_cours[entity]
 
-    def buildBatiment(self, building, clock, nb, game_map):
+    def buildBuilding(self, building, clock, nb, game_map):
         """
         Up to nb villagers build a new building => cost wood => en_cours building
         """
@@ -163,7 +139,7 @@ class Team:
         else:
             print(f"Team {self.teamID}: Not enough wood.")
             return False
-        if not map.place_building(building,self):
+        if not game_map.place_building(building,self):
             print("cannot place")
             return False
        
@@ -224,7 +200,8 @@ class Team:
             if not(soldier.task) and not(isinstance(soldier,Villager)):
                 nb_soldier+=1
                 soldier.task=True
-                soldier.attack(t,map)
+                if unit.target:
+                    soldier.attack(t,map)
             i+=1
 
     def modify_target(self,target,players_target):
@@ -233,8 +210,9 @@ class Team:
         for unit in self.units:
             if not isinstance(unit,Villager):
                 unit.target=None
-                s.task=True
-                s.attaquer(True,t,map)
+                unit.task=True
+                if unit.target:
+                    unit.attack(target,map)
 
     def collectResource(self, villager, resource_tile, duration, game_map):
         if not isinstance(villager, Villager):

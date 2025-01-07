@@ -315,7 +315,7 @@ class GameMap:
         if not self.inactive_matrix[pos]:
             del self.inactive_matrix[pos]
 
-   # ne marche pas
+   
     def place_building(self, building, team):
         # placer un building au hasard
         x_start, x_end, y_start, y_end = zones[team.teamID]

@@ -15,13 +15,3 @@ class Stable(Building):
             buildTime=70,
             spawnsUnits=True
         )
-
-    def train(self, team, clock,map):
-        horseman = Horseman(team)
-        if(team.resources["food"] >= horseman.cost.food and team.resources["gold"] >= horseman.cost.gold and team.maximum_population>len(team.units)):
-            team.resources["food"] -= horseman.cost.food
-            team.resources["gold"] -= horseman.cost.gold
-            team.en_cours[horseman] = clock
-           
-        else:
-            print("not enough resssources or maximum poulation reached")

@@ -224,6 +224,7 @@ def update_minimap_entities(game_state):
 
         t_id = e.team
         if t_id is not None:
+           
             color = team_colors[t_id % len(team_colors)]
             if isinstance(e, Building):
                 half_dim = max(MIN_BUILDING_SIZE, e.size)
