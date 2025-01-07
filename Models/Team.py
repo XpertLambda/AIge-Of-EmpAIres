@@ -8,6 +8,7 @@ from Settings.setup import (
     MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS,
     Resources
 )
+from collections import Counter
 from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
@@ -36,7 +37,7 @@ class Team:
         self.units = []
         self.buildings = []
         self.teamID = teamID
-        self.maximum_population = 0
+        self.maximum_population = maximum_population
         self.en_cours = dict()
 
         if difficulty == 'DEBUG':
@@ -93,6 +94,9 @@ class Team:
                 self.buildings.append(ArcheryRange(team=teamID))
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team=teamID))
+            for _ in range(MARINES_NUMBER_OF_TOWER_CENTRE):
+                self.buildings.append(TownCentre(team=teamID))
+                
 
     def manage_life(self):
       

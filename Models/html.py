@@ -1,5 +1,6 @@
 import webbrowser
 import os
+from Entity.Resource.Resource import Resource
 
 def write_full_html(players, game_map):
     template = """
@@ -67,12 +68,12 @@ def write_full_html(players, game_map):
     # On considère que game_map.grid contient des ressources
     for pos, entities in game_map.grid.items():
         for entity in entities:
-            # On affiche seulement les ressources
-            if hasattr(entity, 'capacity') and not hasattr(entity, 'spawnsUnits'):
+            if isinstance(entity, Resource):
                 template += f"""
                 <p>
                     <b>Type</b>: {entity.acronym}<br>
                     <b>Position</b>: ({entity.x}, {entity.y})<br>
+                    <b>Capacité restante</b>: {entity.storage}<br>
                 </p>
                 """
 
