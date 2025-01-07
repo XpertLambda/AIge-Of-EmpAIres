@@ -3,6 +3,7 @@ import random
 import os
 import pickle
 import time
+from collections import Counter
 from collections import defaultdict
 from datetime import datetime
 from Entity.Building import *
@@ -21,44 +22,57 @@ class GameMap:
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
+        self.inactive_matrix = {}
         if generate:
             self.generate_map()
 
     def add_entity(self, entity, x, y):
-        if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
-            return False
         rounded_x, rounded_y = round(x), round(y)
+        if rounded_x < 0 or rounded_y < 0 or rounded_x + entity.size - 1 >= self.num_tiles_x or rounded_y + entity.size - 1 >= self.num_tiles_y:
+            return False
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
                 if pos in self.grid:
-                    return False
+                    for existing_entity in self.grid[pos]:
+                        if not self.walkable_position(pos):
+                            return False
 
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
-                self.grid[pos] = set()
+                if pos not in self.grid:
+                    self.grid[pos] = set()
                 self.grid[pos].add(entity)
-        entity.x = x + (entity.size - 1)/2
-        entity.y = y + (entity.size - 1)/2
+
+        entity.x = x + (entity.size - 1) / 2
+        entity.y = y + (entity.size - 1) / 2
         return True
 
-    def remove_entity(self, entity, x, y):
-        if x < 0 or y < 0 or x + entity.size >= self.num_tiles_x or y + entity.size >= self.num_tiles_y:
-            return False
-        rounded_x, rounded_y = round(x), round(y)
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (rounded_x + i, rounded_y + j)
-                if pos not in self.grid or entity not in self.grid[pos]:
-                    return False  # Entity not present at the position
+    def remove_entity(self, entity):
+        remove_counter = 0
+        for pos, matrix_entities in self.grid.items():
+            for matrix_entity in matrix_entities:
+                if matrix_entity.entity_id == entity.entity_id:
+                    self.grid[pos].remove(entity)
+                    remove_counter+=1
+                    if not self.grid[pos]:
+                        del self.grid[pos]
+                if remove_counter >= entity.size * entity.size:
+                    return True
+        return False
 
-        for i in range(entity.size):
-            for j in range(entity.size):
-                pos = (rounded_x + i, rounded_y + j)
-                self.grid[pos].remove(entity)
-                if not self.grid[pos]:  
-                    del self.grid[pos]
+    def walkable_position(self, position):
+        x, y = round(position[0]), round(position[1])
+        if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
+            return False
+        
+        entities = self.grid.get((x, y), None)
+        if entities:
+            for entity in entities:
+                if not entity.walkable:
+                    return False
         return True
 
     def generate_zones(self, num_players):
@@ -103,8 +117,10 @@ class GameMap:
                 if not placed:
                     for tile_y in range(self.num_tiles_y - building.size):
                         for tile_x in range(self.num_tiles_x - building.size):
-                            placed = self.add_entity(building, tile_x, tile_y, building)
+                            placed = self.add_entity(building, tile_x, tile_y)
                             if placed:
+                                if (isinstance(building, TownCentre) or isinstance(building, House)):
+                                    player.maximum_population += building.population
                                 break
                         if placed:
                             break
@@ -137,7 +153,7 @@ class GameMap:
                         print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
     def generate_map(self):
-        #self.generate_resources(grid)
+        self.generate_resources()
         self.generate_buildings(self.players)
         self.generate_units(self.players)
 
@@ -202,7 +218,6 @@ class GameMap:
                 if wood_placed >= NUM_WOOD_TILES:
                     break
 
-
     def print_map(self):
         for y in range(self.num_tiles_y):
             row_display = []
@@ -266,10 +281,43 @@ class GameMap:
                 else:
                     row += ' '
             print(row)
+            
+        # Print players resources
+        self.print_players_information()
 
-   #ne marche pas
-    def place_building(self,building,team):
-        #placer un building au hasard
+    def print_players_information(self):
+        print("\n-----------------------------------\n")
+        for player in self.players:
+            print(f"Player {player.teamID} resources: {player.resources}")
+            unit_counts = Counter(unit.acronym for unit in player.units)
+            units_text = "Units - " + ", ".join([f"{acronym}: {count}" for acronym, count in unit_counts.items()])
+            print(units_text)
+
+            building_counts = Counter(building.acronym for building in player.buildings)
+            buildings_text = "Buildings - " + ", ".join([f"{acronym}: {count}" for acronym, count in building_counts.items()])
+            print(buildings_text)
+
+            maximum_population_text = f"Maximum population: {player.maximum_population}"
+            print(maximum_population_text)
+            
+            print("\n-----------------------------------\n")
+            
+    def move_to_inactive(self, entity):
+        self.remove_entity(entity)
+        pos = (round(entity.x), round(entity.y))
+        if pos not in self.inactive_matrix:
+            self.inactive_matrix[pos] = set()
+        self.inactive_matrix[pos].add(entity)
+
+    def remove_inactive(self, entity):
+        pos = (round(entity.x), round(entity.y))
+        self.inactive_matrix[pos].remove(entity)
+        if not self.inactive_matrix[pos]:
+            del self.inactive_matrix[pos]
+
+   # ne marche pas
+    def place_building(self, building, team):
+        # placer un building au hasard
         x_start, x_end, y_start, y_end = zones[team.teamID]
         max_attempts = (x_end - x_start) * (y_end - y_start)
         attempts = 0
@@ -277,7 +325,7 @@ class GameMap:
         while attempts < max_attempts:
             x = random.randint(x_start, max(x_start, x_end - building.size))
             y = random.randint(y_start, max(y_start, y_end - building.size))
-            placed = self.add_entity( building, x, y)
+            placed = self.add_entity(building, x, y)
             if placed:
                 return True
             attempts += 1
@@ -288,8 +336,6 @@ class GameMap:
                 for tx in range(self.num_tiles_x - building.size):
                     placed = self.add_entity(building, tx, ty)
                     if placed:
-                        break
-            if placed:
-                return True
+                        return True
             if not placed:
                 return False

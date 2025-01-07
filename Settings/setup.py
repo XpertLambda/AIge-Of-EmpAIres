@@ -5,6 +5,7 @@ import os
 # Global Constants
 # Classe Villager / Team restriction
 # -------------------
+GAME_SPEED = 2
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_COLLECTION_RATE = 25
 RESOURCE_CAPACITY = 20
@@ -23,7 +24,8 @@ ALLOWED_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
 UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
-
+UNIT_HITBOX = 0.2
+ATTACK_RANGE_EPSILON = 0.5
 
 # -------------------
 # Difficulty Settings
@@ -76,6 +78,8 @@ MAP_PADDING = 650
 MINIMAP_WIDTH = 600
 MINIMAP_HEIGHT = 280
 MINIMAP_MARGIN = 20
+PANEL_RATIO = 0.25
+BG_RATIO    = 0.20
 
 # -------------------
 # Save Directory
@@ -114,16 +118,25 @@ gui_config = {
 
     'food':{
         'directory' : 'assets/UI/Resources/food',
-    }
+    },
+
+    'pointer':{
+        'directory' : 'assets/UI/Pointer/',
+    },
+
 }
 
 BAR_HEIGHT = 30
 BAR_BORDER_RADIUS = 30
 PROGRESS_BAR_WIDTH_RATIO = 0.8
-PROGRESS_BAR_Y_RATIO = 0.7
+PROGRESS_BAR_Y_RATIO = 0.9
 
 BUILDING_RATIO = 200
 UNIT_RATIO = 100
+
+HEALTH_BAR_WIDTH = 40
+HEALTH_BAR_HEIGHT = 5
+HEALTH_BAR_OFFSET_Y = 30
 
 Entity_Acronym = {
     'resources': {
@@ -207,6 +220,7 @@ sprite_config = {
         },
         'tree': {
             'directory': 'assets/resources/tree/',
+            'scale': (TILE_SIZE, TILE_SIZE),
             'variant': 4
         }
     },
@@ -250,8 +264,33 @@ sprite_config = {
     }
 }
 
+# ----
+# Menu
+# ----
 
+user_choices = {
+    "grid_size":      120,
+    "num_bots":       2,
+    "bot_level":      "lean",
+    "gold_at_center": False,
+    "load_game":      False,
+    "chosen_save":    None,
+    "validated":      False,
+    "index_terminal_display" : 0 # 0: GUI, 1: Terminal, 2: Both
+}
 
+VALID_GRID_SIZES = [i for i in range(100, 1000, 10)]
+VALID_BOTS_COUNT = [i for i in range(1, 56)]
+VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
+
+# Pour la gestion du scroll dans chaque combo
+combo_scroll_positions = {
+    "grid": 0,
+    "nbot": 0,
+    "lvl":  0
+}
+MAX_VISIBLE_ITEMS = 5
+ITEM_HEIGHT = 25
 
 
 

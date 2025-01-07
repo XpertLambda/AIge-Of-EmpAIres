@@ -1,4 +1,5 @@
 import math
+from Settings.setup import *
 
 def to_isometric(x, y, tile_width, tile_height):
     iso_x = (x - y) * (tile_width / 2)
@@ -27,9 +28,27 @@ def tile_to_screen(x, y, width, height, camera, screen_width, screen_height):
 
     return screen_x, screen_y
 
-def angle_with_x_axis(vx, vy):
-    magnitude = math.sqrt(vx**2 + vy**2)
-    cosine_theta = vx / magnitude
-    theta_radians = math.acos(cosine_theta)
-    theta_degrees = math.degrees(theta_radians)
-    return theta_degrees
+def get_snapped_angle(start, end, ALLOWED_ANGLES=ALLOWED_ANGLES):
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    angle = math.degrees(math.atan2(dy, dx))
+    angle = (angle + 360) % 360
+    snapped_angle = min(ALLOWED_ANGLES, key=lambda x: abs(x - angle))
+    return snapped_angle
+
+def get_direction(snapped_angle_rad):
+    direction = ((snapped_angle_rad // 45 )+1)%8 
+    return direction 
+    # +1 to match the sprite sheet and %8 because tere are 8 directions
+
+def cos_sign(snapped_angle):
+    return 1 - 2 * ((math.floor(snapped_angle / 180)) % 2)
+
+def sin_sign(snapped_angle):
+    return 1 - 2 * ((math.floor((snapped_angle + 90) / 180)) % 2)
+
+def normalize(v):
+    magnitude = math.sqrt(sum(x**2 for x in v))
+    if magnitude != 0:
+        return [x / magnitude for x in v]
+    return 0

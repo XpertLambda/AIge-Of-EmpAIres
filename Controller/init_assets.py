@@ -10,6 +10,7 @@ zoom_cache = {}
 MAX_ZOOM_CACHE_PER_SPRITE = 60
 
 gui_elements = {}
+gui_cache = {}
 
 def load_sprite(filepath=None, scale=None, adjust=None):
     if filepath:
@@ -46,7 +47,7 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
     return frames
 
 def draw_progress_bar(screen, progress, screen_width, screen_height, progress_text, loading_screen_image):
-    screen.blit(loading_screen_image, (0, 0))
+    screen.blit(loading_screen_image, (screen_width//2 - loading_screen_image.get_width()//2, screen_height//2 - loading_screen_image.get_height()//2))
 
     bar_width = screen_width * PROGRESS_BAR_WIDTH_RATIO
     bar_x = (screen_width - bar_width) / 2
@@ -59,6 +60,8 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     font = pygame.font.Font(None, 36)
     percentage_text = font.render(f"{int(progress * 100)}%", True, text_color)
+    if int(progress * 100) == 96:
+        time.sleep(2)
     percentage_text_rect = percentage_text.get_rect(center=(bar_x + bar_width / 2, bar_y + BAR_HEIGHT / 2))
     screen.blit(percentage_text, percentage_text_rect)
 
@@ -68,6 +71,29 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     pygame.display.flip()
 
+def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
+    global gui_cache
+    key = (ui_name, variant, target_width, target_height)
+    if key in gui_cache:
+        return gui_cache[key]
+
+    original = gui_elements[ui_name][variant]
+    ow, oh = original.get_width(), original.get_height()
+
+    if target_width and not target_height:
+        ratio = target_width / ow
+        target_height = int(oh * ratio)
+    elif target_height and not target_width:
+        ratio = target_height / oh
+        target_width = int(ow * ratio)
+    elif not target_width and not target_height:
+        gui_cache[key] = original
+        return original  # Add this return statement for consistency
+
+    scaled = pygame.transform.smoothscale(original, (target_width, target_height))
+    gui_cache[key] = scaled
+    return scaled
+    
 
 def load_sprites(screen, screen_width, screen_height):
     global gui_elements
@@ -93,13 +119,12 @@ def load_sprites(screen, screen_width, screen_height):
         for filename in dir_content:
             if filename.lower().endswith("webp"):
                 filepath = os.path.join(directory, filename)
-                if gui_key == 'loading_screen':
-                    loading_screen = load_sprite(filepath, (screen_width, screen_height))
-                    screen.blit(loading_screen, (0, 0))
-                    pygame.display.flip()
-                    continue
                 loaded_sprite = load_sprite(filepath, gui_scale, gui_adjust_scale)
                 gui_elements[gui_key].append(loaded_sprite)
+                if gui_key == 'loading_screen':
+                    loading_screen = get_scaled_gui('loading_screen', variant=0, target_height=screen_height) 
+                    pygame.display.flip()
+                    continue
                 loaded_files += 1
                 progress = loaded_files / total_files
                 draw_progress_bar(screen, progress, screen_width, screen_height, gui_key, loading_screen)
@@ -141,7 +166,7 @@ def load_sprites(screen, screen_width, screen_height):
                         state_path = os.path.join(sprite_path, state_dir)
                         if not os.path.isdir(state_path):
                             continue
-                        sprites[category][sprite_name].setdefault(state_dir, [])
+                        sprites[category][sprite_name].setdefault(state_dir, {})
                         sheets = os.listdir(state_path)
                         for sheetname in sheets:
                             if sheetname.lower().endswith("webp"):
@@ -149,10 +174,12 @@ def load_sprites(screen, screen_width, screen_height):
                                 try:
                                     sprite_sheet = load_sprite(filepath, scale, adjust)
                                     frames = extract_frames(sprite_sheet, sheet_rows, sheet_cols)
-                                    sprites[category][sprite_name][state_dir].extend(frames)
+                                    print(f"{len(frames)} frames for {sprite_name} in {state_dir} state with {len(frames) // FRAMES_PER_UNIT} directions")
+                                    for direction_index in range(len(frames) // FRAMES_PER_UNIT):
+                                        direction_frames = frames[direction_index * FRAMES_PER_UNIT : (direction_index + 1) * FRAMES_PER_UNIT]
+                                        sprites[category][sprite_name][state_dir][direction_index] = direction_frames
                                 except Exception as e:
                                     print(f"Error loading sprite sheet {filepath}: {e}")
-                                    exit()
                                 loaded_files += 1
                                 progress = loaded_files / total_files
                                 draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
@@ -162,37 +189,41 @@ def load_sprites(screen, screen_width, screen_height):
 
     print("Sprites loaded successfully.")
     
-# Function to get a scaled sprite, handling both static and animated sprites
-def get_scaled_sprite(name, category, zoom, state, frame_id, variant):
-    cache_key = (zoom, state, frame_id, variant)
+def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant):
+    # same as before except we clamp scaled_width, scaled_height >=1
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
+    cache_key = (zoom, state, frame_id, variant, direction)
     if cache_key in zoom_cache[name]:
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
-    # Load and scale the sprite
-    if category == 'resources' or category == 'buildings':
+
+    if category in ['resources', 'buildings']:
         original_image = sprites[category][name][variant]
     elif category == 'units':
-        original_image = sprites[category][name][state][frame_id]
+        original_image = sprites[category][name][state][direction][frame_id]
 
     scaled_width = int(original_image.get_width() * zoom)
-    scaled_height = int(original_image.get_height() * zoom)
+    scaled_height= int(original_image.get_height()* zoom)
+
+    # clamp
+    if scaled_width <1: scaled_width=1
+    if scaled_height<1: scaled_height=1
+
     scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
-    
+
     zoom_cache[name][cache_key] = scaled_image
     zoom_cache[name].move_to_end(cache_key)
-    
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
     return scaled_image
 
-def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0):
+def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
     name = Entity_Acronym[category][acronym]
     if state is not None:
         state = states[state]
 
-    scaled_sprite = get_scaled_sprite(name, category, zoom, state, frame, variant)
+    scaled_sprite = get_scaled_sprite(name, category, zoom, state, direction, frame, variant)
     if scaled_sprite is None:
         return
     scaled_width = scaled_sprite.get_width()
@@ -201,3 +232,14 @@ def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None,
 
 def fill_grass(screen, screen_x, screen_y, camera):
     draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)
+
+def draw_hitbox(screen, corners, zoom):
+    if len(corners) != 4:
+        raise ValueError("Hitbox must have exactly 4 corners.")
+    scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
+    pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
+
+def draw_path(screen, unit_center, screenPath, zoom, color):
+    if len(screenPath) >= 2:
+        pygame.draw.lines(screen, color, False, screenPath, max(1, int(4 * zoom)))
+    pygame.draw.circle(screen, color, unit_center, int(5 * zoom))

@@ -4,18 +4,12 @@ import sys
 import time
 from collections import OrderedDict, Counter
 from Settings.setup import *
-from Controller.init_assets import gui_elements
+from Controller.init_assets import *
 
 pygame.init()
 font = pygame.font.SysFont(None, 32)
 
-gui_cache = {}
-
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
-    """
-    Charge et met à l'échelle un élément d'interface (GUI).
-    Mise en cache pour éviter les redimensionnements répétitifs.
-    """
     global gui_cache
     key = (ui_name, variant, target_width, target_height)
     if key in gui_cache:
@@ -62,52 +56,6 @@ def draw_gui_elements(screen, screen_width, screen_height):
     food_x = wood_x + wood_img.get_width() + (2 * wood_img.get_width())
     screen.blit(food_img, (food_x, ph // 15))
 
-user_choices = {
-    "grid_size":      120,
-    "num_bots":       2,
-    "bot_level":      "lean",
-    "gold_at_center": False,
-    "load_game":      False,
-    "chosen_save":    None,
-    "validated":      False
-}
-
-VALID_GRID_SIZES = [i for i in range(100, 1000, 10)]
-VALID_BOTS_COUNT = [i for i in range(1, 56)]
-VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
-
-# Pour la gestion du scroll dans chaque combo
-combo_scroll_positions = {
-    "grid": 0,
-    "nbot": 0,
-    "lvl":  0
-}
-MAX_VISIBLE_ITEMS = 5
-ITEM_HEIGHT = 25
-
-gui_cache = {}
-def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
-    global gui_cache
-    key = (ui_name, variant, target_width, target_height)
-    if key in gui_cache:
-        return gui_cache[key]
-
-    original = gui_elements[ui_name][variant]
-    ow, oh = original.get_width(), original.get_height()
-    if target_width and not target_height:
-        ratio = target_width / ow
-        target_height = int(oh * ratio)
-    elif target_height and not target_width:
-        ratio = target_height / oh
-        target_width = int(ow * ratio)
-    elif not target_width and not target_height:
-        gui_cache[key] = original
-        return original
-
-    scaled = pygame.transform.smoothscale(original, (target_width, target_height))
-    gui_cache[key] = scaled
-    return scaled
-
 def run_gui_menu(screen, sw, sh):
     """
     Menu GUI bloquant : boucle Pygame jusqu'à ce que user_choices["validated"] == True
@@ -123,6 +71,12 @@ def run_gui_menu(screen, sw, sh):
         {"text": "Charger Partie",  "rect": pygame.Rect(0,0,200,50)},
         {"text": "Quitter",         "rect": pygame.Rect(0,0,200,50)},
     ]
+    
+    toggle_button = {
+        "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
+        "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
+        "index": 0  # État actuel
+    }
 
     save_files = []
     if os.path.isdir(SAVE_DIRECTORY):
@@ -177,6 +131,9 @@ def run_gui_menu(screen, sw, sh):
                             combo_scroll_positions["lvl"] -= 1
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if toggle_button["rect"].collidepoint(mx, my):
+                    toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
+                    
                 if combo_open == "grid":
                     start_idx = combo_scroll_positions["grid"]
                     visible_items = VALID_GRID_SIZES[start_idx:start_idx + MAX_VISIBLE_ITEMS]
@@ -281,15 +238,26 @@ def run_gui_menu(screen, sw, sh):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     combo_open = None
-
+        
         if show_main_menu:
             draw_main_menu(screen, sw, sh, main_buttons)
         elif show_config_menu:
             draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, combo_open)
+            draw_choose_display(screen, toggle_button)
         elif show_load_menu:
             draw_load_menu(screen, sw, sh, save_files)
 
         pygame.display.flip()
+        
+        user_choices["index_terminal_display"] = toggle_button["index"]
+
+def draw_choose_display(screen, toggle_button):
+    pygame.draw.rect(screen, (0, 122, 255), toggle_button["rect"])
+    font = pygame.font.Font(None, 36)
+    text_surface = font.render(toggle_button["texts"][toggle_button["index"]], True, (255, 255, 255))
+    text_rect = text_surface.get_rect(center=toggle_button["rect"].center)
+    screen.blit(text_surface, text_rect)
+
 
 def draw_main_menu(screen, sw, sh, buttons):
     gap = 20
