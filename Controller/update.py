@@ -18,7 +18,6 @@ def update_game_state(game_state, delta_time):
                     else : 
                         unit.collisionTest(game_map)
                     if unit.target:
-                            unit.attack(game_map, dt)
                         unit.move(game_map, delta_time)
                     if unit.target:
                         unit.attack(game_map, delta_time)
