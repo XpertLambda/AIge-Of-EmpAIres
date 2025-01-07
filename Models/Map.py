@@ -187,7 +187,25 @@ class GameMap:
             'wood': Tree
         }
         if self.center_gold_flag:
-            self.place_gold_near_town_centers(self.grid)
+            center_x = self.num_tiles_x // 2
+            center_y = self.num_tiles_y // 2
+            gold_count = 0
+            layer = 0
+            max_layer = max(self.num_tiles_x, self.num_tiles_y)
+            while gold_count < NUM_GOLD_TILES and layer < max_layer:
+                for dx in range(-layer, layer + 1):
+                    for dy in range(-layer, layer + 1):
+                        x = center_x + dx
+                        y = center_y + dy
+                        if 0 <= x < self.num_tiles_x and 0 <= y < self.num_tiles_y and (x, y) not in self.grid:
+                            self.grid[(x, y)] = set()
+                            self.grid[(x, y)].add(resource_classes['gold'](x, y))
+                            gold_count += 1
+                            if gold_count >= NUM_GOLD_TILES:
+                                break
+                    if gold_count >= NUM_GOLD_TILES:
+                        break
+                layer += 1
         else:
             # Generate gold as groups of 4
             gold_placed = 0
