@@ -11,7 +11,7 @@ class Team:
         self.units = []     
         self.buildings = []
         self.teamID = teamID
-        self.maximum_population = maximum_population
+        self.maximum_population = START_MAXIMUM_POPULATION
         self.en_cours=dict()
         if difficulty == 'DEBUG':
             self.resources["gold"] = LEAN_STARTING_GOLD
@@ -71,11 +71,12 @@ class Team:
 
     def manage_life(self):
         for u in self.units:
-            if u.hp==0:
+            if u.hp<=0:
                 self.units.remove(u)
+                
         for b in self.buildings:
-            if b.hp==0:
-                self.units.remove(b)
+            if b.hp<=0:
+                self.buildings.remove(b)
         for i in range(0,len(self.units)):
             s=self.units[i]
             if not(isinstance(s,Villager)):
@@ -89,9 +90,12 @@ class Team:
             if isinstance(entity,Building):
                 if time-clock<=0:
                     self.buildings.append(entity)
+                    print("ok")
                     l.append(entity)
                     for villager in entity.constructors:
                         villager.task=False
+                    if isinstance(entity,House) or isinstance(entity,TownCentre):
+                        self.maximum_population+=5
             else:
                 if entity.training_time+time-clock<=0:
                     l.append(entity)
@@ -135,16 +139,37 @@ class Team:
 
 
     def battle(self,t,map,nb):
+        #attaque et l'adversaire défend
         for i in range(0,len(t.units)):
-            s=t.units[i]
-            if not(s.task) and not(isinstance(s,Villager)):
+            soldier=t.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
                 print("ok")
-                s.task=True
-                s.attaquer(False,self,map)
-  
+                soldier.task=True
+                soldier.attack(self,map)
+    
         for i in range(0,min(nb,len(self.units))):
-            s=self.units[i]
-            if not(isinstance(s,Villager)):
+            soldier=self.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
                
-                s.task=True
-                s.attaquer(True,t,map)
+                soldier.task=True
+                soldier.attack(t,map)
+
+
+    def battle_v2(self,t,map,nb):
+        #attaque et l'adversaire ne défend pas
+        i=0
+        nb_soldier=0
+        while(i<len(self.units) and nb_soldier< nb):
+            soldier=self.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
+                nb_soldier+=1
+                soldier.task=True
+                soldier.attack(t,map)
+            i+=1
+
+    def modify_target(self,target,players_target):
+        #arrete toutes les attaques de la team
+        for unit in self.units:
+            if not isinstance(unit,Villager):
+                unit.target=None
+        players_target[self.teamID]=target

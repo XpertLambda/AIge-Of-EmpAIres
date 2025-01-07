@@ -26,7 +26,7 @@ class Unit(Entity):
         self.attack_range = attack_range
         self.speed = speed
         self.training_time = training_time
-
+        self.task=False
         self.unit_id = Unit.id
 
         # Movement

@@ -277,7 +277,7 @@ class GameMap:
         while attempts < max_attempts:
             x = random.randint(x_start, max(x_start, x_end - building.size))
             y = random.randint(y_start, max(y_start, y_end - building.size))
-            placed = self.add_entity(self.grid, x, y, building)
+            placed = self.add_entity( building, x, y)
             if placed:
                 return True
             attempts += 1
@@ -286,7 +286,7 @@ class GameMap:
             # On essaie juste sur la carte complète en dernier recours
             for ty in range(self.num_tiles_y - building.size):
                 for tx in range(self.num_tiles_x - building.size):
-                    placed = self.add_entity(self.grid, tx, ty, building)
+                    placed = self.add_entity(building, tx, ty)
                     if placed:
                         break
             if placed:

@@ -218,7 +218,7 @@ def update_minimap_entities(game_state):
         my = (iso_y - minimap_min_iso_y) * minimap_scale + minimap_offset_y
 
         if team is not None:
-            color = team_colors[team % len(team_colors)]
+            color = team_colors[0]#team % len(team_colors)
             if isinstance(entity, Building):
                 half_dim = max(MIN_BUILDING_SIZE, size)
                 rect = pygame.Rect(mx - half_dim, my - half_dim, half_dim*2, half_dim*2)
