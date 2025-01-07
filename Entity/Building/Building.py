@@ -1,7 +1,26 @@
 from Entity.Entity import Entity
 from Controller.isometric_utils import tile_to_screen
-from Settings.setup import HALF_TILE_SIZE
+from Settings.setup import HALF_TILE_SIZE, GAME_SPEED
 from Controller.init_assets import draw_sprite
+from random import randint
+from AiUtils.aStar import a_star
+from Entity.Unit.Archer import Archer
+from Entity.Unit.Swordsman import Swordsman
+from Entity.Unit.Horseman import Horseman
+from Entity.Unit.Villager import Villager
+
+UNIT_TRAINING_MAP = {
+    'T': 'villager',   # TownCentre => Villager
+    'A': 'archer',     # ArcheryRange => Archer
+    'B': 'swordsman',  # Barracks => Swordsman
+    'S': 'horseman'    # Stable => Horseman
+}
+UNIT_CLASSES = {
+    'villager':  Villager,
+    'archer':    Archer,
+    'swordsman': Swordsman,
+    'horseman':  Horseman,
+}
 
 class Building(Entity):
     def __init__(
@@ -22,21 +41,145 @@ class Building(Entity):
         attack_power=0, 
         attack_range=0,
     ):
-        super().__init__(x=x, y=y, team=team, acronym=acronym, size=size, max_hp=max_hp, cost=cost, walkable=walkable)
+        super().__init__(
+            x=x, 
+            y=y, 
+            team=team, 
+            acronym=acronym, 
+            size=size, 
+            max_hp=max_hp, 
+            cost=cost, 
+            walkable=walkable
+        )
         self.buildTime = buildTime
         self.population = population
         self.resourceDropPoint = resourceDropPoint
         self.spawnsUnits = spawnsUnits
         self.containsFood = containsFood
-        self.walkable = walkable
         self.attack_power = attack_power
         self.attack_range = attack_range
-        self.constructors=[] #liste des villageois qui construisent le batiment
+        self.constructors = []
 
-    def display(self, screen, screen_width, screen_height, camera, dt):
+        self.training_queue = []
+        self.current_training_unit = None
+        self.current_training_time_left = 0
+        self.training_progress = 0.0
+
+    def display(self, screen, screen_width, screen_height, camera, delta_time):
         category = 'buildings'
-        screen_x, screen_y = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        screen_x, screen_y = tile_to_screen(
+            self.x, 
+            self.y, 
+            HALF_TILE_SIZE, 
+            HALF_TILE_SIZE / 2,
+            camera,
+            screen_width,
+            screen_height
+        )
         draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom)
 
     def is_walkable(self):
         return self.walkable
+
+    def add_to_training_queue(self, team):
+        """
+        Attempt to enqueue a new unit if enough resources. 
+        Return True if successful, False otherwise.
+        """
+        if self.acronym not in UNIT_TRAINING_MAP:
+            return False
+
+        unit_name = UNIT_TRAINING_MAP[self.acronym]
+        unit_class = UNIT_CLASSES[unit_name]
+        dummy_unit = unit_class(team=self.team)
+
+        food_cost = dummy_unit.cost.food
+        gold_cost = dummy_unit.cost.gold
+        wood_cost = dummy_unit.cost.wood
+
+        if (team.resources["food"] >= food_cost and
+            team.resources["gold"] >= gold_cost and
+            team.resources["wood"] >= wood_cost):
+            team.resources["food"] -= food_cost
+            team.resources["gold"] -= gold_cost
+            team.resources["wood"] -= wood_cost
+
+            self.training_queue.append(unit_name)
+            return True
+
+        return False
+
+    def update_training(self, delta_time, game_map, team):
+        """
+        Updates the building's training queue each frame.
+        """
+        if not self.training_queue and not self.current_training_unit:
+            return
+
+        if not self.current_training_unit:
+            next_unit_name = self.training_queue.pop(0)
+            unit_class = UNIT_CLASSES[next_unit_name]
+            dummy_unit = unit_class(team=self.team)
+            self.current_training_unit = next_unit_name
+            self.current_training_time_left = dummy_unit.training_time / GAME_SPEED
+            self.training_progress = 0.0
+
+        if self.current_training_unit:
+            self.current_training_time_left -= delta_time
+            unit_class = UNIT_CLASSES[self.current_training_unit]
+            total_time = unit_class(team=self.team).training_time / GAME_SPEED
+            self.training_progress = max(0.0, min(1.0, 1.0 - (self.current_training_time_left / total_time)))
+
+            if self.current_training_time_left <= 0:
+                self.spawn_trained_unit(self.current_training_unit, game_map, team)
+                self.current_training_unit = None
+                self.current_training_time_left = 0
+                self.training_progress = 0.0
+
+    def spawn_trained_unit(self, unit_name, game_map, team):
+        """
+        Once the unit is fully trained, find a free adjacent tile, place the unit, 
+        and make it move randomly away from the building.
+        """
+        unit_class = UNIT_CLASSES[unit_name]
+        spawn_tile = self.find_adjacent_tile(game_map)
+        if not spawn_tile:
+            return
+
+        new_unit = unit_class(team=self.team)
+        placed_ok = game_map.add_entity(new_unit, spawn_tile[0], spawn_tile[1])
+        if not placed_ok:
+            return
+
+        team.units.append(new_unit)
+        self.move_unit_randomly(new_unit, game_map)
+
+    def find_adjacent_tile(self, game_map):
+        """
+        Search tiles around the building in an expanding square to find a walkable one.
+        """
+        base_x, base_y = round(self.x), round(self.y)
+        for radius in range(1, 8):
+            for check_x in range(base_x - radius, base_x + radius + 1):
+                for check_y in range(base_y - radius, base_y + radius + 1):
+                    if (0 <= check_x < game_map.num_tiles_x and 
+                        0 <= check_y < game_map.num_tiles_y):
+                        if game_map.walkable_position((check_x, check_y)):
+                            return (check_x, check_y)
+        return None
+
+    def move_unit_randomly(self, new_unit, game_map):
+        """
+        Move newly spawned unit up to ~5 tiles away randomly, if walkable.
+        """
+        origin_x, origin_y = round(new_unit.x), round(new_unit.y)
+        for _ in range(30):
+            offset_x = randint(-5, 5)
+            offset_y = randint(-5, 5)
+            target_x = origin_x + offset_x
+            target_y = origin_y + offset_y
+            if (0 <= target_x < game_map.num_tiles_x and 
+                0 <= target_y < game_map.num_tiles_y):
+                if game_map.walkable_position((target_x, target_y)):
+                    a_star(new_unit, (target_x, target_y), game_map)
+                    break
