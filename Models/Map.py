@@ -93,7 +93,7 @@ class GameMap:
             zones.append((x_start, x_end, y_start, y_end))
         return zones
 
-    def generate_buildings(self, players):
+    def generate_buildings(self, grid, players):
         num_players = len(players)
         global zones
         zones = self.generate_zones(num_players)
@@ -127,7 +127,7 @@ class GameMap:
                     if not placed:
                         raise ValueError("Unable to deploy building for a player; map too crowded?")
 
-    def generate_units(self, players):
+    def generate_units(self, grid, players):
         num_players = len(players)
         zones = self.generate_zones(num_players)
 
@@ -152,10 +152,34 @@ class GameMap:
                     if not placed:
                         print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
+    def place_gold_near_town_centers(self, grid):
+        town_centers = [pos for pos, entities in grid.items() if any(isinstance(entity, TownCentre) for entity in entities)]
+        for center in town_centers:
+            x, y = center
+            placed = False
+            attempts = 0
+            while not placed and attempts < 100:
+                dx = random.choice([-2, -1, 0, 1])
+                dy = random.choice([-2, -1, 0, 1])
+                if self.can_place_group(grid, x + dx, y + dy):
+                    for i in range(2):
+                        for j in range(2):
+                            gold = Gold(x + dx + i, y + dy + j)
+                            self.add_entity(gold, x + dx + i, y + dy + j)
+                    placed = True
+                attempts += 1
+
+    def can_place_group(self, grid, x, y):
+        if x + 1 < self.num_tiles_x and y + 1 < self.num_tiles_y:
+            return all((x + dx, y + dy) not in grid for dx in range(2) for dy in range(2))
+        return False
+    
     def generate_map(self):
         self.generate_resources()
-        self.generate_buildings(self.players)
-        self.generate_units(self.players)
+        self.place_gold_near_town_centers(self.grid)
+        self.generate_buildings(self.grid, self.players)
+        self.generate_units(self.grid, self.players)
+        return self.grid
 
     def generate_resources(self):
         resource_classes = {
@@ -183,16 +207,27 @@ class GameMap:
                         break
                 layer += 1
         else:
-            # Place gold randomly
-            for _ in range(NUM_GOLD_TILES):
-                placed = False
-                attempts = 0
-                while not placed and attempts < 1000:
-                    x = random.randint(0, self.num_tiles_x - 1)
-                    y = random.randint(0, self.num_tiles_y - 1)
-                    resource = resource_classes['gold'](x, y)
-                    placed = self.add_entity(resource, x, y)
-                    attempts += 1
+            # Generate gold as groups of 4
+            gold_placed = 0
+            while gold_placed < NUM_GOLD_TILES:
+                x_start = random.randint(0, self.num_tiles_x - 2)
+                y_start = random.randint(0, self.num_tiles_y - 2)
+                for i in range(2):
+                    for j in range(2):
+                        if gold_placed >= NUM_GOLD_TILES:
+                            break
+                        x = x_start + i
+                        y = y_start + j
+                        attempts = 0
+                        placed = False
+                        while not placed and attempts < 10:
+                            resource = resource_classes['gold'](x, y)
+                            placed = self.add_entity(resource, x, y)
+                            attempts += 1
+                        if placed:
+                            gold_placed += 1
+                    if gold_placed >= NUM_GOLD_TILES:
+                        break
 
         # Generate trees as groups instead of one by one
         cluster_size_min, cluster_size_max = 2, 4
