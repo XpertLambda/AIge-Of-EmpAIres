@@ -6,9 +6,10 @@ from Settings.setup import (
     MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD,
     MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES,
     MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS,
-    START_MAXIMUM_POPULATION,
+    MAXIMUM_POPULATION,
     Resources
 )
+from collections import Counter
 from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
@@ -32,12 +33,12 @@ def get_building_tiles(building, game_map):
     return results
 
 class Team:
-    def __init__(self, difficulty, teamID, maximum_population=START_MAXIMUM_POPULATION):
+    def __init__(self, difficulty, teamID):
         self.resources = {"gold": 0, "wood": 0, "food": 0}
         self.units = []
         self.buildings = []
         self.teamID = teamID
-        self.maximum_population = maximum_population
+        self.maximum_population = 0    
         self.en_cours = dict()
 
         if difficulty == 'DEBUG':
@@ -94,6 +95,7 @@ class Team:
                 self.buildings.append(ArcheryRange(team=teamID))
             for _ in range(MARINES_STARTING_VILLAGERS):
                 self.units.append(Villager(team=teamID))
+                
 
     def manage_life(self, game_map):
         """
