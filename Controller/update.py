@@ -14,7 +14,7 @@ def update_game_state(game_state, delta_time):
                 if unit.isAlive():
                     unit.setIdle()
                     if unit.path:
-                        unit.move(game_map, dt)
+                        unit.move(game_map, delta_time)
                     else : 
                         unit.collisionTest(game_map)
                     
