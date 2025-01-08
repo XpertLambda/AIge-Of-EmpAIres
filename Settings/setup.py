@@ -23,6 +23,7 @@ ALLOWED_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
 UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
+FRAMES_PER_BUILDING = 15
 UNIT_HITBOX = 0.2
 ATTACK_RANGE_EPSILON = 0.5
 
@@ -130,7 +131,7 @@ BAR_BORDER_RADIUS = 30
 PROGRESS_BAR_WIDTH_RATIO = 0.8
 PROGRESS_BAR_Y_RATIO = 0.9
 
-BUILDING_RATIO = 200
+BUILDING_RATIO = 100
 UNIT_RATIO = 100
 
 HEALTH_BAR_WIDTH = 40
@@ -168,43 +169,83 @@ states = {
      2: 'attack',
      3: 'death',
      4: 'decay',
-     5: 'task'
+     5: 'task',
+     6: 'destruction'
 }
 
 sprite_config = {
     'buildings': {
         'towncenter': {
             'directory': 'assets/buildings/towncenter/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states': 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'barracks': {
             'directory': 'assets/buildings/barracks/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'stable': {
             'directory': 'assets/buildings/stable/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'archeryrange': {
             'directory': 'assets/buildings/archeryrange/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'keep': {
             'directory': 'assets/buildings/keep/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'camp': {
             'directory': 'assets/buildings/camp/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'house': {
             'directory': 'assets/buildings/house/',
+            'states' : 2,
             'adjust_scale': TILE_SIZE / BUILDING_RATIO,
-            'variant': 4
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'farm': {
             'directory': 'assets/buildings/farm/',
-            'adjust_scale': TILE_SIZE / 120
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / 120,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
     },
     'resources': {

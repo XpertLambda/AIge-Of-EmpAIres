@@ -25,7 +25,7 @@ def load_sprite(filepath=None, scale=None, adjust=None):
     sprite = sprite.convert_alpha()
     return sprite
 
-def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
+def extract_Unitframes(sheet, rows, columns, frames_entity, scale=TILE_SIZE / 400):
     frames = []
     sheet_width, sheet_height = sheet.get_size()
     frame_width = sheet_width // columns
@@ -33,12 +33,33 @@ def extract_frames(sheet, rows, columns, scale=TILE_SIZE / 400):
     target_width = int(frame_width * scale)
     target_height = int(frame_height * scale)
 
-    frame_step = columns // FRAMES_PER_UNIT
+    frame_step = columns // frames_entity
     for row in range(rows):
         if row % 2 != 0:
             continue
         for col in range(columns):
             if col % frame_step == 0:
+                x = col * frame_width
+                y = row * frame_height
+                frame = sheet.subsurface(pygame.Rect(x, y, frame_width, frame_height))
+                frame = pygame.transform.smoothscale(frame, (target_width, target_height))
+                frames.append(frame)
+    return frames
+
+def extract_Buildingframes(sheet, rows, columns, frames_entity, scale=TILE_SIZE / 400):
+    frames = []
+    sheet_width, sheet_height = sheet.get_size()
+    frame_width = sheet_width // columns
+    frame_height = sheet_height // rows
+    target_width = int(frame_width * scale)
+    target_height = int(frame_height * scale)
+
+    frame_step = columns*rows // frames_entity
+    print(f'step {frame_step}, cols : {columns}, frames_entity : {frames_entity}')
+    for row in range(rows):
+        for col in range(columns):
+            index = row * columns + col
+            if index % frame_step == 0:
                 x = col * frame_width
                 y = row * frame_height
                 frame = sheet.subsurface(pygame.Rect(x, y, frame_width, frame_height))
@@ -69,31 +90,7 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
     progress_text_rect = progress_text_surface.get_rect(centerx=(bar_x + bar_width / 2), top=(bar_y + BAR_HEIGHT))
     screen.blit(progress_text_surface, progress_text_rect)
 
-    pygame.display.flip()
-
-def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
-    global gui_cache
-    key = (ui_name, variant, target_width, target_height)
-    if key in gui_cache:
-        return gui_cache[key]
-
-    original = gui_elements[ui_name][variant]
-    ow, oh = original.get_width(), original.get_height()
-
-    if target_width and not target_height:
-        ratio = target_width / ow
-        target_height = int(oh * ratio)
-    elif target_height and not target_width:
-        ratio = target_height / oh
-        target_width = int(ow * ratio)
-    elif not target_width and not target_height:
-        gui_cache[key] = original
-        return original  # Add this return statement for consistency
-
-    scaled = pygame.transform.smoothscale(original, (target_width, target_height))
-    gui_cache[key] = scaled
-    return scaled
-    
+    pygame.display.flip()  
 
 def load_sprites(screen, screen_width, screen_height):
     global gui_elements
@@ -140,7 +137,7 @@ def load_sprites(screen, screen_width, screen_height):
                 sheet_cols = value['sheet_config'].get('columns', 0)
                 sheet_rows = value['sheet_config'].get('rows', 0)
 
-            if category in ['resources', 'buildings']:
+            if category in ['resources']:
                 sprites[category][sprite_name] = []
                 try:
                     dir_content = os.listdir(directory)
@@ -157,6 +154,35 @@ def load_sprites(screen, screen_width, screen_height):
                         # Re-blit loading screen last loaded for continuity
                         draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name,loading_screen)
 
+            elif category == 'buildings':
+                sprites[category][sprite_name] = {}
+                sprite_path = directory
+                if os.path.isdir(sprite_path):
+                    state_dirs = os.listdir(sprite_path)
+                    for state_dir in state_dirs:
+                        state_path = os.path.join(sprite_path, state_dir)
+                        if not os.path.isdir(state_path):
+                            continue
+                        sprites[category][sprite_name].setdefault(state_dir, {})
+                        sheets = os.listdir(state_path)
+                        for sheetname in sheets:
+                            if sheetname.lower().endswith("webp"):
+                                filepath = os.path.join(state_path, sheetname)
+                                try:
+                                    sprite_sheet = load_sprite(filepath, scale, adjust)
+                                    if state_dir == 'death':
+                                        frames = extract_Buildingframes(sprite_sheet, sheet_rows, sheet_cols, FRAMES_PER_BUILDING)
+                                    else:
+                                        frames = extract_Buildingframes(sprite_sheet, 1, 1, 1)
+                                    print(f"{len(frames)} frames for {sprite_name} in {state_dir} state ")
+                                    sprites[category][sprite_name][state_dir] = frames
+                                
+                                except Exception as e:
+                                    print(f"Error loading sprite sheet {filepath}: {e}")
+                                loaded_files += 1
+                                progress = loaded_files / total_files
+                                draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
+                
             elif category == 'units':
                 sprites[category][sprite_name] = {}
                 sprite_path = directory
@@ -173,7 +199,7 @@ def load_sprites(screen, screen_width, screen_height):
                                 filepath = os.path.join(state_path, sheetname)
                                 try:
                                     sprite_sheet = load_sprite(filepath, scale, adjust)
-                                    frames = extract_frames(sprite_sheet, sheet_rows, sheet_cols)
+                                    frames = extract_Unitframes(sprite_sheet, sheet_rows, sheet_cols, FRAMES_PER_UNIT)
                                     print(f"{len(frames)} frames for {sprite_name} in {state_dir} state with {len(frames) // FRAMES_PER_UNIT} directions")
                                     for direction_index in range(len(frames) // FRAMES_PER_UNIT):
                                         direction_frames = frames[direction_index * FRAMES_PER_UNIT : (direction_index + 1) * FRAMES_PER_UNIT]
@@ -184,8 +210,9 @@ def load_sprites(screen, screen_width, screen_height):
                                 progress = loaded_files / total_files
                                 draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
 
-                progress = loaded_files / total_files
-                draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
+
+                    progress = loaded_files / total_files
+                    draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
 
     print("Sprites loaded successfully.")
     
@@ -198,15 +225,18 @@ def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant)
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
 
-    if category in ['resources', 'buildings']:
-        original_image = sprites[category][name][variant]
+    if category == 'buildings':
+        frame_id = frame_id % len(sprites[category][name][state])
+        original_image = sprites[category][name][state][frame_id]
     elif category == 'units':
+        frame_id = frame_id % len(sprites[category][name][state][direction])
         original_image = sprites[category][name][state][direction][frame_id]
+    else: 
+        original_image = sprites[category][name][variant]
 
     scaled_width = int(original_image.get_width() * zoom)
     scaled_height= int(original_image.get_height()* zoom)
 
-    # clamp
     if scaled_width <1: scaled_width=1
     if scaled_height<1: scaled_height=1
 
@@ -218,6 +248,29 @@ def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant)
         zoom_cache[name].popitem(last=False)
     return scaled_image
 
+def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
+    global gui_cache
+    key = (ui_name, variant, target_width, target_height)
+    if key in gui_cache:
+        return gui_cache[key]
+
+    original = gui_elements[ui_name][variant]
+    ow, oh = original.get_width(), original.get_height()
+
+    if target_width and not target_height:
+        ratio = target_width / ow
+        target_height = int(oh * ratio)
+    elif target_height and not target_width:
+        ratio = target_height / oh
+        target_width = int(ow * ratio)
+    elif not target_width and not target_height:
+        gui_cache[key] = original
+        return original  # Add this return statement for consistency
+
+    scaled = pygame.transform.smoothscale(original, (target_width, target_height))
+    gui_cache[key] = scaled
+    return scaled
+  
 def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
     name = Entity_Acronym[category][acronym]
     if state is not None:

@@ -20,8 +20,13 @@ def update_game_state(game_state, dt):
                             unit.attack(game_map, dt)
                     if not unit.path:
                         unit.collisionTest(game_map)
-                else:
-                    unit.kill(game_map)
+        
+        for entities in list(game_map.grid.values):
+            if entities
+                for entity in list (entities):
+                    if not entity.isAlive():
+                         unit.kill(game_map)
+                         
         for inactive_entities in list(game_map.inactive_matrix.values()):
             if inactive_entities:
                 for entity in list(inactive_entities):

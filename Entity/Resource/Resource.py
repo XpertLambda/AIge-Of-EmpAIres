@@ -13,6 +13,14 @@ class Resource(Entity):
     def __str__(self):
         return f"Gold: {self.gold}, Wood: {self.wood}, Food: {self.food}"
 
+    def kill(self, game_map):
+        self.current_frame = 0
+        self.hp = 0
+        game_map.move_to_inactive(self)
+
+    def death(self, game_map):
+        game_map.remove_inactive(self)
+
     def display(self, screen, screen_width, screen_height, camera, dt):
         category = 'resources'
         screen_x, screen_y = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
