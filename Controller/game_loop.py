@@ -111,6 +111,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     running = True
     update_interval = 60
     frame_counter = 0
+    players_target=[None for _ in range(len(players))]
+    # ----------------------------------------------------------------
+    # Main loop
+    # ----------------------------------------------------------------
 
     while running:
         raw_dt = clock.tick(120) / 1000.0
@@ -132,7 +136,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         team_colors = game_state['team_colors']
         game_map = game_state['game_map']
         camera = game_state['camera']
-
         # Periodic terminal update
         if user_choices["index_terminal_display"] in {1, 2}:
             game_state['last_terminal_update'] = game_state.get('last_terminal_update', 0)
@@ -240,12 +243,20 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         # This is just an example usage for building/training
         # (unchanged logic, but we might skip it if paused)
+        '''
         if not game_state['paused']:
-            barrack = Barracks(selected_player)
+            barrack = House(selected_player.teamID)
             # Try building it with 3 villagers, in case resources suffice
             if selected_player.resources["wood"] >= barrack.cost.wood:
-                selected_player.buildBatiment(barrack, time.time(), 3, game_map)
+                selected_player.buildBuilding(barrack, time.time(), 3, game_map)
             selected_player.manage_creation(time.time())
-
+            
+            selected_player.modify_target(players[0],players_target)
+            if players_target[selected_player.teamID]!=None:
+                selected_player.battle_v2(players_target[selected_player.teamID],game_map,10)
+            selected_player.manage_creation(time.time())
+            for player in players:
+                player.manage_life()
+            '''
     # End main loop
 

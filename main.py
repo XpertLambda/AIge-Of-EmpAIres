@@ -189,7 +189,7 @@ def main():
         players = game_map.players
         game_loop(screen, game_map, screen_width, screen_height, players)
     else:
-        players = init_players(number_of_bots)
+        players = init_players(number_of_bots, bot_level)
         game_map = GameMap(grid_size, gold_at_center, players)
         game_loop(screen, game_map, screen_width, screen_height, players)
 

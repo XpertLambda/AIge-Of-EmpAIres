@@ -4,7 +4,7 @@ import random
 from AiUtils.aStar import a_star
 from Entity.Entity import Entity
 from Entity.Building import Building
-from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
+from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE,TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
 from Controller.isometric_utils import tile_to_screen, get_direction, get_snapped_angle, normalize
 from Controller.init_assets import draw_sprite, draw_hitbox, draw_path
 
@@ -23,19 +23,20 @@ class Unit(Entity):
         speed,
         training_time
         ):
-        super().__init__(x=x, y=y, team=team, acronym=acronym, size=1, max_hp=max_hp, cost=cost, walkable=True)
+        super().__init__(x=x, y=y, team=team, acronym=acronym, size=1, max_hp=max_hp, cost=cost, walkable=True, hitbox=UNIT_HITBOX)
         
         self.attack_power = attack_power
         self.attack_range = attack_range
         self.attack_speed = attack_speed
         self.attack_timer = 0
+        self.follow_timer = 0
         self.target = None
-        self.attack_range_epsilon = ATTACK_RANGE_EPSILON
         
         self.speed = speed
         self.training_time = training_time
-        self.path = None
-
+        self.task=False
+        self.path = []
+        
         self.state = 0
         self.frames = FRAMES_PER_UNIT
         self.current_frame = 0
@@ -58,16 +59,20 @@ class Unit(Entity):
         target_tile = self.path[0]        
         snapped_angle = get_snapped_angle(((self.x, self.y)), (target_tile[0], target_tile[1]))
         self.direction = get_direction(snapped_angle)
-        step = ( dt *  self.speed * math.cos(math.radians(snapped_angle)), dt * self.speed * math.sin(math.radians(snapped_angle)))
-        
+        diff = [target_tile[0] - self.x, target_tile[1] - self.y]
+        diff = normalize(diff)
+        if diff:
+            step = [component * dt *  self.speed for component in diff]
+
         self.x += step[0]
         self.y += step[1]
 
         dx = target_tile[0] - self.x
         dy = target_tile[1] - self.y
             
-        if abs(dx) <= abs(step[0]) or abs(dy) <= abs(step[1]):
+        if abs(dx) <= abs(step[0]) and abs(dy) <= abs(step[1]):
             self.path.pop(0)
+            #print('attemtpin to call remove  + add')
             game_map.remove_entity(self)
             game_map.add_entity(self, self.x, self.y)
 
@@ -81,30 +86,33 @@ class Unit(Entity):
             for entity in entities:
                 if entity.entity_id != self.entity_id:
                     distance = math.dist((entity.x, entity.y), (self.x, self.y))
-                    if distance <= 2*UNIT_HITBOX and distance != 0:
+                    hitbox_difference = distance - abs(self.hitbox  + entity.hitbox)
+                    if hitbox_difference < 0:
                         diff = [self.x - entity.x, self.y - entity.y]
                         diff = normalize(diff)
-                        scaled_diff = [component * UNIT_HITBOX / abs(component) for component in diff]
-                        self.path = [(self.x + scaled_diff[0], self.y + scaled_diff[1])]
+                        if diff:
+                            scaled_diff = [component * self.hitbox for component in diff]
+                            self.path.insert(0, (self.x + scaled_diff[0], self.y + scaled_diff[1]))
         return True
-
 
     # ---------------- Attack Logic ----------------
     def set_target(self, target):
         self.target = target
 
     def attack(self, game_map, dt):
-        if not self.target.team or not self.target.isAlive() or self.target.entity_id == self.entity_id or self.target.team == self.team:
+        if self.target.team == None or not self.target.isAlive() or self.target.entity_id == self.entity_id or self.target.team == self.team:
+            print({self.target.team}, {self.target.isAlive()}, {self.target.entity_id}, {self.target.team == self.team})
             self.target = None
 
         else :
-            distance = math.dist((self.x, self.y), (self.target.x, self.target.y))
-            if distance < self.attack_range:
+            distance = math.dist((self.x, self.y), (self.target.x, self.target.y)) - self.target.hitbox - self.attack_range
+
+            if distance <= 0 :
                 self.state = 2
                 self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.target.x, self.target.y))) 
                 if self.attack_timer == 0:
                     self.current_frame = 0
-                    self.path = None
+                    self.path = []
                 
                 elif self.current_frame == self.frames - 1:
                     self.cooldown_frame = self.current_frame
@@ -114,8 +122,12 @@ class Unit(Entity):
                     self.target.hp -= self.attack_power
                     self.attack_timer = 0
                     self.cooldown_frame = None
-            else:
-                a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+            else :
+                if self.path:
+                    self.path = [self.path[0]] + a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+                else:
+                    self.path = a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+
                 self.attack_timer = 0
 
     # ---------------- Death Logic ----------------
@@ -149,31 +161,23 @@ class Unit(Entity):
         draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame, direction=self.direction)
 
     def display_hitbox(self, screen, screen_width, screen_height, camera):
-        x_center, y_center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-
-        corner_distance = UNIT_HITBOX
-        
-        corners = [
-            (self.x - corner_distance, self.y - corner_distance),
-            (self.x - corner_distance, self.y + corner_distance),
-            (self.x + corner_distance, self.y + corner_distance),
-            (self.x + corner_distance, self.y - corner_distance)
-        ]
-        
-        screen_corners = []
-        for corner in corners:
-            x_screen, y_screen = tile_to_screen(corner[0], corner[1], HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-            screen_corners.append((x_screen, y_screen))
-        
-        draw_hitbox(screen, screen_corners, camera.zoom)
+        center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        hitbox_iso = self.hitbox / math.cos(math.radians(45))
+        width =  hitbox_iso * camera.zoom * HALF_TILE_SIZE
+        height = hitbox_iso * camera.zoom * HALF_TILE_SIZE / 2
+        x = center[0] - width // 2
+        y = center[1] - height // 2 
+        pygame.draw.ellipse(screen, (255, 255, 255), (x, y, width, height), 1)
+        pygame.draw.rect(screen, (0, 0, 255), (x, y, width, height), 1)
     
     def display_path(self, screen, screen_width, screen_height, camera):
         unit_position = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         color = ((self.entity_id * 30) % 255, (self.entity_id*20) % 255, (self.entity_id*2) % 255)
-        transformed_path = [unit_position, 
-        *[
-            tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-            for x, y in self.path
-        ]
-    ]
+        transformed_path = [unit_position, *[ tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height) for x, y in self.path ] ]
+        draw_path(screen, unit_position, transformed_path, camera.zoom, color)
+    
+    def display_path(self, screen, screen_width, screen_height, camera):
+        unit_position = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        color = ((self.entity_id * 30) % 255, (self.entity_id*20) % 255, (self.entity_id*2) % 255)
+        transformed_path = [unit_position, *[ tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height) for x, y in self.path ] ]
         draw_path(screen, unit_position, transformed_path, camera.zoom, color)

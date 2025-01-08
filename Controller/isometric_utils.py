@@ -9,7 +9,16 @@ def to_isometric(x, y, tile_width, tile_height):
 def get_color_for_terrain(terrain_type):
     if terrain_type == 'gold':
         return (255, 215, 0)  
-        
+
+def screen_to_2_5d(sx, sy, screen_width, screen_height, camera, tile_width, tile_height):
+    iso_x = (sx - screen_width / 2) / camera.zoom - camera.offset_x
+    iso_y = (sy - screen_height / 2) / camera.zoom - camera.offset_y
+    
+    x = ((2 * iso_x) / tile_width + (2 * iso_y) / tile_height) / 2
+    y = ((2 * iso_y) / tile_height - (2 * iso_x) / tile_width) / 2
+    
+    return x, y
+    
 def screen_to_tile(sx, sy, screen_width, screen_height, camera, a, b):
     iso_x = (sx - screen_width / 2) / camera.zoom - camera.offset_x
     iso_y = (sy - screen_height / 2) / camera.zoom - camera.offset_y
@@ -17,7 +26,7 @@ def screen_to_tile(sx, sy, screen_width, screen_height, camera, a, b):
     x = ((iso_x / a) + (iso_y / b)) / 2
     y = ((iso_y / b) - (iso_x / a)) / 2
     
-    return int(x), int(y)
+    return round(x), round(y)
 
 def tile_to_screen(x, y, width, height, camera, screen_width, screen_height):
     iso_x = (x - y) * (width / 2)
@@ -41,14 +50,8 @@ def get_direction(snapped_angle_rad):
     return direction 
     # +1 to match the sprite sheet and %8 because tere are 8 directions
 
-def cos_sign(snapped_angle):
-    return 1 - 2 * ((math.floor(snapped_angle / 180)) % 2)
-
-def sin_sign(snapped_angle):
-    return 1 - 2 * ((math.floor((snapped_angle + 90) / 180)) % 2)
-
 def normalize(v):
     magnitude = math.sqrt(sum(x**2 for x in v))
     if magnitude != 0:
         return [x / magnitude for x in v]
-    return 0
+    return None
