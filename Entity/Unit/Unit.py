@@ -58,6 +58,8 @@ class Unit(Entity):
     def set_target(self, target):
         if target and target.team and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
             self.target = target
+            return
+        self.target = None
 
     def kill(self):
         self.state = 3

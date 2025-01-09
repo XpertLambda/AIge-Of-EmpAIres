@@ -46,6 +46,9 @@ class Villager(Unit):
     def set_target(self, target):
         if target and target.team and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
             self.target = target
+            return
+        self.target = None
+
 
     def seekAttack(self, game_map, dt):
         if self.target and self.isAvailable() and self.target.isAlive():
