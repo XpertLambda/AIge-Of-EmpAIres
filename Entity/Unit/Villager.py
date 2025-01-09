@@ -33,9 +33,9 @@ class Villager(Unit):
     def update(self, game_map, dt):
         if self.isAlive():
             self.setIdle()
-            self.seekMove(game_map, dt)
-            self.seekCollision(game_map)
             self.seekAttack(game_map, dt)
+            self.seekCollision(game_map, dt)
+            self.seekMove(game_map, dt)
             #self.seekCollect(game_map, dt)
             #self.seekStock(game_map, dt)
             #self.seekBuild(game_map, dt)
@@ -46,6 +46,8 @@ class Villager(Unit):
     def set_target(self, target):
         if target and target.team and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
             self.target = target
+            return
+        self.target = None
 
     def seekAttack(self, game_map, dt):
         if self.target and self.isAvailable() and self.target.isAlive():

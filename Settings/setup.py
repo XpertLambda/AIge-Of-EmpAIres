@@ -5,7 +5,7 @@ import os
 # Global Constants
 # Classe Villager / Team restriction
 # -------------------
-GAME_SPEED = 2
+GAME_SPEED = 1
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_COLLECTION_RATE = 25
 RESOURCE_CAPACITY = 20

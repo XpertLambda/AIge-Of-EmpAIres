@@ -35,6 +35,7 @@ class Unit(Entity):
         self.speed = speed
         self.training_time = training_time
         self.path = []
+        self.collision_timer = 0
 
         self.frames = FRAMES_PER_UNIT
         self.direction = 0
@@ -43,9 +44,9 @@ class Unit(Entity):
     def update(self, game_map, dt):
         if self.isAlive():
             self.setIdle()
-            self.seekCollision(game_map)
-            self.seekMove(game_map, dt)
             self.seekAttack(game_map, dt)
+            self.seekCollision(game_map, dt)
+            self.seekMove(game_map, dt)
         else:
             self.death(game_map, dt)
 
@@ -58,6 +59,8 @@ class Unit(Entity):
     def set_target(self, target):
         if target and target.team and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
             self.target = target
+            return
+        self.target = None
 
     def kill(self):
         self.state = 3
@@ -93,11 +96,10 @@ class Unit(Entity):
 
             return self.path
 
-    def seekCollision(self, game_map):
+    def seekCollision(self, game_map, dt):
         if not self.path:
             rounded_position = (round(self.x), round(self.y))
             entities = game_map.grid.get(rounded_position, None)
-            force = [0, 0]        
             if entities:
                 for entity in entities:
                     if entity.entity_id != self.entity_id:
@@ -107,7 +109,7 @@ class Unit(Entity):
                             diff = [self.x - entity.x, self.y - entity.y]
                             diff = normalize(diff)
                             if diff:
-                                scaled_diff = [component * self.hitbox for component in diff]
+                                scaled_diff = [component * self.hitbox/2 for component in diff]
                                 self.path.insert(0, (self.x + scaled_diff[0], self.y + scaled_diff[1]))
             return True
 

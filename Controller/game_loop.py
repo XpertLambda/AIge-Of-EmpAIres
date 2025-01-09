@@ -22,7 +22,7 @@ from Controller.event_handler import handle_events
 from Controller.update import update_game_state
 from Controller.isometric_utils import tile_to_screen
 from Controller.gui import create_player_selection_surface, create_player_info_surface, get_scaled_gui, draw_gui_elements
-from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices, GAME_SPEED, PANEL_RATIO, BG_RATIO
+from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices, GAME_SPEED, PANEL_RATIO, BG_RATIO, ONE_SECOND
 
 
 def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height, margin=10):
@@ -117,7 +117,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     # ----------------------------------------------------------------
 
     while running:
-        raw_dt = clock.tick(120) / 1000.0
+        raw_dt = clock.tick(200) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         frame_counter += 1
         dt = dt*GAME_SPEED
