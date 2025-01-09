@@ -353,27 +353,18 @@ class GameMap:
         self.inactive_matrix[pos].remove(entity)
         if not self.inactive_matrix[pos]:
             del self.inactive_matrix[pos]
-   
-    def place_building(self, building, team):
-        # placer un building au hasard
-        x_start, x_end, y_start, y_end = zones[team.teamID]
-        max_attempts = (x_end - x_start) * (y_end - y_start)
-        attempts = 0
-        placed = False
-        while attempts < max_attempts:
-            x = random.randint(x_start, max(x_start, x_end - building.size))
-            y = random.randint(y_start, max(y_start, y_end - building.size))
-            placed = self.add_entity(building, x, y)
-            if placed:
-                return True
-            attempts += 1
-        if not placed:
-            # Si impossible de placer le bâtiment dans cette zone
-            # On essaie juste sur la carte complète en dernier recours
-            for ty in range(self.num_tiles_y - building.size):
-                for tx in range(self.num_tiles_x - building.size):
-                    placed = self.add_entity(building, tx, ty)
-                    if placed:
-                        return True
-            if not placed:
-                return False
+
+    def patch(self, dt):
+        for entities in list(self.grid.values()):
+            if entities:
+                for entity in list (entities):
+                    entity.update(self, dt)
+                    if not entity.isAlive():
+                        self.move_to_inactive(entity)
+
+        for inactive_entities in list(self.inactive_matrix.values()):
+            if inactive_entities:
+                for entity in list(inactive_entities):
+                    entity.update(self, dt)
+                    if entity.state == 7:
+                        self.remove_inactive(entity)

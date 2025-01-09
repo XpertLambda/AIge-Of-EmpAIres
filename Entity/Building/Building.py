@@ -61,27 +61,33 @@ class Building(Entity):
         self.attack_range = attack_range
         self.constructors = []
 
-        self.state = 0
         self.frames = FRAMES_PER_BUILDING
-        self.current_frame = 0
-        self.frame_duration = 0
 
         self.training_queue = []
         self.current_training_unit = None
         self.current_training_time_left = 0
         self.training_progress = 0.0
 
-    def kill(self, game_map):
+    # ---------------- Update Unit ---------------
+    def update(self, game_map, dt):
+        if not self.isAlive():
+            self.death(game_map)
+
+    # ---------------- Controller ----------------
+    def kill(self):
         self.state = 3
         self.current_frame = 0
         self.hp = 0
-        game_map.move_to_inactive(self)
-        game_map.players[self.team].buildings.remove(self)
 
     def death(self, game_map):
-        if self.current_frame == self.frames - 1:
-            game_map.remove_inactive(self)
+        if self.state != 3 :
+            self.kill()
 
+        if self.current_frame == self.frames - 1 and self.state == 3:
+            self.state = 7
+
+    
+    # ---------------- Display Logic ----------------
     def display(self, screen, screen_width, screen_height, camera, dt):
         if self.state !=0:
             self.frame_duration += dt
@@ -89,6 +95,9 @@ class Building(Entity):
             if self.frame_duration >= frame_time:
                 self.frame_duration -= frame_time
                 self.current_frame = (self.current_frame + 1) % self.frames
+
+        if self.cooldown_frame:
+            self.current_frame = self.cooldown_frame
 
         sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)

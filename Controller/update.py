@@ -9,39 +9,12 @@ def update_game_state(game_state, delta_time):
     if not game_state.get('paused', False):
         handle_camera(camera, delta_time)
 
-        for player in players:
-            for unit in player.units:
-                if unit.isAlive():
-                    unit.setIdle()
-                    if unit.path:
-                        unit.move(game_map, delta_time)
-                    else : 
-                        unit.collisionTest(game_map)
-
-                    if unit.target:
-                        unit.attack(game_map, delta_time)
-
-        
-        for entities in list(game_map.grid.values()):
-            if entities:
-                for entity in list (entities):
-                    if not entity.isAlive():
-                         entity.kill(game_map)
-                         
-        for inactive_entities in list(game_map.inactive_matrix.values()):
-            if inactive_entities:
-                for entity in list(inactive_entities):
-                    entity.death(game_map)  
+        game_map.patch(delta_time)
 
         for player in players:
             for building in player.buildings:
                 if building.spawnsUnits:
                     building.update_training(delta_time, game_map, player)
-
-        for inactives in list(game_map.inactive_matrix.values()):
-            if inactives:
-                for entity in list(inactives):
-                    entity.death(game_map)
 
 def handle_camera(camera, delta_time):
     keys = pygame.key.get_pressed()

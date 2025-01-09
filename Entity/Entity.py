@@ -34,6 +34,14 @@ class Entity:
         self.last_damage_time = 0
         self.last_clicked_time = 0
 
+        self.state = 0
+        self.current_frame = 0
+        self.frame_duration = 0
+        self.cooldown_frame = None
+
+        self.death_timer = 0
+        self.death_duration = 5
+
         self.entity_id = Entity.id
         Entity.id += 1
 
@@ -94,7 +102,7 @@ class Entity:
             x = center[0] - width // 2
             y = center[1] - height // 2 
             pygame.draw.ellipse(screen, (255, 0, 0), (x, y, width, height), 1)
-            pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
+            #pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
 
     def display_healthbar(self, screen, screen_width, screen_height, camera, color=(0,200,0)):
         """Displays the entity's health bar above its position."""

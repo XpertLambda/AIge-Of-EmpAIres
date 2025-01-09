@@ -55,8 +55,7 @@ def a_star(unit, goal, game_map):
     if not game_map.walkable_position(goal):
         goal = adjust_goal_to_walkable(unit, goal, game_map)
     if not goal or not game_map.walkable_position(goal):
-        unit.path = []
-        return
+        return []
 
     open_set = []
     heapq.heappush(open_set, (0, (round(unit.x), round(unit.y))))
@@ -83,5 +82,5 @@ def a_star(unit, goal, game_map):
                 f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goal)
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
-    unit.path = []
+    return []
 

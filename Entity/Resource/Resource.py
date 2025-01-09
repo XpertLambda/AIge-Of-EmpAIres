@@ -13,13 +13,14 @@ class Resource(Entity):
     def __str__(self):
         return f"Gold: {self.gold}, Wood: {self.wood}, Food: {self.food}"
 
-    def kill(self, game_map):
+    def update(self, game_map, dt):
+        if not self.isAlive():
+            self.kill()
+
+    def kill(self):
         self.current_frame = 0
         self.hp = 0
-        game_map.move_to_inactive(self)
-
-    def death(self, game_map):
-        game_map.remove_inactive(self)
+        self.state = 7
 
     def display(self, screen, screen_width, screen_height, camera, dt):
         category = 'resources'

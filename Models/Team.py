@@ -20,13 +20,13 @@ class Team:
             self.resources["food"] = LEAN_STARTING_FOOD
             self.resources["wood"] = LEAN_STARTING_WOOD
 
-            for _ in range(10):
+            for _ in range(30):
                 self.units.append(Horseman(team=teamID))
                 self.units.append(Villager(team=teamID))
                 self.units.append(Archer(team=teamID))
                 self.units.append(Swordsman(team=teamID))
 
-            for _ in range(10):
+            for _ in range(5):
                 self.buildings.append(TownCentre(team=teamID))
                 self.buildings.append(ArcheryRange(team=teamID))
                 self.buildings.append(Stable(team=teamID))
@@ -72,7 +72,7 @@ class Team:
             for _ in range(MARINES_NUMBER_OF_TOWER_CENTRE):
                 self.buildings.append(TownCentre(team=teamID))
                 
-    '''
+    
     def manage_life(self):
         # Non-Villager => .task=False
         for s in self.units:
@@ -223,4 +223,3 @@ class Team:
         )
         villager.resources = Resources(food=0, gold=0, wood=0)
         villager.task = False
-    '''

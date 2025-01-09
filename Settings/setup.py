@@ -169,7 +169,7 @@ states = {
      3: 'death',
      4: 'decay',
      5: 'task',
-     6: 'destruction'
+     7: 'inactive'
 }
 
 sprite_config = {
