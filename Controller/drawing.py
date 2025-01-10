@@ -268,84 +268,7 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
     return surface_map, scale_factor, offset_x, offset_y, min_iso_x, min_iso_y
 
-def update_minimap_entities(game_state):
-    from Entity.Building import Building
-    from Entity.Resource.Gold import Gold
 
-    camera = game_state['camera']
-    game_map = game_state['game_map']
-    team_colors = game_state['team_colors']
-    scale_factor = game_state['minimap_scale']
-    offset_x = game_state['minimap_offset_x']
-    offset_y = game_state['minimap_offset_y']
-    min_iso_x = game_state['minimap_min_iso_x']
-    min_iso_y = game_state['minimap_min_iso_y']
-    minimap_surface = game_state['minimap_entities_surface']
-
-    minimap_surface.fill((0, 0, 0, 0))
-
-    tile_width = HALF_TILE_SIZE
-    tile_height = HALF_TILE_SIZE / 2
-
-    entity_set = set()
-    for pos, active_entities in game_map.grid.items():
-        for ent in active_entities:
-            entity_set.add(ent)
-
-    MIN_BUILDING_SIZE = 3
-    MIN_UNIT_RADIUS = 2
-
-    for ent in entity_set:
-        x_val, y_val = ent.x, ent.y
-        iso_x, iso_y = to_isometric(x_val, y_val, tile_width, tile_height)
-        mini_x = (iso_x - min_iso_x) * scale_factor + offset_x
-        mini_y = (iso_y - min_iso_y) * scale_factor + offset_y
-
-        if ent.team is not None:
-            color_draw = team_colors[ent.team % len(team_colors)]
-            if isinstance(ent, Building):
-                half_dim = max(MIN_BUILDING_SIZE, ent.size)
-                rect_building = pygame.Rect(
-                    mini_x - half_dim, 
-                    mini_y - half_dim, 
-                    half_dim * 2, 
-                    half_dim * 2
-                )
-                pygame.draw.rect(minimap_surface, (*color_draw, 150), rect_building)
-            else:
-                radius_val = max(MIN_UNIT_RADIUS, ent.size)
-                pygame.draw.circle(minimap_surface, (*color_draw, 150), (mini_x, mini_y), radius_val)
-        else:
-            if isinstance(ent, Gold):
-                gold_color = get_color_for_terrain('gold')
-                radius_val = max(MIN_UNIT_RADIUS, ent.size)
-                pygame.draw.circle(minimap_surface, (*gold_color, 150), (mini_x, mini_y), radius_val)
-
-def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
-    half_screen_w = camera.width / (2 * camera.zoom)
-    half_screen_h = camera.height / (2 * camera.zoom)
-    center_iso_x = -camera.offset_x
-    center_iso_y = -camera.offset_y
-
-    left_iso_x = center_iso_x - half_screen_w
-    left_iso_y = center_iso_y - half_screen_h
-    right_iso_x = center_iso_x + half_screen_w
-    right_iso_y = center_iso_y + half_screen_h
-
-    rect_left = (left_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
-    rect_top = (left_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
-    rect_right = (right_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
-    rect_bottom = (right_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
-
-    rect_width = rect_right - rect_left
-    rect_height = rect_bottom - rect_top
-
-    pygame.draw.rect(
-        screen, 
-        (255, 255, 255), 
-        (rect_left, rect_top, rect_width, rect_height), 
-        2
-    )
 
 def display_fps(screen):
     if not hasattr(display_fps, 'last_time'):
@@ -366,6 +289,7 @@ def display_fps(screen):
     screen.blit(fps_text, (10, 10))
 
 def draw_pointer(screen):
+    from Controller.gui import get_scaled_gui  # Déplacé ici pour éviter l'import circulaire
     mouse_x, mouse_y = pygame.mouse.get_pos()
     pointer_image = get_scaled_gui('pointer', 0, target_width=30)
     pointer_rect = pointer_image.get_rect(center=(mouse_x + pointer_image.get_width() //2, mouse_y + pointer_image.get_height() //2))
