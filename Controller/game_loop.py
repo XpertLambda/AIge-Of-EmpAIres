@@ -104,6 +104,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'force_full_redraw': False,
         'show_all_health_bars': False
     }
+    
+    game_map.set_game_state(game_state)  
 
     player_selection_surface = None
     player_info_surface = None
@@ -127,6 +129,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 running = False
 
         update_game_state(game_state, dt)
+
+        # Appel de l'update de chaque unité pour suivre leur path
+        for player in players:
+            for unit in player.units:
+                unit.update(game_map, dt)  
 
         screen = game_state['screen']
         screen_width = game_state['screen_width']

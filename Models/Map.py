@@ -23,6 +23,7 @@ class GameMap:
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
         self.inactive_matrix = {}
+        self.game_state = None  
         if generate:
             self.generate_map()
 
@@ -368,3 +369,6 @@ class GameMap:
                     entity.update(self, dt)
                     if entity.state == 7:
                         self.remove_inactive(entity)
+
+    def set_game_state(self, game_state):
+        self.game_state = game_state

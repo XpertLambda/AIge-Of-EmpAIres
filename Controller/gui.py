@@ -72,10 +72,13 @@ def run_gui_menu(screen, sw, sh):
         {"text": "Quitter",         "rect": pygame.Rect(0,0,200,50)},
     ]
     
+    # Add back button
+    back_button = {"text": "Retour", "rect": pygame.Rect(20, 20, 100, 40)}
+
     toggle_button = {
         "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
         "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
-        "index": 0  # État actuel
+        "index": 1  # État actuel
     }
 
     save_files = []
@@ -131,6 +134,13 @@ def run_gui_menu(screen, sw, sh):
                             combo_scroll_positions["lvl"] -= 1
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Add back button handling at the start
+                if (show_config_menu or show_load_menu) and back_button["rect"].collidepoint(mx, my):
+                    show_main_menu = True
+                    show_config_menu = False
+                    show_load_menu = False
+                    continue
+
                 if toggle_button["rect"].collidepoint(mx, my):
                     toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
                     
@@ -244,8 +254,16 @@ def run_gui_menu(screen, sw, sh):
         elif show_config_menu:
             draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, combo_open)
             draw_choose_display(screen, toggle_button)
+            # Draw back button
+            pygame.draw.rect(screen, (100, 100, 200), back_button["rect"])
+            txt = font.render(back_button["text"], True, (255,255,255))
+            screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
         elif show_load_menu:
             draw_load_menu(screen, sw, sh, save_files)
+            # Draw back button
+            pygame.draw.rect(screen, (100, 100, 200), back_button["rect"])
+            txt = font.render(back_button["text"], True, (255,255,255))
+            screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
 
         pygame.display.flip()
         
