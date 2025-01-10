@@ -39,6 +39,7 @@ class Unit(Entity):
 
         self.frames = FRAMES_PER_UNIT
         self.direction = 0
+        self.removed = False
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
@@ -158,7 +159,17 @@ class Unit(Entity):
 
         if self.state == 4 and  self.current_frame == self.frames - 1:
             self.state = 7
-        self.death_timer+=dt
+
+        if self.state == 7 and not self.removed:
+            self.removed = True
+            for player in game_map.game_state['players']:
+                if hasattr(player, 'units') and self in player.units:
+                    player.units.remove(self)
+                    break
+            game_map.remove_entity(self)
+            game_map.game_state['player_info_updated'] = True
+
+        self.death_timer += dt
 
     # ---------------- Display Logic ----------------
     def display(self, screen, screen_width, screen_height, camera, dt):

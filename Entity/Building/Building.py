@@ -67,6 +67,7 @@ class Building(Entity):
         self.current_training_unit = None
         self.current_training_time_left = 0
         self.training_progress = 0.0
+        self.removed = False
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
@@ -85,6 +86,15 @@ class Building(Entity):
 
         if self.current_frame == self.frames - 1 and self.state == 3:
             self.state = 7
+
+        if self.state == 7 and not self.removed:
+            self.removed = True
+            for player in game_map.game_state['players']:
+                if hasattr(player, 'buildings') and self in player.buildings:
+                    player.buildings.remove(self)
+                    break
+            game_map.remove_entity(self)
+            game_map.game_state['player_info_updated'] = True
 
     
     # ---------------- Display Logic ----------------
