@@ -58,7 +58,7 @@ class Unit(Entity):
         self.cooldown_frame = None
 
     def set_target(self, target):
-        if target and target.team and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
+        if target and target.team != None and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
             self.target = target
             return
         self.target = None
