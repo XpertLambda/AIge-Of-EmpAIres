@@ -110,7 +110,9 @@ class Unit(Entity):
                             diff = normalize(diff)
                             if diff:
                                 scaled_diff = [component * self.hitbox/2 for component in diff]
-                                self.path.insert(0, (self.x + scaled_diff[0], self.y + scaled_diff[1]))
+                                new_pos = (self.x + scaled_diff[0], self.y + scaled_diff[1])
+                                if game_map.walkable_position(new_pos):
+                                    self.path.insert(0, new_pos)
             return True
 
     # ---------------- Attack Logic ----------------
