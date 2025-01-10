@@ -37,6 +37,13 @@ def tile_to_screen(x, y, width, height, camera, screen_width, screen_height):
 
     return screen_x, screen_y
 
+def get_angle(start, end):
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    angle = math.degrees(math.atan2(dy, dx))
+    angle = (angle + 360) % 360
+    return angle
+
 def get_snapped_angle(start, end, ALLOWED_ANGLES=ALLOWED_ANGLES):
     dx = end[0] - start[0]
     dy = end[1] - start[1]
