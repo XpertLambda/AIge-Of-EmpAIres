@@ -12,7 +12,7 @@ class Team:
         self.units = []
         self.buildings = []
         self.teamID = teamID
-        self.maximum_population = MAXIMUM_POPULATION
+        self.maximum_population = 0
         self.en_cours = dict()
 
         if difficulty == 'DEBUG':
@@ -149,7 +149,7 @@ class Team:
             return False
 
         self.buildings.append(building)
-        if hasattr(building, 'population'):
+        if hasattr(building, 'population'): #rajouter condition pour pas depasser MAXIMUM8POPUPLATION a 200
             self.maximum_population += building.population
         game_map.game_state['player_info_updated'] = True
 
@@ -180,7 +180,7 @@ class Team:
             if not(soldier.task) and not(isinstance(soldier,Villager)):
                 nb_soldier+=1
                 soldier.task=True
-                if unit.target:
+                if soldier.target:
                     soldier.attack(t,map)
             i+=1
 
