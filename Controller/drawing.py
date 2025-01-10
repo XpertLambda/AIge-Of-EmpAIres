@@ -106,6 +106,40 @@ def draw_map(
         entity.display_range(screen, screen_width, screen_height, camera)
 
         if hasattr(entity, 'spawnsUnits') and entity.spawnsUnits:
+            ent_screen_x, ent_screen_y = tile_to_screen(
+                entity.x, 
+                entity.y, 
+                HALF_TILE_SIZE, 
+                HALF_TILE_SIZE / 2,
+                camera,
+                screen_width,
+                screen_height
+            )
+            
+            # Always show training progress if there's an active training
+            if entity.current_training_unit:
+                bar_width = 80
+                bar_height = 6
+                button_width = 120
+                offset_y = 12 * entity.size
+                button_x = int(ent_screen_x - button_width / 2)
+                button_y = int(ent_screen_y - offset_y - 10)
+                bar_x = button_x
+                bar_y = button_y - 10
+
+                # Draw progress bar
+                pygame.draw.rect(screen, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
+                fill_w = int(bar_width * entity.training_progress)
+                pygame.draw.rect(screen, (0, 220, 0), (bar_x, bar_y, fill_w, bar_height))
+
+                # Draw queue length
+                font_obj = pygame.font.Font(None, 18)
+                queue_len = len(entity.training_queue)
+                queue_text = f"Q:{queue_len}"
+                queue_surf = font_obj.render(queue_text, True, (255, 255, 255))
+                screen.blit(queue_surf, (bar_x + bar_width + 5, bar_y - 2))
+
+            # Only show training button and feedback when selected
             if 'selected_entities' in game_state and entity in game_state['selected_entities']:
                 button_width = 120
                 button_height = 25
@@ -137,22 +171,6 @@ def draw_map(
                 screen.blit(text_surf, text_surf.get_rect(center=button_rect.center))
 
                 game_state['train_button_rects'][entity.entity_id] = button_rect
-
-                # If currently training => progress bar + queue length
-                if entity.current_training_unit:
-                    bar_width = 80
-                    bar_height = 6
-                    bar_x = button_x
-                    bar_y = button_y - 10
-
-                    pygame.draw.rect(screen, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
-                    fill_w = int(bar_width * entity.training_progress)
-                    pygame.draw.rect(screen, (0, 220, 0), (bar_x, bar_y, fill_w, bar_height))
-
-                    queue_len = len(entity.training_queue)
-                    queue_text = f"Q:{queue_len}"
-                    queue_surf = font_obj.render(queue_text, True, (255, 255, 255))
-                    screen.blit(queue_surf, (bar_x + bar_width + 5, bar_y - 2))
 
                 # If not enough resources feedback
                 if 'insufficient_resources_feedback' in game_state:

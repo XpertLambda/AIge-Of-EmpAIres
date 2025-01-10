@@ -147,6 +147,12 @@ class Team:
         else:
             print("No free villager found to build.")
             return False
+
+        self.buildings.append(building)
+        if hasattr(building, 'population'):
+            self.maximum_population += building.population
+        game_map.game_state['player_info_updated'] = True
+
         return True
 
     def battle(self,t,map,nb):

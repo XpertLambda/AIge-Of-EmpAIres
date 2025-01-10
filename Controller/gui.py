@@ -78,7 +78,7 @@ def run_gui_menu(screen, sw, sh):
     toggle_button = {
         "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
         "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
-        "index": 0  # État actuel
+        "index": 1  # État actuel
     }
 
     save_files = []

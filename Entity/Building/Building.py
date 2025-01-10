@@ -176,6 +176,7 @@ class Building(Entity):
             return
 
         team.units.append(new_unit)
+        game_map.game_state['player_info_updated'] = True
         self.move_unit_randomly(new_unit, game_map)
 
     def find_adjacent_tile(self, game_map):
@@ -195,15 +196,23 @@ class Building(Entity):
     def move_unit_randomly(self, new_unit, game_map):
         """
         Move newly spawned unit up to ~5 tiles away randomly, if walkable.
+        Makes up to 10 attempts to find a walkable position.
+        If no walkable position is found, unit stays near the building.
         """
         origin_x, origin_y = round(new_unit.x), round(new_unit.y)
-        for _ in range(30):
+        max_attempts = 10
+        
+        for attempt in range(max_attempts):
             offset_x = randint(-5, 5)
             offset_y = randint(-5, 5)
             target_x = origin_x + offset_x
             target_y = origin_y + offset_y
+            
             if (0 <= target_x < game_map.num_tiles_x and 
-                0 <= target_y < game_map.num_tiles_y):
-                if game_map.walkable_position((target_x, target_y)):
-                    a_star(new_unit, (target_x, target_y), game_map)
-                    break
+                0 <= target_y < game_map.num_tiles_y and
+                game_map.walkable_position((target_x, target_y))):
+                # Calculer ET assigner le path à l'unité
+                new_unit.path = a_star(new_unit, (target_x, target_y), game_map)
+                # Définir la destination
+                new_unit.destination = (target_x, target_y)
+                return
