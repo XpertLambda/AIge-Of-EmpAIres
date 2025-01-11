@@ -112,12 +112,15 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         raw_dt = clock.tick(200) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt*GAME_SPEED
-        for event in pygame.event.get():
+
+        events = pygame.event.get()
+        for event in events:
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
                 running = False
 
-        update_game_state(game_state, dt) 
+        # -- On met à jour la logique du jeu --
+        update_game_state(game_state, dt)
 
         screen = game_state['screen']
         screen_width = game_state['screen_width']
@@ -127,42 +130,30 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         team_colors = game_state['team_colors']
         game_map = game_state['game_map']
         camera = game_state['camera']
-        # Periodic terminal update
+
+        # Mise à jour Terminal éventuelle
         if user_choices["index_terminal_display"] in {1, 2}:
             game_state['last_terminal_update'] = game_state.get('last_terminal_update', 0)
             if not game_state['paused']:
                 game_state['last_terminal_update'] += dt
             if game_state['last_terminal_update'] >= 2:
                 game_map.update_terminal()
-                game_state['last_terminal_update'] = 0  # Reset the timer
+                game_state['last_terminal_update'] = 0  # Reset timer
 
-        # Display the screen only if in "GUI" or "Both" mode
+        if user_choices["index_terminal_display"] == 1:
+            # Terminal only => no GUI
+            screen = None
+
+        # Si on veut vraiment un mode "GUI" (ou "Both"), on dessine
         if screen is not None:
-            # -----------------------------------------------------------
-            # Update game state
-            #  (camera, units, etc.) - skipping logic if dt=0
-            # -----------------------------------------------------------
-            if game_state.get('recompute_camera', False):
-                min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
-                camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
-                game_state['recompute_camera'] = False
-            # -----------------------------------------------------------
-            # Handle events
-            # -----------------------------------------------------------
-            for event in pygame.event.get():
-                handle_events(event, game_state)
-                if event.type == pygame.QUIT:
-                    running = False
-                    
-                    
-            # -------------------------------------
-            # Update the minimap from time to time
-            # -------------------------------------
+
+            # Mise à jour de la minimap périodique
             if (not game_state.get('paused', False)) and (update_counter > 1):
                 update_counter = 0
                 update_minimap_elements(game_state)
             update_counter += dt
-            # Update side panels
+
+            # Mise à jour surfaces (player selection / player info)
             if not game_state.get('paused', False):
                 if game_state.get('player_selection_updated', False):
                     player_selection_surface = create_player_selection_surface(
@@ -184,13 +175,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             # -----------------------------------------------------------
             screen.fill((0, 0, 0))
 
-            # Draw the map with all entities
+            # Draw la map avec les entités
             draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state, dt)
 
-            # GUI elements first (background)
+            # Panneaux GUI (ressources, etc.)
             draw_gui_elements(screen, screen_width, screen_height)
 
-            # Minimap elements on top
+            # Minimap
             screen.blit(game_state['minimap_background'], game_state['minimap_background_rect'].topleft)
             screen.blit(game_state['minimap_entities_surface'], game_state['minimap_background_rect'].topleft)
             draw_minimap_viewport(
@@ -217,8 +208,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
             # FPS
             display_fps(screen)
+            # Pointeur souris custom
             draw_pointer(screen)
 
+            # Affichage du path éventuel des unités sélectionnées (debug/visu)
             for player in players:
                 for unit in player.units:
                     if unit.path:
@@ -230,6 +223,4 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             else:
                 pygame.display.flip()
 
-
     # End main loop
-

@@ -1,5 +1,7 @@
+import pygame
 import math
 from Settings.setup import *
+import colorsys
 
 
 # ---------------- Isometric ----------------

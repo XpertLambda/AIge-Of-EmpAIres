@@ -5,7 +5,7 @@ import time
 from tkinter import Tk, filedialog
 from Entity.Building import Building, TownCentre
 from Controller.isometric_utils import *
-from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY
+from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY, MINIMAP_MARGIN, PANEL_RATIO, BG_RATIO
 from Controller.drawing import compute_map_bounds, generate_team_colors
 from Models.html import write_full_html
 from AiUtils.aStar import a_star
@@ -26,12 +26,74 @@ def handle_events(event, game_state):
         pygame.quit()
         sys.exit()
 
+    elif event.type == pygame.VIDEORESIZE:
+        sw, sh = event.size
+        camera.width = sw
+        camera.height = sh
+
+        panel_width  = int(sw * PANEL_RATIO)
+        panel_height = int(sh * PANEL_RATIO)
+
+        from Controller.init_assets import get_scaled_gui
+        minimap_panel_sprite = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
+        game_state['minimap_panel_sprite'] = minimap_panel_sprite
+
+        from Controller.drawing import create_minimap_background
+        from Controller.utils import get_centered_rect_in_bottom_right
+
+        new_panel_rect = get_centered_rect_in_bottom_right(
+            panel_width, 
+            panel_height, 
+            sw, 
+            sh, 
+            MINIMAP_MARGIN
+        )
+        game_state['minimap_panel_rect'] = new_panel_rect
+
+        bg_width  = int(sw * BG_RATIO)
+        bg_height = int(sh * BG_RATIO)
+        mb, ms, mo_x, mo_y, mi_x, mi_y = create_minimap_background(
+            game_state['game_map'], bg_width, bg_height
+        )
+
+        game_state['minimap_background']     = mb
+        game_state['minimap_scale']          = ms
+        game_state['minimap_offset_x']       = mo_x
+        game_state['minimap_offset_y']       = mo_y
+        game_state['minimap_min_iso_x']      = mi_x
+        game_state['minimap_min_iso_y']      = mi_y
+
+        new_bg_rect = mb.get_rect()
+        new_bg_rect.center = new_panel_rect.center
+        new_bg_rect.y -= panel_height / 50
+        new_bg_rect.x += panel_width / 18
+        game_state['minimap_background_rect'] = new_bg_rect
+
+        game_state['minimap_entities_surface'] = pygame.Surface(
+            (mb.get_width(), mb.get_height()),
+            pygame.SRCALPHA
+        )
+        game_state['minimap_entities_surface'].fill((0, 0, 0, 0))
+
+        game_state['screen_width']  = sw
+        game_state['screen_height'] = sh
+
+        game_state['force_full_redraw'] = True
+        game_state['player_selection_updated'] = True
+
+        camera.limit_camera()
+        return
+
     elif event.type == pygame.KEYDOWN:
         if event.key == pygame.K_F2:
             game_state['show_all_health_bars'] = not game_state['show_all_health_bars']
+
         elif event.key == pygame.K_F11:
+            # Sauvegarde
             game_state['game_map'].save_map()
+
         elif event.key == pygame.K_F12:
+            # Chargement via un dialogue file
             try:
                 root = Tk()
                 root.withdraw()
@@ -64,10 +126,13 @@ def handle_events(event, game_state):
 
         elif event.key in (pygame.K_PLUS, pygame.K_KP_PLUS):
             camera.set_zoom(camera.zoom * 1.1)
+
         elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
             camera.set_zoom(camera.zoom / 1.1)
+
         elif event.key == pygame.K_m:
             camera.zoom_out_to_global()
+
         elif event.key == pygame.K_ESCAPE:
             try:
                 os.remove('full_snapshot.html')
@@ -135,9 +200,10 @@ def handle_events(event, game_state):
                 for unit_selected in game_state['selected_units']:
                     unit_selected.path = a_star(unit_selected, (tile_x, tile_y), game_state['game_map'])
 
-        elif event.button == 4:
+        elif event.button == 4:  # molette haut
             camera.set_zoom(camera.zoom * 1.1)
-        elif event.button == 5:
+
+        elif event.button == 5:  # molette bas
             camera.set_zoom(camera.zoom / 1.1)
 
     elif event.type == pygame.MOUSEMOTION:
