@@ -19,7 +19,7 @@ class Resource(Entity):
     def kill(self):
         self.current_frame = 0
         self.hp = 0
-        self.state = 7
+        self.state = ''
 
     def display(self, screen, screen_width, screen_height, camera, dt):
         category = 'resources'
