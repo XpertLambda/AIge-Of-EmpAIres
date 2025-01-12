@@ -6,7 +6,7 @@ from collections import OrderedDict, Counter
 from Settings.setup import *
 from Controller.init_assets import *
 from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, PANEL_RATIO, BG_RATIO
-from Controller.isometric_utils import to_isometric, get_color_for_terrain
+from Controller.utils import to_isometric, get_color_for_terrain
 from Entity.Building import Building
 
 pygame.init()
@@ -268,7 +268,7 @@ def run_gui_menu(screen, sw, sh):
                     expanded_rect = pygame.Rect(sw//2 - 100, 160 + ITEM_HEIGHT, 200, ITEM_HEIGHT * len(visible_items))
                     if expanded_rect.collidepoint(mx,my):
                         relative_y = my - (160 + ITEM_HEIGHT)
-                        item_index = relative_y // item_height
+                        item_index = relative_y // ITEM_HEIGHT
                         if 0 <= item_index < len(visible_items):
                             new_val = visible_items[item_index]
                             idx_nbot = VALID_BOTS_COUNT.index(new_val)
@@ -281,7 +281,7 @@ def run_gui_menu(screen, sw, sh):
                     expanded_rect = pygame.Rect(sw//2 - 100, 220 + ITEM_HEIGHT, 200, ITEM_HEIGHT * len(visible_items))
                     if expanded_rect.collidepoint(mx,my):
                         relative_y = my - (220 + ITEM_HEIGHT)
-                        item_index = relative_y // item_height
+                        item_index = relative_y // ITEM_HEIGHT
                         if 0 <= item_index < len(visible_items):
                             new_val = visible_items[item_index]
                             idx_lvl = VALID_LEVELS.index(new_val)
@@ -509,17 +509,17 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
 def create_player_info_surface(selected_player, screen_width, team_colors):
     font_info = pygame.font.Font(None, 24)
     padding = 5
-    info_height = 160
+    info_height = 200
     surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
 
     team_color = team_colors[selected_player.teamID % len(team_colors)]
     player_name_surface = font_info.render(f"Player {selected_player.teamID}", True, team_color)
     surface.blit(player_name_surface, (padding, 0))
 
-    resources_text = (f"Resources - Food: {selected_player.resources['food']}, "
-                      f"Wood: {selected_player.resources['wood']}, "
-                      f"Gold: {selected_player.resources['gold']}")
-    resources_surface = font_info.render(resources_text, True, (255, 255, 255))
+    resources_text = (f"Resources - Food: {selected_player.resources.food}, "
+                      f"Wood: {selected_player.resources.wood}, "
+                      f"Gold: {selected_player.resources.gold}")
+    resources_surface = font.render(resources_text, True, (255, 255, 255))
     surface.blit(resources_surface, (padding, 30))
 
     unit_counts = Counter(unit.acronym for unit in selected_player.units)
@@ -535,5 +535,9 @@ def create_player_info_surface(selected_player, screen_width, team_colors):
     maximum_population_text = (f"Maximum population : {selected_player.maximum_population}")
     maximum_population = font_info.render(maximum_population_text, True, (255, 255, 255))
     surface.blit(maximum_population, (padding, 120))
+
+    population_text = (f"population : {selected_player.population}")
+    population = font.render(population_text, True, (255, 255, 255))
+    surface.blit(population, (padding, 150))
 
     return surface

@@ -273,9 +273,6 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
   
 def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
     name = Entity_Acronym[category][acronym]
-    if state is not None:
-        state = states[state]
-
     scaled_sprite = get_scaled_sprite(name, category, zoom, state, direction, frame, variant)
     if scaled_sprite is None:
         return

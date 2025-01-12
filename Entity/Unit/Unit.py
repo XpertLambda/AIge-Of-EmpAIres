@@ -5,7 +5,7 @@ from AiUtils.aStar import a_star
 from Entity.Entity import Entity
 from Entity.Building import Building
 from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE,TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
-from Controller.isometric_utils import tile_to_screen, get_direction, get_snapped_angle, normalize
+from Controller.utils import tile_to_screen, get_direction, get_snapped_angle, normalize
 from Controller.init_assets import draw_sprite, draw_hitbox, draw_path
 
 class Unit(Entity):
@@ -28,9 +28,9 @@ class Unit(Entity):
         self.attack_power = attack_power
         self.attack_range = attack_range
         self.attack_speed = attack_speed
+        self.attack_target = None
         self.attack_timer = 0
         self.follow_timer = 0
-        self.target = None
         
         self.speed = speed
         self.training_time = training_time
@@ -53,28 +53,34 @@ class Unit(Entity):
 
     # ---------------- Controller ----------------
     def setIdle(self):
-        if self.state !=0:
-            self.state = 0
+        if self.state != 'idle':
+            self.state = 'idle'
         self.cooldown_frame = None
 
     def set_target(self, target):
+        self.attack_target = None
+        self.set_destination(None, None)
         if target and target.team != None and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
-            self.target = target
-            return
-        self.target = None
+            self.attack_target = target
+            
+
+    def set_destination(self, destination, game_map):
+        if destination and game_map:
+            self.path = a_star((self.x, self.y), destination, game_map)
+        else:
+            self.path = []
 
     def kill(self):
-        self.state = 3
+        self.state = 'death'
         self.cooldown_frame = None
-        self.target = None
+        self.attack_target = None
         self.path = []
         self.current_frame = 0
         self.hp = 0
-
     # ---------------- Move Logic ----------------
     def seekMove(self, game_map, dt, ALLOWED_ANGLES=ALLOWED_ANGLES):
         if self.path:
-            self.state = 1
+            self.state = 'walk'
 
             target_tile = self.path[0]        
             snapped_angle = get_snapped_angle(((self.x, self.y)), (target_tile[0], target_tile[1]))
@@ -105,23 +111,32 @@ class Unit(Entity):
                 for entity in entities:
                     if entity.entity_id != self.entity_id:
                         distance = math.dist((entity.x, entity.y), (self.x, self.y))
-                        hitbox_difference = distance - abs(self.hitbox  + entity.hitbox)
+                        hitbox_difference = distance - abs(self.hitbox + entity.hitbox)
                         if hitbox_difference < 0:
                             diff = [self.x - entity.x, self.y - entity.y]
                             diff = normalize(diff)
                             if diff:
-                                scaled_diff = [component * self.hitbox/2 for component in diff]
-                                self.path.insert(0, (self.x + scaled_diff[0], self.y + scaled_diff[1]))
+                                force = [component * self.hitbox for component in diff]
+                                '''
+                                if self.path:
+                                    perp = [-diff[1], diff[0]]
+                                    perp_factor = 0.3
+                                    force[0] += perp[0] * perp_factor
+                                    force[1] += perp[1] * perp_factor
+                                '''
+                                new_pos = (self.x + force[0], self.y + force[1])
+                                if game_map.walkable_position(new_pos):
+                                    self.path.insert(0, new_pos)
             return True
 
     # ---------------- Attack Logic ----------------
     def seekAttack(self, game_map, dt):
-        if self.target and self.target.isAlive():
-            distance = math.dist((self.x, self.y), (self.target.x, self.target.y)) - self.target.hitbox - self.attack_range
+        if self.attack_target and self.attack_target.isAlive():
+            distance = math.dist((self.x, self.y), (self.attack_target.x, self.attack_target.y)) - self.attack_target.hitbox - self.attack_range
 
             if distance <= 0 :
-                self.state = 2
-                self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.target.x, self.target.y))) 
+                self.state = 'attack'
+                self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.attack_target.x, self.attack_target.y))) 
                 if self.attack_timer == 0:
                     self.current_frame = 0
                     self.path = []
@@ -131,59 +146,50 @@ class Unit(Entity):
                     
                 self.attack_timer += dt
                 if self.attack_timer >= self.attack_speed:
-                    self.target.hp -= self.attack_power
+                    self.attack_target.hp -= self.attack_power
                     self.attack_timer = 0
                     self.cooldown_frame = None
             else :
                 if self.path:
-                    self.path = [self.path[0]] + a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+                    self.path = [self.path[0]] + a_star((self.x, self.y), (self.attack_target.x,self.attack_target.y), game_map)
                 else:
-                    self.path = a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+                    self.set_destination((self.attack_target.x,self.attack_target.y), game_map)
 
                 self.attack_timer = 0
         else: 
-            self.target = None
+            self.attack_target = None
 
     # ---------------- Death Logic ----------------
     def death(self, game_map, dt):
         if self.death_timer == 0:
             self.kill()
         
-        if self.current_frame == self.frames - 1 and self.state == 3:
+        if self.current_frame == self.frames - 1 and self.state == 'death':
             self.cooldown_frame = self.current_frame
         
-        if self.death_timer > self.death_duration and self.state == 3:
-            self.state = 4
+        if self.death_timer > self.death_duration and self.state == 'death':
+            self.state = 'decay'
             self.current_frame = 0
             self.cooldown_frame = None
 
-        if self.state == 4 and  self.current_frame == self.frames - 1:
-            self.state = 7
-
-        if self.state == 7 and not self.removed:
-            self.removed = True
-            for player in game_map.game_state['players']:
-                if hasattr(player, 'units') and self in player.units:
-                    player.units.remove(self)
-                    break
-            game_map.remove_entity(self)
-            game_map.game_state['player_info_updated'] = True
-
-        self.death_timer += dt
+        if self.state == 'decay' and  self.current_frame == self.frames - 1:
+            self.state = ''
+        self.death_timer+=dt
 
     # ---------------- Display Logic ----------------
     def display(self, screen, screen_width, screen_height, camera, dt):
-        self.frame_duration += dt
-        frame_time = 1.0 / self.frames
-        if self.frame_duration >= frame_time:
-            self.frame_duration -= frame_time
-            self.current_frame = (self.current_frame + 1) % self.frames
+        if self.state:
+            self.frame_duration += dt
+            frame_time = 1.0 / self.frames
+            if self.frame_duration >= frame_time:
+                self.frame_duration -= frame_time
+                self.current_frame = (self.current_frame + 1) % self.frames
 
-        if self.cooldown_frame:
-            self.current_frame = self.cooldown_frame
+            if self.cooldown_frame:
+                self.current_frame = self.cooldown_frame
 
-        sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame, direction=self.direction)
+            sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame, direction=self.direction)
 
     def display_hitbox(self, screen, screen_width, screen_height, camera):
         center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)

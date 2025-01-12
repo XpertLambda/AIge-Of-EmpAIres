@@ -18,8 +18,8 @@ from Controller.drawing import (
 import copy
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
-from Controller.isometric_utils import tile_to_screen
 from Controller.gui import create_player_selection_surface, create_player_info_surface, get_scaled_gui, draw_gui_elements, get_centered_rect_in_bottom_right, update_minimap_elements, draw_minimap_viewport
+from Controller.utils import tile_to_screen
 from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices, GAME_SPEED, PANEL_RATIO, BG_RATIO, ONE_SECOND
 
 
@@ -119,9 +119,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             if event.type == pygame.QUIT:
                 running = False
 
-        # -- On met à jour la logique du jeu --
-        update_game_state(game_state, dt)
-
         screen = game_state['screen']
         screen_width = game_state['screen_width']
         screen_height = game_state['screen_height']
@@ -170,6 +167,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     )
                     game_state['player_info_updated'] = False
 
+            update_game_state(game_state, dt)
             # -----------------------------------------------------------
             # Rendering
             # -----------------------------------------------------------
@@ -211,8 +209,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             # Pointeur souris custom
             draw_pointer(screen)
 
-            # Affichage du path éventuel des unités sélectionnées (debug/visu)
-            for player in players:
+
+            for player in game_map.players:
                 for unit in player.units:
                     if unit.path:
                         unit.display_path(game_state['screen'], game_state['screen_width'], game_state['screen_height'], game_state['camera'])

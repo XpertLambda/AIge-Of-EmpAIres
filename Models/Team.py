@@ -1,5 +1,6 @@
-from Settings.setup import *
 from collections import Counter
+from Settings.setup import *
+from Settings.entity_mapping import *
 from Entity.Entity import *
 from Entity.Building import *
 from Entity.Unit import *
@@ -8,77 +9,69 @@ from Models.Map import GameMap
 
 class Team:
     def __init__(self, difficulty, teamID):
-        self.resources = {"gold": 0, "wood": 0, "food": 0}
-        self.units = []
-        self.buildings = []
+        self.resources = difficulty_config[difficulty]['Resources']
+        self.units = set()
+        self.buildings = set()
         self.teamID = teamID
+
+        self.population = 0
         self.maximum_population = 0
-        self.en_cours = dict()
+        self.en_cours = {}
 
-        if difficulty == 'DEBUG':
-            self.resources["gold"] = LEAN_STARTING_GOLD
-            self.resources["food"] = LEAN_STARTING_FOOD
-            self.resources["wood"] = LEAN_STARTING_WOOD
+        for building, amount in difficulty_config[difficulty]['Buildings'].items():
+            for _ in range(amount):
+                if building in building_class_map:
+                    self.add_member(building_class_map[building](team=teamID))
 
-            for _ in range(30):
-                self.units.append(Horseman(team=teamID))
-                self.units.append(Villager(team=teamID))
-                self.units.append(Archer(team=teamID))
-                self.units.append(Swordsman(team=teamID))
+        for unit, amount in difficulty_config[difficulty]['Units'].items():
+            for _ in range(amount):
+                if unit in unit_class_map:
+                    self.add_member(unit_class_map[unit](team=teamID))
 
-            for _ in range(5):
-                self.buildings.append(TownCentre(team=teamID))
-                self.buildings.append(ArcheryRange(team=teamID))
-                self.buildings.append(Stable(team=teamID))
-                self.buildings.append(Barracks(team=teamID))
-                self.buildings.append(Keep(team=teamID))
-                self.buildings.append(Camp(team=teamID))
-                self.buildings.append(House(team=teamID))
-                self.buildings.append(Farm(team=teamID))
+    def add_member(self, entity):
+        if entity.team == self.teamID :
+            if entity in self.buildings or entity in self.units:
+                return False
 
-        elif difficulty == 'lean':
-            self.resources["gold"] = LEAN_STARTING_GOLD
-            self.resources["food"] = LEAN_STARTING_FOOD
-            self.resources["wood"] = LEAN_STARTING_WOOD
+            if isinstance(entity, Building):
+                if entity.population + self.maximum_population > MAXIMUM_POPULATION :
+                    print("Maximum population reached")
+                    return False
 
-            for _ in range(LEAN_STARTING_VILLAGERS):
-                self.units.append(Villager(team=teamID))
-            for _ in range(LEAN_NUMBER_OF_TOWER_CENTRE):
-                self.buildings.append(TownCentre(team=teamID))
+                self.buildings.add(entity)
+                self.maximum_population += entity.population
+                print(f'addded {entity} : {entity.entity_id} to team #{entity.team}')
+                return True
 
-        elif difficulty == 'mean':
-            self.resources["gold"] = MEAN_STARTING_GOLD
-            self.resources["food"] = MEAN_STARTING_FOOD
-            self.resources["wood"] = MEAN_STARTING_WOOD
-            for _ in range(MEAN_STARTING_VILLAGERS):
-                self.units.append(Villager(team=teamID))
-            for _ in range(MEAN_NUMBER_OF_TOWER_CENTRE):
-                self.buildings.append(TownCentre(team=teamID))
-                self.units = set()
+            elif isinstance(entity, Unit):
+                if self.population + 1 > self.maximum_population:
+                    print("Failed to add entity : Not enough space")
+                    return False
 
-        elif difficulty == 'marines':
-            self.resources["gold"] = MARINES_STARTING_GOLD
-            self.resources["food"] = MARINES_STARTING_FOOD
-            self.resources["wood"] = MARINES_STARTING_WOOD
-            # Ajout des bâtiments
-            for _ in range(MARINES_NUMBER_OF_BARRACKS):
-                self.buildings.append(Barracks(team=teamID))
-            for _ in range(MARINES_NUMBER_OF_STABLES):
-                self.buildings.append(Stable(team=teamID))
-            for _ in range(MARINES_NUMBER_OF_ARCHERY_RANGES):
-                self.buildings.append(ArcheryRange(team=teamID))
-            for _ in range(MARINES_STARTING_VILLAGERS):
-                self.units.append(Villager(team=teamID))
-            for _ in range(MARINES_NUMBER_OF_TOWER_CENTRE):
-                self.buildings.append(TownCentre(team=teamID))
-                
-    
-    def manage_life(self):
-        # Non-Villager => .task=False
-        for s in self.units:
-            if not isinstance(s, Villager):
-                s.task = False
+                self.units.add(entity)
+                self.population += 1
+                return True
+        return False
 
+    def remove_member(self, entity):
+        if entity.team == self.teamID:
+            if isinstance(entity, Building):
+                if entity in self.buildings:
+                    self.buildings.remove(entity)
+                    self.maximum_population -= entity.population
+                    return True
+            elif isinstance(entity, Unit):
+                if entity in self.units:
+                    self.units.remove(entity)
+                    self.population -= 1
+                    return True
+        return False
+
+    def modify_resources(self, Resources):
+        self.resources['food'] += Resources.food 
+        self.resources['wood'] += Resources.wood 
+        self.resources['gold'] += Resources.gold
+    '''
     def manage_creation(self, clock):
         """
         Manages creation of buildings/units in self.en_cours.
@@ -229,3 +222,6 @@ class Team:
         )
         villager.resources = Resources(food=0, gold=0, wood=0)
         villager.task = False
+
+    '''
+    

@@ -10,7 +10,7 @@ from Settings.setup import (
     HEALTH_BAR_OFFSET_Y,
     UNIT_HITBOX
 )
-from Controller.isometric_utils import (
+from Controller.utils import (
     to_isometric,
     get_color_for_terrain,
     screen_to_tile,

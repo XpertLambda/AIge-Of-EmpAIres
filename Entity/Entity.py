@@ -1,8 +1,8 @@
 import time
 import math
-from Settings.setup import Resources
+from Models.Resources import Resources
 from Controller.init_assets import draw_hitbox, HALF_TILE_SIZE
-from Controller.isometric_utils import tile_to_screen
+from Controller.utils import tile_to_screen
 from Controller.drawing import draw_healthBar
 import pygame
 
@@ -16,8 +16,9 @@ class Entity:
         acronym, 
         size, 
         max_hp, 
-        cost=Resources(food=0, gold=0, wood=0),
-        walkable=False,
+        cost=Resources(),
+        walkable = False,
+        hasResources = False,
         hitbox=0
     ):
         self.x = x
@@ -28,13 +29,14 @@ class Entity:
         self.max_hp = max_hp
         self.cost = cost
         self.walkable = walkable
+        self.hasResources = hasResources
         
         self.hp = max_hp
         self.hitbox = hitbox if hitbox > 0 else size/2
         self.last_damage_time = 0
         self.last_clicked_time = 0
 
-        self.state = 0
+        self.state = 'idle'
         self.current_frame = 0
         self.frame_duration = 0
         self.cooldown_frame = None

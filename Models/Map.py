@@ -50,7 +50,8 @@ class GameMap:
 
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
-
+        if entity.team != None:
+            self.players[entity.team].add_member(entity)
         return True
 
     def remove_entity(self, entity):
@@ -65,6 +66,8 @@ class GameMap:
                         del self.grid[pos]
 
                     if remove_counter >= entity.size * entity.size:
+                        if entity.team != None:
+                            self.players[entity.team].remove_member(entity)
                         return True
                         
         return False
@@ -115,8 +118,6 @@ class GameMap:
                     y = random.randint(y_start, max(y_start, y_end - building.size))
                     placed = self.add_entity(building, x, y)
                     if placed:
-                        if (isinstance(building, TownCentre) or isinstance(building, House)):
-                            player.maximum_population += building.population
                         break
                     attempts += 1
               
@@ -367,7 +368,7 @@ class GameMap:
             if inactive_entities:
                 for entity in list(inactive_entities):
                     entity.update(self, dt)
-                    if entity.state == 7:
+                    if not entity.state:
                         self.remove_inactive(entity)
 
     def set_game_state(self, game_state):
