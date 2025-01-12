@@ -222,6 +222,15 @@ def handle_events(event, game_state):
             else:
                 debug_print("[GUI] TAB => Unpause => reprise du jeu.")
 
+    #idem avec P mais sans la snapshot
+    elif event.type == pygame.KEYUP:
+        if event.key == pygame.K_p:
+            game_state['paused'] = not game_state.get('paused', False)
+            if game_state['paused']:
+                debug_print("[GUI] 'p' => Pause activée.")
+            else:
+                debug_print("[GUI] 'p' => Unpause => reprise du jeu.")
+
     #
     # (9) - MOUSEBUTTONDOWN
     #

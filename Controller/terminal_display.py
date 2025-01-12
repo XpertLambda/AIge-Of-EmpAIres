@@ -107,9 +107,9 @@ def _curses_main(stdscr, game_map):
             key = -1
 
         if key != -1:
-            if key in [27]:  # 27 = ESC
-                debug_print("Fermeture curses demandée (ESC).")
+            if key in [27]:  # 27 = ESC fermer curses et faire un clear du terminal
                 running = False
+                debug_print("Fermeture curses demandée (ESC).")
                 break
 
             move_amount = 1
@@ -146,7 +146,14 @@ def _curses_main(stdscr, game_map):
                         debug_print("[CURSES] Tab => Pause ON + snapshot générée")
                     else:
                         debug_print("[CURSES] Tab => Unpause => reprise du jeu")
-
+            elif key == ord('p'):
+                if game_map.game_state is not None:
+                    is_paused = not game_map.game_state.get('paused', False)
+                    game_map.game_state['paused'] = is_paused
+                    if is_paused:
+                        debug_print("[CURSES] 'p' => Pause ON")
+                    else:
+                        debug_print("[CURSES] 'p' => Unpause => reprise du jeu")
             #6 ET 7 A REFAIRE!!!!!!!!!!!!!!
             # 6) Touche F11 => Sauvegarde
             elif key == curses.KEY_F11:
