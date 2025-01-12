@@ -16,12 +16,13 @@ from Controller.gui import run_gui_menu, user_choices, VALID_GRID_SIZES, VALID_B
 def ask_terminal_inputs_non_blocking():
     """
     Menu Terminal en mode non-bloquant.
-    On reproduit ici l'affichage 'classique', avec gestion des valeurs par défaut,
-    vérification si la GUI a validé, etc.
+    On ajoute ici la possibilité de choisir :
+       [1] GUI only
+       [2] Terminal only
+       [3] Both
+    par défaut => "3" (Both).
 
-    - Le choix par défaut de l'affichage est "both" (index = 2).
-    - Si l'utilisateur appuie sur 'Entrée' sans rien saisir, on prend la valeur par défaut.
-    - Après chaque choix, on affiche un message de confirmation du choix effectué.
+    Ensuite, menu standard : [1] nouvelle partie / [2] load, etc.
     """
 
     step = 0  # État de progression dans les questions
@@ -33,33 +34,10 @@ def ask_terminal_inputs_non_blocking():
             print("Choix fait sur la GUI => arrêt du menu terminal.")
             return
 
-        # Enchaînement logique (étape par étape)
         if step == 0:
             print("\n--- Choisir le mode d'affichage ---")
             print("[1] GUI only / [2] Terminal only / [3] Both ? (défaut=3)")
             step = 1
-
-        elif step == 1:
-            rlist, _, _ = select([sys.stdin], [], [], 0.1)
-            if rlist:
-                line = sys.stdin.readline().strip()
-                if line == "":
-                    # L'utilisateur a juste appuyé sur Entrée => mode par défaut = 3 => index 2
-                    user_choices["index_terminal_display"] = 2
-                    print("Choix par défaut : Both (GUI + Terminal)")
-                elif line in ['1', '2', '3']:
-                    val = int(line) - 1  # 0 => GUI only, 1 => Terminal only, 2 => Both
-                    user_choices["index_terminal_display"] = val
-                    if val == 0:
-                        print("Vous avez choisi : GUI only")
-                    elif val == 1:
-                        print("Vous avez choisi : Terminal only")
-                    else:
-                        print("Vous avez choisi : Both (GUI + Terminal)")
-                else:
-                    user_choices["index_terminal_display"] = 2
-                    print("Choix invalide. Mode par défaut : Both (GUI + Terminal)")
-                step = 2
 
         elif step == 2:
             print("\n--- Menu Terminal ---")
@@ -88,20 +66,38 @@ def ask_terminal_inputs_non_blocking():
             step = 11
 
         # On lit l'input s’il est dispo (non-bloquant)
-        rlist, _, _ = select([sys.stdin], [], [], 0.1)  # 100ms de timeout
+        rlist, _, _ = select([sys.stdin], [], [], 0.1)
         if rlist:
             line = sys.stdin.readline().strip()
 
-            # step 3 : Choix entre [1] nouvelle partie / [2] charger
-            if step == 3:
+            # step 1 : choix [1/2/3] => index_terminal_display
+            if step == 1:
                 if line == "":
-                    # Appui direct sur Entrée => on considère que c'est "nouvelle partie" par défaut
-                    user_choices["load_game"] = False
-                    print("Aucun choix spécifié => Nouvelle partie (défaut).")
-                    step = 4
-                elif line == '2':
+                    # Par défaut => 3 => index 2
+                    user_choices["index_terminal_display"] = 2
+                    print("Aucun choix => on prend le mode Both (GUI+Terminal).")
+                elif line in ['1', '2', '3']:
+                    val = int(line)
+                    if val == 1:
+                        user_choices["index_terminal_display"] = 0
+                        print("Mode choisi : GUI only.")
+                    elif val == 2:
+                        user_choices["index_terminal_display"] = 1
+                        print("Mode choisi : Terminal only.")
+                    else:
+                        user_choices["index_terminal_display"] = 2
+                        print("Mode choisi : Both (GUI+Terminal).")
+                else:
+                    user_choices["index_terminal_display"] = 2
+                    print("Choix invalide => Both (GUI+Terminal).")
+
+                # Prochaine étape => le menu standard
+                step = 2
+
+            # step 3 : Choix entre [1] nouvelle partie / [2] charger
+            elif step == 3:
+                if line == '2':
                     user_choices["load_game"] = True
-                    print("Vous avez choisi de charger une sauvegarde.")
                     if os.path.isdir(SAVE_DIRECTORY):
                         saves = [f for f in os.listdir(SAVE_DIRECTORY) if f.endswith('.pkl')]
                         if saves:
@@ -109,7 +105,7 @@ def ask_terminal_inputs_non_blocking():
                             for idx, sf in enumerate(saves):
                                 print(f"{idx+1} - {sf}")
                             print("Sélection de la sauvegarde : ")
-                            step = 12  # on va lire l'index de la sauvegarde
+                            step = 12  # on va lire l'index
                         else:
                             print("Aucune sauvegarde valable, on repasse en mode 'nouvelle partie'")
                             user_choices["load_game"] = False
@@ -119,14 +115,14 @@ def ask_terminal_inputs_non_blocking():
                         user_choices["load_game"] = False
                         step = 4
                 else:
+                    # On ne fait pas de vérification, on part sur "nouvelle partie"
                     user_choices["load_game"] = False
-                    print("Vous avez choisi de créer une nouvelle partie.")
                     step = 4
 
             # step 12 : choix de la sauvegarde
             elif step == 12:
                 if line == "":
-                    print("Appui sur Entrée => choix invalide => mode nouvelle partie.")
+                    print("Pas de saisie => nouvelle partie.")
                     user_choices["load_game"] = False
                     step = 4
                 else:
@@ -138,82 +134,71 @@ def ask_terminal_inputs_non_blocking():
                             print(f"Sauvegarde choisie : {saves[sel_idx]}")
                             return
                         else:
-                            print("Index hors liste, on passe en mode nouvelle partie.")
+                            print("Index hors liste => nouvelle partie.")
                             user_choices["load_game"] = False
                             step = 4
                     except:
-                        print("Choix invalide, on passe en mode nouvelle partie.")
+                        print("Choix invalide => nouvelle partie.")
                         user_choices["load_game"] = False
                         step = 4
 
             # step 5 : saisie taille
             elif step == 5:
                 if line == "":
-                    print(f"Pas de saisie => on garde la taille par défaut : {user_choices['grid_size']}")
-                    step = 6  # keep default
+                    print(f"Pas de saisie => taille par défaut {user_choices['grid_size']}")
+                    step = 6
                 else:
                     if line.isdigit():
                         val = int(line)
                         if val in VALID_GRID_SIZES:
                             user_choices["grid_size"] = val
-                            print(f"Taille choisie: {val}")
-                        else:
-                            print(f"Valeur invalide => on garde la taille par défaut : {user_choices['grid_size']}")
-                    else:
-                        print(f"Valeur invalide => on garde la taille par défaut : {user_choices['grid_size']}")
+                            print(f"Taille choisie : {val}")
                     step = 6
 
             # step 7 : saisie nb bots
             elif step == 7:
                 if line == "":
-                    print(f"Pas de saisie => on garde nb bots par défaut : {user_choices['num_bots']}")
+                    print(f"Pas de saisie => nb bots par défaut {user_choices['num_bots']}")
                     step = 8
                 else:
                     if line.isdigit():
                         val = int(line)
                         if 1 <= val <= 55:
                             user_choices["num_bots"] = val
-                            print(f"Nb bots choisi: {val}")
-                        else:
-                            print(f"Valeur invalide => on garde nb bots par défaut : {user_choices['num_bots']}")
-                    else:
-                        print(f"Valeur invalide => on garde nb bots par défaut : {user_choices['num_bots']}")
+                            print(f"Nb bots choisi : {val}")
                     step = 8
 
             # step 9 : saisie niveau bots
             elif step == 9:
                 if line == "":
-                    print(f"Pas de saisie => on garde le niveau par défaut : {user_choices['bot_level']}")
+                    print(f"Pas de saisie => niveau par défaut {user_choices['bot_level']}")
                     step = 10
                 else:
                     if line in VALID_LEVELS:
                         user_choices["bot_level"] = line
-                        print(f"Niveau bots choisi: {line}")
-                    else:
-                        print(f"Valeur invalide => on garde le niveau par défaut : {user_choices['bot_level']}")
+                        print(f"Niveau bots choisi : {line}")
                     step = 10
 
             # step 11 : or au centre
             elif step == 11:
                 if line == "":
-                    print(f"Pas de saisie => on garde la valeur par défaut : {user_choices['gold_at_center']}")
+                    print("Pas de saisie => pas d'or au centre (défaut=false).")
                     step = 13
                 else:
                     if line.lower() == "oui":
                         user_choices["gold_at_center"] = True
-                        print("Vous avez choisi: Or au centre.")
+                        print("Or au centre => True.")
                     else:
-                        user_choices["gold_at_center"] = False
-                        print("Vous avez choisi: pas d'or au centre.")
+                        print("Or au centre => False.")
                     step = 13
 
-            # step 13 : on a terminé => validated
+            # step 13 => validated => on lance la partie
             if step == 13:
                 user_choices["validated"] = True
                 print("Menu Terminal terminé, on lance la partie.")
                 return
 
-        # Pause légère pour ne pas saturer le CPU
+        # Petite pause
         time.sleep(0.01)
 
 def main():
@@ -243,7 +228,7 @@ def main():
     # Lance le jeu
     screen, screen_width, screen_height = init_pygame()
 
-    # Si index_terminal_display = 1 => Terminal only => pas de GUI
+    # Si index_terminal_display == 1 => Terminal only => on supprime l'écran => plus de GUI
     if user_choices["index_terminal_display"] == 1:
         screen = None
 

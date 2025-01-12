@@ -9,7 +9,8 @@ from Models.Map import GameMap
 
 class Team:
     def __init__(self, difficulty, teamID):
-        self.resources = difficulty_config[difficulty]['Resources']
+        self.resources = difficulty_config[difficulty]['Resources'].copy()
+
         self.units = set()
         self.buildings = set()
         self.teamID = teamID
@@ -68,14 +69,19 @@ class Team:
         return False
 
     def modify_resources(self, Resources):
+        """
+        Modifie directement les ressources de l'équipe (ex: +100 gold, -50 wood, etc.).
+        Note : appelle un refresh GUI.
+        """
         self.resources['food'] += Resources.food 
         self.resources['wood'] += Resources.wood 
         self.resources['gold'] += Resources.gold
-    '''
+        game_map.game_state['player_info_updated'] = True
+    
     def manage_creation(self, clock):
         """
-        Manages creation of buildings/units in self.en_cours.
-        Once time is up => place them in .units or .buildings.
+        Gère la création de bâtiments/unités (self.en_cours).
+        Une fois le temps écoulé => on les place dans .units ou .buildings.
         """
         to_remove = []
         for entity, start_time in self.en_cours.items():
@@ -142,14 +148,16 @@ class Team:
             return False
 
         self.buildings.append(building)
-        if hasattr(building, 'population'): #rajouter condition pour pas depasser MAXIMUM8POPUPLATION a 200
+        if hasattr(building, 'population'): #rajouter condition pour pas depasser MAXIMUM_POPULATION a 200
             self.maximum_population += building.population
         game_map.game_state['player_info_updated'] = True
 
         return True
 
     def battle(self,t,map,nb):
-        #attaque et l'adversaire défend
+        """
+        Attaque t, et l'adversaire défend.
+        """
         for i in range(0,len(t.units)):
             soldier=t.units[i]
             if not(soldier.task) and not(isinstance(soldier,Villager)):
@@ -165,7 +173,9 @@ class Team:
                 soldier.attack(t,map)
 
     def battle_v2(self,t,map,nb):
-        #attaque et l'adversaire ne défend pas
+        """
+        Attaque t, et l'adversaire ne défend pas.
+        """
         i=0
         nb_soldier=0
         while(i<len(self.units) and nb_soldier< nb):
@@ -178,7 +188,10 @@ class Team:
             i+=1
 
     def modify_target(self,target,players_target):
-        #arrete toutes les attaques de la team
+        """
+        Met à jour la cible de l'équipe (arrête toutes les attaques de la team)
+        pour la remplacer par la nouvelle 'target'.
+        """
         players_target[self.teamID]=target
         for unit in self.units:
             if not isinstance(unit,Villager):
@@ -188,27 +201,47 @@ class Team:
                     unit.attack(target,map)
 
     def collectResource(self, villager, resource_tile, duration, game_map):
+        """
+        Méthode de récolte de ressources : villager se déplace et récolte sur 'resource_tile'.
+        La quantité récoltée dépend de 'duration' et du 'resource_rate' du villager.
+        """
         if not isinstance(villager, Villager):
             return
         if not villager.isAvailable():
             return
         villager.task = True
         villager.move(resource_tile.x, resource_tile.y, game_map)
+
         collected = min(
             villager.resource_rate * duration,
             villager.carry_capacity - getattr(villager.resources, resource_tile.acronym.lower(), 0)
         )
-        setattr(villager.resources, resource_tile.acronym.lower(), getattr(villager.resources, resource_tile.acronym.lower(), 0) + collected)
+        setattr(
+            villager.resources,
+            resource_tile.acronym.lower(),
+            getattr(villager.resources, resource_tile.acronym.lower(), 0) + collected
+        )
+        
         resource_tile.storage = Resources(
             food=resource_tile.storage.food - (collected if resource_tile.acronym == "F" else 0),
             gold=resource_tile.storage.gold - (collected if resource_tile.acronym == "G" else 0),
             wood=resource_tile.storage.wood - (collected if resource_tile.acronym == "W" else 0),
         )
-        if resource_tile.storage.food <= 0 and resource_tile.storage.gold <= 0 and resource_tile.storage.wood <= 0:
+        
+        if (resource_tile.storage.food <= 0 
+            and resource_tile.storage.gold <= 0 
+            and resource_tile.storage.wood <= 0):
             game_map.remove_entity(resource_tile, resource_tile.x, resource_tile.y)
+
         villager.task = False
+        # ----------- AJOUT POUR METTRE A JOUR L'AFFICHAGE -----------
+        game_map.game_state['player_info_updated'] = True
+        # ------------------------------------------------------------
 
     def stockResources(self, villager, building, game_map):
+        """
+        Le villager va déposer ses ressources dans 'building' s'il le peut.
+        """
         if not isinstance(villager, Villager):
             return
         if not villager.isAvailable() or not hasattr(building, 'resourceDropPoint') or not building.resourceDropPoint:
@@ -222,6 +255,5 @@ class Team:
         )
         villager.resources = Resources(food=0, gold=0, wood=0)
         villager.task = False
-
-    '''
-    
+        # On refresh l'UI
+        game_map.game_state['player_info_updated'] = True

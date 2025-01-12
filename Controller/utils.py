@@ -90,4 +90,3 @@ def get_entity_bar_color(entity, game_state, team_colors):
     if entity.team is None:
         return (50, 255, 50)
     return team_colors[entity.team % len(team_colors)]
-# ...end of file...

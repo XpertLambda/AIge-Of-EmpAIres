@@ -1,3 +1,5 @@
+# Chemin de /home/cyril/Documents/Projet_python/Controller/game_loop.py
+
 import time
 import pygame
 import sys
@@ -18,10 +20,26 @@ from Controller.drawing import (
 import copy
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
-from Controller.gui import create_player_selection_surface, create_player_info_surface, get_scaled_gui, draw_gui_elements, get_centered_rect_in_bottom_right, update_minimap_elements, draw_minimap_viewport
+from Controller.gui import (
+    create_player_selection_surface,
+    create_player_info_surface,
+    get_scaled_gui,
+    draw_gui_elements,
+    get_centered_rect_in_bottom_right,
+    update_minimap_elements,
+    draw_minimap_viewport
+)
 from Controller.utils import tile_to_screen
-from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices, GAME_SPEED, PANEL_RATIO, BG_RATIO, ONE_SECOND
-
+from Settings.setup import (
+    HALF_TILE_SIZE,
+    MINIMAP_MARGIN,
+    UPDATE_EVERY_N_MILLISECOND,
+    user_choices,
+    GAME_SPEED,
+    PANEL_RATIO,
+    BG_RATIO,
+    ONE_SECOND
+)
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
@@ -104,6 +122,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     running = True
     update_counter = 0
     players_target=[None for _ in range(len(players))]
+
+    ### AJOUT : on mémorise l'état "précédent" des ressources de chaque joueur ###
+    old_resources = {}
+    for p in players:
+        old_resources[p.teamID] = p.resources.copy()
+    ### FIN AJOUT ###
+
     # ----------------------------------------------------------------
     # Main loop
     # ----------------------------------------------------------------
@@ -111,7 +136,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     while running:
         raw_dt = clock.tick(200) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
-        dt = dt*GAME_SPEED
+        dt = dt * GAME_SPEED
 
         events = pygame.event.get()
         for event in events:
@@ -141,42 +166,63 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             # Terminal only => no GUI
             screen = None
 
-        # Si on veut vraiment un mode "GUI" (ou "Both"), on dessine
-        if screen is not None:
-
-            # Mise à jour de la minimap périodique
-            if (not game_state.get('paused', False)) and (update_counter > 1):
+        # Mise à jour de la logique (camera, map, etc.)
+        if not game_state.get('paused', False):
+            if (update_counter > 1):
                 update_counter = 0
                 update_minimap_elements(game_state)
             update_counter += dt
 
-            # Mise à jour surfaces (player selection / player info)
-            if not game_state.get('paused', False):
-                if game_state.get('player_selection_updated', False):
-                    player_selection_surface = create_player_selection_surface(
-                        players,
-                        selected_player,
-                        game_state['minimap_background_rect'],
-                        team_colors
-                    )
-                    game_state['player_selection_updated'] = False
+        # Mises à jour surfaces (player selection / player info)
+        if not game_state.get('paused', False):
+            if game_state.get('player_selection_updated', False):
+                player_selection_surface = create_player_selection_surface(
+                    players,
+                    selected_player,
+                    game_state['minimap_background_rect'],
+                    team_colors
+                )
+                game_state['player_selection_updated'] = False
 
-                if game_state.get('player_info_updated', False):
-                    player_info_surface = create_player_info_surface(
-                        selected_player, screen_width, team_colors
-                    )
-                    game_state['player_info_updated'] = False
+            if game_state.get('player_info_updated', False):
+                player_info_surface = create_player_info_surface(
+                    selected_player, screen_width, team_colors
+                )
+                game_state['player_info_updated'] = False
 
-            update_game_state(game_state, dt)
-            # -----------------------------------------------------------
-            # Rendering
-            # -----------------------------------------------------------
+        # ---- Appel principal : update_game_state (logique, pathfinding, etc.) ----
+        update_game_state(game_state, dt)
+
+        ### AJOUT : après avoir mis à jour la logique, on compare les ressources ###
+        if selected_player is not None:
+            current = selected_player.resources
+            previous = old_resources[selected_player.teamID]
+            if current != previous:  
+                # S'il y a un changement => on force le refresh
+                game_state['player_info_updated'] = True
+                old_resources[selected_player.teamID] = current.copy()
+        ### FIN AJOUT ###
+
+        # -----------------------------------------------------------
+        # Rendu "GUI" (si on a un screen)
+        # -----------------------------------------------------------
+        if screen is not None:
             screen.fill((0, 0, 0))
 
-            # Draw la map avec les entités
-            draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state, dt)
+            # Dessine la map + entités
+            draw_map(
+                screen,
+                screen_width,
+                screen_height,
+                game_map,
+                camera,
+                players,
+                team_colors,
+                game_state,
+                dt
+            )
 
-            # Panneaux GUI (ressources, etc.)
+            # Panneaux GUI (ressources, minimap, etc.)
             draw_gui_elements(screen, screen_width, screen_height)
 
             # Minimap
@@ -204,16 +250,20 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 inf_h = player_info_surface.get_height()
                 screen.blit(player_info_surface, (0, screen_height - inf_h))
 
-            # FPS
+            # FPS, pointeur souris custom
             display_fps(screen)
-            # Pointeur souris custom
             draw_pointer(screen)
 
-
+            # Debug path (facultatif) : montrer la path de chaque unité
             for player in game_map.players:
                 for unit in player.units:
                     if unit.path:
-                        unit.display_path(game_state['screen'], game_state['screen_width'], game_state['screen_height'], game_state['camera'])
+                        unit.display_path(
+                            game_state['screen'],
+                            game_state['screen_width'],
+                            game_state['screen_height'],
+                            game_state['camera']
+                        )
 
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
@@ -221,4 +271,4 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             else:
                 pygame.display.flip()
 
-    # End main loop
+    # Fin de la boucle principale

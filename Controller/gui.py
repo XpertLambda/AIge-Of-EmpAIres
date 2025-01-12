@@ -183,7 +183,7 @@ def run_gui_menu(screen, sw, sh):
     toggle_button = {
         "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
         "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
-        "index": 1  # => Both
+        "index": 2  # => Both
     }
 
     save_files = []
@@ -243,10 +243,6 @@ def run_gui_menu(screen, sw, sh):
                     show_config_menu = False
                     show_load_menu = False
                     continue
-
-                if toggle_button["rect"].collidepoint(mx, my):
-                    toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
-                    user_choices["index_terminal_display"] = toggle_button["index"]
 
                 if combo_open == "grid":
                     start_idx = combo_scroll_positions["grid"]
@@ -335,6 +331,11 @@ def run_gui_menu(screen, sw, sh):
                     if valid_rect.collidepoint(mx,my):
                         user_choices["validated"] = True
                         running = False
+
+                    # Insert toggle_button logic here
+                    if toggle_button["rect"].collidepoint(mx, my):
+                        toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
+                        user_choices["index_terminal_display"] = toggle_button["index"]
 
                 elif show_load_menu:
                     start_y = 100

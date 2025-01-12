@@ -6,7 +6,7 @@ import os
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 1
+GAME_SPEED = 10
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_RATE_PER_SEC = 25 / 60
 MAXIMUM_CARRY = 20

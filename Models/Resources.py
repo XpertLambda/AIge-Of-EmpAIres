@@ -71,3 +71,6 @@ class Resources:
         if isinstance(other, Resources):
             return self.food == other.food and self.gold == other.gold and self.wood == other.wood
         return False
+
+    def __repr__(self):
+        return f"Resources(food={self.food}, wood={self.wood}, gold={self.gold})"
