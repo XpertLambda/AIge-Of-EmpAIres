@@ -20,7 +20,7 @@ from Controller.drawing import (
 import copy
 from Controller.event_handler import handle_events
 from Controller.update import update_game_state
-from Controller.isometric_utils import tile_to_screen
+from Controller.utils import tile_to_screen
 from Controller.gui import create_player_selection_surface, create_player_info_surface, get_scaled_gui, draw_gui_elements
 from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, UPDATE_EVERY_N_MILLISECOND, user_choices, GAME_SPEED, PANEL_RATIO, BG_RATIO, ONE_SECOND
 
@@ -127,9 +127,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
                 running = False
-
-        update_game_state(game_state, dt)
-
         # Appel de l'update de chaque unité pour suivre leur path
         for player in players:
             for unit in player.units:
@@ -194,6 +191,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     )
                     game_state['player_info_updated'] = False
 
+            update_game_state(game_state, dt)
             # -----------------------------------------------------------
             # Rendering
             # -----------------------------------------------------------
@@ -237,7 +235,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             display_fps(screen)
             draw_pointer(screen)
 
-            for player in players:
+            for player in game_map.players:
                 for unit in player.units:
                     if unit.path:
                         unit.display_path(game_state['screen'], game_state['screen_width'], game_state['screen_height'], game_state['camera'])

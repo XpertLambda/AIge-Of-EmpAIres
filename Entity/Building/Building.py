@@ -1,5 +1,5 @@
 from Entity.Entity import Entity
-from Controller.isometric_utils import tile_to_screen
+from Controller.utils import tile_to_screen
 from Settings.setup import HALF_TILE_SIZE, FRAMES_PER_BUILDING, GAME_SPEED
 from Settings.setup import HALF_TILE_SIZE, GAME_SPEED
 from Controller.init_assets import draw_sprite
@@ -9,6 +9,7 @@ from Entity.Unit.Archer import Archer
 from Entity.Unit.Swordsman import Swordsman
 from Entity.Unit.Horseman import Horseman
 from Entity.Unit.Villager import Villager
+from Models.Resources import Resources
 
 UNIT_TRAINING_MAP = {
     'T': 'villager',   # TownCentre => Villager
@@ -34,13 +35,13 @@ class Building(Entity):
         max_hp, 
         cost, 
         buildTime, 
-        population=0, 
-        resourceDropPoint=False,
-        spawnsUnits=False, 
-        containsFood=False, 
-        walkable=False,
-        attack_power=0, 
-        attack_range=0,
+        population = 0, 
+        resourceDropPoint = False,
+        spawnsUnits = False, 
+        walkable = False,
+        attack_power = 0, 
+        attack_range = 0,
+        hasResources = False,
     ):
         super().__init__(
             x=x, 
@@ -50,13 +51,13 @@ class Building(Entity):
             size=size, 
             max_hp=max_hp, 
             cost=cost, 
-            walkable=walkable
+            walkable=walkable,
+            hasResources=hasResources
         )
         self.buildTime = buildTime
         self.population = population
         self.resourceDropPoint = resourceDropPoint
         self.spawnsUnits = spawnsUnits
-        self.containsFood = containsFood
         self.attack_power = attack_power
         self.attack_range = attack_range
         self.constructors = []
@@ -70,37 +71,41 @@ class Building(Entity):
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
-        if not self.isAlive():
+        if self.isAlive():
+            if self.spawnsUnits:
+                self.update_training(dt, game_map, self.team)
+        else:
             self.death(game_map)
 
     # ---------------- Controller ----------------
     def kill(self):
-        self.state = 3
+        self.state = 'death'
         self.current_frame = 0
         self.hp = 0
 
     def death(self, game_map):
-        if self.state != 3 :
+        if self.state != 'death' :
             self.kill()
 
-        if self.current_frame == self.frames - 1 and self.state == 3:
-            self.state = 7
+        if self.current_frame == self.frames - 1 and self.state == 'death':
+            self.state = ''
 
     
     # ---------------- Display Logic ----------------
     def display(self, screen, screen_width, screen_height, camera, dt):
-        if self.state !=0:
-            self.frame_duration += dt
-            frame_time = 1.0 / self.frames
-            if self.frame_duration >= frame_time:
-                self.frame_duration -= frame_time
-                self.current_frame = (self.current_frame + 1) % self.frames
+        if self.state:
+            if self.state != 'idle':
+                self.frame_duration += dt
+                frame_time = 1.0 / self.frames
+                if self.frame_duration >= frame_time:
+                    self.frame_duration -= frame_time
+                    self.current_frame = (self.current_frame + 1) % self.frames
 
-        if self.cooldown_frame:
-            self.current_frame = self.cooldown_frame
+            if self.cooldown_frame:
+                self.current_frame = self.cooldown_frame
 
-        sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
+            sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
 
     def is_walkable(self):
         return self.walkable
@@ -115,19 +120,11 @@ class Building(Entity):
 
         unit_name = UNIT_TRAINING_MAP[self.acronym]
         unit_class = UNIT_CLASSES[unit_name]
-        dummy_unit = unit_class(team=self.team)
+        unit = unit_class(team=self.team)
 
-        food_cost = dummy_unit.cost.food
-        gold_cost = dummy_unit.cost.gold
-        wood_cost = dummy_unit.cost.wood
 
-        if (team.resources["food"] >= food_cost and
-            team.resources["gold"] >= gold_cost and
-            team.resources["wood"] >= wood_cost):
-            team.resources["food"] -= food_cost
-            team.resources["gold"] -= gold_cost
-            team.resources["wood"] -= wood_cost
-
+        if (team.resources.has_enough(unit.cost.get()) and team.population < team.maximum_population ):
+            team.resources.decrease_resources(unit.cost.get())
             self.training_queue.append(unit_name)
             return True
 
@@ -143,9 +140,9 @@ class Building(Entity):
         if not self.current_training_unit:
             next_unit_name = self.training_queue.pop(0)
             unit_class = UNIT_CLASSES[next_unit_name]
-            dummy_unit = unit_class(team=self.team)
+            unit = unit_class(team=self.team)
             self.current_training_unit = next_unit_name
-            self.current_training_time_left = dummy_unit.training_time / GAME_SPEED
+            self.current_training_time_left = unit.training_time / GAME_SPEED
             self.training_progress = 0.0
 
         if self.current_training_unit:
@@ -175,7 +172,6 @@ class Building(Entity):
         if not placed_ok:
             return
 
-        team.units.append(new_unit)
         game_map.game_state['player_info_updated'] = True
         self.move_unit_randomly(new_unit, game_map)
 
@@ -212,7 +208,14 @@ class Building(Entity):
                 0 <= target_y < game_map.num_tiles_y and
                 game_map.walkable_position((target_x, target_y))):
                 # Calculer ET assigner le path à l'unité
-                new_unit.path = a_star(new_unit, (target_x, target_y), game_map)
-                # Définir la destination
+                new_unit.set_destination((target_x, target_y), game_map)
                 new_unit.destination = (target_x, target_y)
                 return
+
+
+    def stock(self, game_map, resources):
+        if self.resourceDropPoint:
+            team_resources = game_map.players[self.team].resources
+            if team_resources.increase_resources(resources):
+                return resources
+        return None

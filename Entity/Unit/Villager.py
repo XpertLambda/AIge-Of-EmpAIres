@@ -1,12 +1,9 @@
 import math
 import pygame
-from Settings.setup import RESOURCE_CAPACITY, RESOURCE_COLLECTION_RATE, Resources, FRAMES_PER_UNIT, HALF_TILE_SIZE,TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
-from Entity.Resource.Resource import Resource
+from Settings.setup import MAXIMUM_CARRY, RESOURCE_RATE_PER_SEC, Resources, FRAMES_PER_UNIT, HALF_TILE_SIZE,TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX, villager_tasks
 from Entity.Unit.Unit import Unit
-from Entity.Entity import Entity
-from Entity.Building import Building
 from AiUtils.aStar import a_star
-from Controller.isometric_utils import get_direction, get_snapped_angle
+from Controller.utils import get_direction, get_snapped_angle
 
 class Villager(Unit):
     def __init__(self, team=None, x=0, y=0):
@@ -24,10 +21,13 @@ class Villager(Unit):
             training_time=20, 
 
         )
-        self.resources = Resources(food=0, gold=0, wood=0)
-        self.carry_capacity = RESOURCE_CAPACITY
-        self.resource_rate = RESOURCE_COLLECTION_RATE / 60
+        self.carry = Resources(food=0, gold=0, wood=0)
+        self.resource_rate = RESOURCE_RATE_PER_SEC
         self.task = None
+        self.collect_target = None
+        self.build_target = None
+        self.stock_target = None
+        self.task_timer = 0
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
@@ -35,49 +35,100 @@ class Villager(Unit):
             self.setIdle()
             self.seekAttack(game_map, dt)
             self.seekCollision(game_map, dt)
+            self.seekCollect(game_map, dt)
+            self.seekStock(game_map)
             self.seekMove(game_map, dt)
-            #self.seekCollect(game_map, dt)
-            #self.seekStock(game_map, dt)
             #self.seekBuild(game_map, dt)
         else:
             self.death(game_map, dt)
 
     # ---------------- Controller ----------------
     def set_target(self, target):
-        if target and target.team != None and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
-            self.target = target
-            return
-        self.target = None
+        self.attack_target = None
+        self.collect_target = None
+        self.build_target = None
+        self.stock_target = None
+        self.set_destination(None, None)
 
-    def seekAttack(self, game_map, dt):
-        if self.target and self.isAvailable() and self.target.isAlive():
-            distance = math.dist((self.x, self.y), (self.target.x, self.target.y)) - self.target.hitbox - self.attack_range
+        if target and target.isAlive() and target.entity_id != self.entity_id:
+            if target.hasResources:
+                self.set_task('collect', target)
 
-            if distance <= 0 :
-                self.state = 2
-                self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.target.x, self.target.y))) 
-                if self.attack_timer == 0:
-                    self.current_frame = 0
-                    self.path = []
-                
-                elif self.current_frame == self.frames - 1:
-                    self.cooldown_frame = self.current_frame
-                    
-                self.attack_timer += dt
-                if self.attack_timer >= self.attack_speed:
-                    self.target.hp -= self.attack_power
-                    self.attack_timer = 0
-                    self.cooldown_frame = None
-            else :
-                if self.path:
-                    self.path = [self.path[0]] + a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+            elif target.team == self.team and hasattr(target, 'population'):
+                if target.resourceDropPoint and target.state == 'idle':
+                    self.set_task('stock', target)
                 else:
-                    self.path = a_star(self, (round(self.target.x), round(self.target.y)), game_map)
+                    self.set_task('build', target)
+            
+            elif target.team != self.team:
+                self.attack_target = target
 
-                self.attack_timer = 0
+    def set_task(self, task, target = None):
+        self.attack_target = None
+        self.collect_target = None
+        self.build_target = None
+        self.stock_target = None
+        self.task = None
+        
+        if task in villager_tasks:
+            self.task = task
+            setattr(self, villager_tasks[task], target)
 
     def isAvailable(self):
         return not self.task
+
+    def seekCollect(self, game_map, dt):
+        if self.task != 'collect':
+            return
+
+        if self.collect_target and self.collect_target.isAlive():
+            distance = math.dist((self.x, self.y), (self.collect_target.x, self.collect_target.y)) - self.collect_target.hitbox - self.attack_range
+
+            if distance <= 0 and self.carry.total() < MAXIMUM_CARRY :
+                self.state = 'task'
+                self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.collect_target.x, self.collect_target.y)))
+                if self.task_timer == 0 :
+                    self.current_frame = 0
+                    self.set_destination(None, game_map)
+                self.task_timer += dt
+                amount = min(self.resource_rate * dt, abs(MAXIMUM_CARRY - self.carry.total()))
+                resource_collected = self.collect_target.storage.decrease_resources((amount, amount, amount))
+                hp_damage = amount*self.collect_target.max_hp / self.collect_target.maximum_storage.total()
+                self.collect_target.hp -= hp_damage
+                self.carry.increase_resources(resource_collected)
+                if self.carry.total() >= MAXIMUM_CARRY or not self.collect_target.isAlive():
+                    self.task = 'stock'
+
+            elif not self.path:
+                self.set_destination((self.collect_target.x, self.collect_target.y), game_map)
+                self.task_timer = 0
+
+    def seekStock(self, game_map):
+        if self.task != 'stock':
+            return
+        if self.stock_target and self.stock_target.isAlive():
+            distance = math.dist((self.x, self.y), (self.stock_target.x, self.stock_target.y)) - self.stock_target.hitbox - self.attack_range
+            if self.carry.total() == 0:
+                    self.task = 'collect'
+                    return
+            if distance <= 0:
+                self.state = 'idle'
+                self.set_destination(None, game_map)
+                self.carry.decrease_resources(self.stock_target.stock(game_map, self.carry.get()))
+            elif not self.path:
+                self.set_destination((self.stock_target.x, self.stock_target.y), game_map)
+       
+        else :
+            closest_building = None
+            min_distance = float('inf')
+            for building in game_map.players[self.team].buildings:
+                if building.resourceDropPoint:
+                    distance = math.dist((self.x, self.y),(building.x, building.y))
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_building = building
+            if closest_building:
+                self.stock_target = closest_building
 
 
     '''

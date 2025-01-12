@@ -1,5 +1,5 @@
 from Entity.Building import Building
-from Settings.setup import Resources
+from Models.Resources import Resources
 
 class Keep(Building):
     def __init__(self, team, x=0, y=0):

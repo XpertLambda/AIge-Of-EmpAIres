@@ -1,5 +1,5 @@
 from Entity.Building import Building
-from Settings.setup import Resources
+from Models.Resources import Resources
 from Entity.Unit import Archer
 
 class ArcheryRange(Building):

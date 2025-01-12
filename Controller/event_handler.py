@@ -4,7 +4,7 @@ import os
 import time
 from tkinter import Tk, filedialog
 from Entity.Building import Building, TownCentre
-from Controller.isometric_utils import *
+from Controller.utils import *
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY
 from Controller.drawing import compute_map_bounds, generate_team_colors
 from Models.html import write_full_html
@@ -128,12 +128,12 @@ def handle_events(event, game_state):
                 for unit_selected in game_state['selected_units']:
                     unit_selected.set_target(entity_target)
                     unit_selected.path = None
-                tile_x, tile_y = screen_to_tile(
+                mouse_x, mouse_y = screen_to_2_5d(
                     mouse_x, mouse_y, screen_width, screen_height,
-                    camera, HALF_TILE_SIZE / 2, HALF_TILE_SIZE / 4
+                    camera, HALF_TILE_SIZE , HALF_TILE_SIZE / 2
                 )
                 for unit_selected in game_state['selected_units']:
-                    unit_selected.path = a_star(unit_selected, (tile_x, tile_y), game_state['game_map'])
+                    unit_selected.set_destination((mouse_x, mouse_y), game_state['game_map'])
 
         elif event.button == 4:
             camera.set_zoom(camera.zoom * 1.1)
@@ -214,7 +214,7 @@ def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_st
     camera = game_state['camera']
     clicked_player_panel = False
 
-    from Controller.isometric_utils import to_isometric
+    from Controller.utils import to_isometric
     from Entity.Building import TownCentre
 
     for index, player_obj in enumerate(reversed(players)):
@@ -252,7 +252,7 @@ def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_st
 
 def finalize_box_selection(game_state):
     import pygame
-    from Controller.isometric_utils import tile_to_screen
+    from Controller.utils import tile_to_screen
 
     x1, y1 = game_state['selection_start']
     x2, y2 = game_state['selection_end']

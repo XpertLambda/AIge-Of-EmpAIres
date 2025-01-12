@@ -410,16 +410,16 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
 def create_player_info_surface(selected_player, screen_width, team_colors):
     font = pygame.font.Font(None, 24)
     padding = 5
-    info_height = 160
+    info_height = 200
     surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
 
     team_color = team_colors[selected_player.teamID % len(team_colors)]
     player_name_surface = font.render(f"Player {selected_player.teamID}", True, team_color)
     surface.blit(player_name_surface, (padding, 0))
 
-    resources_text = (f"Resources - Food: {selected_player.resources['food']}, "
-                      f"Wood: {selected_player.resources['wood']}, "
-                      f"Gold: {selected_player.resources['gold']}")
+    resources_text = (f"Resources - Food: {selected_player.resources.food}, "
+                      f"Wood: {selected_player.resources.wood}, "
+                      f"Gold: {selected_player.resources.gold}")
     resources_surface = font.render(resources_text, True, (255, 255, 255))
     surface.blit(resources_surface, (padding, 30))
 
@@ -436,5 +436,9 @@ def create_player_info_surface(selected_player, screen_width, team_colors):
     maximum_population_text = (f"Maximum population : {selected_player.maximum_population}")
     maximum_population = font.render(maximum_population_text, True, (255, 255, 255))
     surface.blit(maximum_population, (padding, 120))
+
+    population_text = (f"population : {selected_player.population}")
+    population = font.render(population_text, True, (255, 255, 255))
+    surface.blit(population, (padding, 150))
 
     return surface

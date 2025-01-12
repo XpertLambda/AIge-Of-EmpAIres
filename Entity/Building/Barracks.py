@@ -1,6 +1,6 @@
 from Entity.Building import Building
 from Entity.Unit.Swordsman import Swordsman
-from Settings.setup import Resources
+from Models.Resources import Resources
 
 class Barracks(Building):
     def __init__(self, team, x=0, y=0):
