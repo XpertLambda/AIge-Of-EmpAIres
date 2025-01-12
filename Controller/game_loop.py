@@ -110,7 +110,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'rectangle_additive': False,
         'paused': False,
         'force_full_redraw': False,
-        'show_all_health_bars': False
+        'show_all_health_bars': False,
+        'show_player_info': True,
+        'show_gui_elements': True,  # Nouveau flag pour F1
     }
     
     game_map.set_game_state(game_state)
@@ -196,29 +198,30 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state,
                 dt
             )
-            draw_gui_elements(screen, screen_width, screen_height)
+            
+            if game_state['show_gui_elements']:
+                draw_gui_elements(screen, screen_width, screen_height)
+                screen.blit(game_state['minimap_background'], game_state['minimap_background_rect'].topleft)
+                screen.blit(game_state['minimap_entities_surface'], game_state['minimap_background_rect'].topleft)
+                draw_minimap_viewport(
+                    screen,
+                    camera,
+                    game_state['minimap_background_rect'],
+                    game_state['minimap_scale'],
+                    game_state['minimap_offset_x'],
+                    game_state['minimap_offset_y'],
+                    game_state['minimap_min_iso_x'],
+                    game_state['minimap_min_iso_y']
+                )
 
-            screen.blit(game_state['minimap_background'], game_state['minimap_background_rect'].topleft)
-            screen.blit(game_state['minimap_entities_surface'], game_state['minimap_background_rect'].topleft)
-            draw_minimap_viewport(
-                screen,
-                camera,
-                game_state['minimap_background_rect'],
-                game_state['minimap_scale'],
-                game_state['minimap_offset_x'],
-                game_state['minimap_offset_y'],
-                game_state['minimap_min_iso_x'],
-                game_state['minimap_min_iso_y']
-            )
+                if player_selection_surface:
+                    sel_h = player_selection_surface.get_height()
+                    bg_rect = game_state['minimap_background_rect']
+                    screen.blit(player_selection_surface, (bg_rect.x, bg_rect.y - sel_h - 20))
 
-            if player_selection_surface:
-                sel_h = player_selection_surface.get_height()
-                bg_rect = game_state['minimap_background_rect']
-                screen.blit(player_selection_surface, (bg_rect.x, bg_rect.y - sel_h - 20))
-
-            if player_info_surface:
-                inf_h = player_info_surface.get_height()
-                screen.blit(player_info_surface, (0, screen_height - inf_h))
+                if player_info_surface and game_state['show_player_info']:
+                    inf_h = player_info_surface.get_height()
+                    screen.blit(player_info_surface, (0, screen_height - inf_h))
 
             display_fps(screen)
             draw_pointer(screen)

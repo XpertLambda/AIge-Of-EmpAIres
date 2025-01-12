@@ -94,7 +94,14 @@ def handle_events(event, game_state):
 
     elif event.type == pygame.KEYDOWN:
         #
-        # (1) - Touche F2 => bascule health bars
+        # (1) - Touche F1 => bascule interface
+        #
+        if event.key == pygame.K_F1:
+            game_state['show_gui_elements'] = not game_state['show_gui_elements']
+            debug_print(f"[GUI] F1 => Show/Hide GUI elements={game_state['show_gui_elements']}")
+            
+        #
+        # (2) - Touche F2 => bascule health bars
         #
         if event.key == pygame.K_F2:
             game_state['show_all_health_bars'] = not game_state['show_all_health_bars']
@@ -179,6 +186,8 @@ def handle_events(event, game_state):
         # (7) - Mouvements Terminal si on est en mode terminal/both
         #       => on modifie terminal_view_x / y
         #
+        elif event.key == pygame.K_F3:
+            game_state['show_player_info'] = not game_state['show_player_info']
         else:
             from Settings.setup import user_choices
             # Vérifie si c'est le mode Terminal or Both
