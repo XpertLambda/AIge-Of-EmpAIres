@@ -1,10 +1,8 @@
-# Chemin de /home/cyril/Documents/Projet_python/Controller/game_loop.py
-
 import time
 import pygame
 import sys
 import random
-from Models.Map import *
+from Models.Map import GameMap
 from Entity.Building import *
 from Entity.Unit import *
 from Models.Team import Team
@@ -60,12 +58,14 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     bg_width  = int(screen_width * BG_RATIO)
     bg_height = int(screen_height * BG_RATIO)
-    (minimap_background_surface,
-     minimap_scale,
-     minimap_offset_x,
-     minimap_offset_y,
-     minimap_min_iso_x,
-     minimap_min_iso_y) = create_minimap_background(game_map, bg_width, bg_height)
+    (
+        minimap_background_surface,
+        minimap_scale,
+        minimap_offset_x,
+        minimap_offset_y,
+        minimap_min_iso_x,
+        minimap_min_iso_y
+    ) = create_minimap_background(game_map, bg_width, bg_height)
 
     minimap_background_rect = minimap_background_surface.get_rect()
     minimap_background_rect.center = minimap_panel_rect.center
@@ -103,7 +103,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'minimap_dragging': False,
         'player_selection_updated': True,
         'player_info_updated': True,
-        'last_terminal_update': 0,
         'selected_entities': [],
         'selecting_entities': False,
         'selection_start': None,
@@ -114,24 +113,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'show_all_health_bars': False
     }
     
-    game_map.set_game_state(game_state)  
+    game_map.set_game_state(game_state)
 
     player_selection_surface = None
     player_info_surface = None
 
     running = True
     update_counter = 0
-    players_target=[None for _ in range(len(players))]
 
-    ### AJOUT : on mémorise l'état "précédent" des ressources de chaque joueur ###
     old_resources = {}
     for p in players:
         old_resources[p.teamID] = p.resources.copy()
-    ### FIN AJOUT ###
-
-    # ----------------------------------------------------------------
-    # Main loop
-    # ----------------------------------------------------------------
 
     while running:
         raw_dt = clock.tick(200) / ONE_SECOND
@@ -153,27 +145,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         game_map = game_state['game_map']
         camera = game_state['camera']
 
-        # Mise à jour Terminal éventuelle
-        if user_choices["index_terminal_display"] in {1, 2}:
-            game_state['last_terminal_update'] = game_state.get('last_terminal_update', 0)
-            if not game_state['paused']:
-                game_state['last_terminal_update'] += dt
-            if game_state['last_terminal_update'] >= 2:
-                game_map.update_terminal()
-                game_state['last_terminal_update'] = 0  # Reset timer
-
+        # Terminal only => pas d'affichage Pygame
         if user_choices["index_terminal_display"] == 1:
-            # Terminal only => no GUI
             screen = None
 
-        # Mise à jour de la logique (camera, map, etc.)
+        # Mise à jour (logique)
         if not game_state.get('paused', False):
-            if (update_counter > 1):
+            if update_counter > 1:
                 update_counter = 0
                 update_minimap_elements(game_state)
             update_counter += dt
 
-        # Mises à jour surfaces (player selection / player info)
+        # Surfaces
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):
                 player_selection_surface = create_player_selection_surface(
@@ -190,26 +173,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 )
                 game_state['player_info_updated'] = False
 
-        # ---- Appel principal : update_game_state (logique, pathfinding, etc.) ----
         update_game_state(game_state, dt)
 
-        ### AJOUT : après avoir mis à jour la logique, on compare les ressources ###
         if selected_player is not None:
-            current = selected_player.resources
-            previous = old_resources[selected_player.teamID]
-            if current != previous:  
-                # S'il y a un changement => on force le refresh
+            current_res = selected_player.resources
+            previous_res = old_resources[selected_player.teamID]
+            if current_res != previous_res:
                 game_state['player_info_updated'] = True
-                old_resources[selected_player.teamID] = current.copy()
-        ### FIN AJOUT ###
+                old_resources[selected_player.teamID] = current_res.copy()
 
-        # -----------------------------------------------------------
-        # Rendu "GUI" (si on a un screen)
-        # -----------------------------------------------------------
+        # Rendu Pygame (GUI)
         if screen is not None:
             screen.fill((0, 0, 0))
-
-            # Dessine la map + entités
             draw_map(
                 screen,
                 screen_width,
@@ -221,11 +196,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state,
                 dt
             )
-
-            # Panneaux GUI (ressources, minimap, etc.)
             draw_gui_elements(screen, screen_width, screen_height)
 
-            # Minimap
             screen.blit(game_state['minimap_background'], game_state['minimap_background_rect'].topleft)
             screen.blit(game_state['minimap_entities_surface'], game_state['minimap_background_rect'].topleft)
             draw_minimap_viewport(
@@ -239,24 +211,20 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['minimap_min_iso_y']
             )
 
-            # Player selection panel
             if player_selection_surface:
                 sel_h = player_selection_surface.get_height()
                 bg_rect = game_state['minimap_background_rect']
                 screen.blit(player_selection_surface, (bg_rect.x, bg_rect.y - sel_h - 20))
 
-            # Player info panel
             if player_info_surface:
                 inf_h = player_info_surface.get_height()
                 screen.blit(player_info_surface, (0, screen_height - inf_h))
 
-            # FPS, pointeur souris custom
             display_fps(screen)
             draw_pointer(screen)
 
-            # Debug path (facultatif) : montrer la path de chaque unité
-            for player in game_map.players:
-                for unit in player.units:
+            for pl in game_map.players:
+                for unit in pl.units:
                     if unit.path:
                         unit.display_path(
                             game_state['screen'],
@@ -271,4 +239,4 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             else:
                 pygame.display.flip()
 
-    # Fin de la boucle principale
+    # fin de game_loop

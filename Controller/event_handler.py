@@ -10,8 +10,14 @@ from Controller.drawing import compute_map_bounds, generate_team_colors
 from Models.html import write_full_html
 from AiUtils.aStar import a_star
 from Entity.Unit.Unit import Unit
+from Controller.terminal_display_debug import debug_print
+
 
 def handle_events(event, game_state):
+    """
+    Gère les événements côté GUI/Pygame. 
+    (Touches Pygame, clic souris, resize fenêtre, etc.)
+    """
     camera = game_state['camera']
     players = game_state['players']
     selected_player = game_state['selected_player']
@@ -19,6 +25,7 @@ def handle_events(event, game_state):
     screen_height = game_state['screen_height']
 
     if event.type == pygame.QUIT:
+        # On supprime éventuellement la snapshot HTML
         try:
             os.remove('full_snapshot.html')
         except:
@@ -27,6 +34,7 @@ def handle_events(event, game_state):
         sys.exit()
 
     elif event.type == pygame.VIDEORESIZE:
+        # Redimension de la fenêtre => on réadapte la taille, le minimap, etc.
         sw, sh = event.size
         camera.width = sw
         camera.height = sh
@@ -85,15 +93,25 @@ def handle_events(event, game_state):
         return
 
     elif event.type == pygame.KEYDOWN:
+        #
+        # (1) - Touche F2 => bascule health bars
+        #
         if event.key == pygame.K_F2:
             game_state['show_all_health_bars'] = not game_state['show_all_health_bars']
+            debug_print(f"[GUI] F2 => show_all_health_bars={game_state['show_all_health_bars']}")
 
+        #
+        # (2) - Touche F11 => Sauvegarde
+        #
         elif event.key == pygame.K_F11:
-            # Sauvegarde
             game_state['game_map'].save_map()
+            debug_print("[GUI] F11 => Sauvegarde effectuée.")
 
+        #
+        # (3) - Touche F12 => Chargement
+        #
         elif event.key == pygame.K_F12:
-            # Chargement via un dialogue file
+            debug_print("[GUI] F12 => Menu chargement (filedialog).")
             try:
                 root = Tk()
                 root.withdraw()
@@ -121,41 +139,103 @@ def handle_events(event, game_state):
                     min_x, max_x, min_y, max_y = compute_map_bounds(game_state['game_map'])
                     camera.set_bounds(min_x, max_x, min_y, max_y)
                     game_state['force_full_redraw'] = True
-            except Exception as e:
-                print(f"Error loading: {e}")
+                else:
+                    debug_print("[GUI] F12 => Aucune sauvegarde choisie (annulé).")
 
+            except Exception as e:
+                debug_print(f"[GUI] Error loading: {e}")
+
+        #
+        # (4) - Zoom + / -
+        #
         elif event.key in (pygame.K_PLUS, pygame.K_KP_PLUS):
             camera.set_zoom(camera.zoom * 1.1)
+            debug_print("[GUI] Zoom avant via +")
 
         elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
             camera.set_zoom(camera.zoom / 1.1)
+            debug_print("[GUI] Zoom arrière via -")
 
+        #
+        # (5) - Touche m => Zoom out global (on se recadre)
+        #
         elif event.key == pygame.K_m:
             camera.zoom_out_to_global()
+            debug_print("[GUI] m => Camera zoom out global.")
 
+        #
+        # (6) - Touche ESC => on quitte l'application
+        #
         elif event.key == pygame.K_ESCAPE:
             try:
                 os.remove('full_snapshot.html')
             except:
                 pass
+            debug_print("[GUI] ESC => Quitte le jeu.")
             pygame.quit()
             sys.exit()
 
+        #
+        # (7) - Mouvements Terminal si on est en mode terminal/both
+        #       => on modifie terminal_view_x / y
+        #
+        else:
+            from Settings.setup import user_choices
+            # Vérifie si c'est le mode Terminal or Both
+            if user_choices["index_terminal_display"] in [1, 2]:
+                if game_state['game_map'] and game_state['game_map'].game_state:
+                    terminal_map = game_state['game_map']
+                    move_amount = 1
+                    mods = pygame.key.get_mods()
+                    if mods & pygame.KMOD_SHIFT:
+                        move_amount = 5
+                        debug_print("[CURSES] SHIFT => scroll accéléré")
+
+                    if event.key in [pygame.K_z, pygame.K_UP]:
+                        terminal_map.terminal_view_y -= move_amount
+                    elif event.key in [pygame.K_s, pygame.K_DOWN]:
+                        terminal_map.terminal_view_y += move_amount
+                    elif event.key in [pygame.K_q, pygame.K_LEFT]:
+                        terminal_map.terminal_view_x -= move_amount
+                    elif event.key in [pygame.K_d, pygame.K_RIGHT]:
+                        terminal_map.terminal_view_x += move_amount
+                    elif event.key == pygame.K_m:
+                        # Recentrer la vue curses
+                        debug_print("[CURSES] M => recentrage curses")
+                        half_w = terminal_map.num_tiles_x // 2
+                        half_h = terminal_map.num_tiles_y // 2
+                        # Suppose qu'on veut recadrer la "fenêtre"
+                        # centrée sur la map (juste un exemple)
+                        # On peut adapter
+                        terminal_map.terminal_view_x = max(0, half_w - 40)
+                        terminal_map.terminal_view_y = max(0, half_h - 15)
+
+    #
+    # (8) - KEYUP => Touche Tab => on pause/unpause
+    #
     elif event.type == pygame.KEYUP:
         if event.key == pygame.K_TAB:
             game_state['paused'] = not game_state.get('paused', False)
             if game_state['paused']:
                 write_full_html(game_state['players'], game_state['game_map'])
+                debug_print("[GUI] TAB => Pause activée, snapshot générée.")
+            else:
+                debug_print("[GUI] TAB => Unpause => reprise du jeu.")
 
+    #
+    # (9) - MOUSEBUTTONDOWN
+    #
     elif event.type == pygame.MOUSEBUTTONDOWN:
         mouse_x, mouse_y = event.pos
         mods = pygame.key.get_mods()
         ctrl_pressed = (mods & pygame.KMOD_CTRL)
 
         if event.button == 1:
+            # On check si on clique sur la minimap
             if game_state['minimap_background_rect'].collidepoint(mouse_x, mouse_y):
                 game_state['minimap_dragging'] = True
             else:
+                # Bouton "Train"
                 train_rects = game_state.get('train_button_rects', {})
                 clicked_building_id = None
                 for bld_id, rect in train_rects.items():
@@ -174,6 +254,7 @@ def handle_events(event, game_state):
                                     game_state['insufficient_resources_feedback'] = {}
                                 game_state['insufficient_resources_feedback'][building_clicked.entity_id] = time.time()
                 else:
+                    # Clique "normal" => sélectionner un entity ou drag box
                     entity = closest_entity(game_state, mouse_x, mouse_y)
                     if entity:
                         select_single_entity(entity, game_state, ctrl_pressed)
@@ -188,24 +269,31 @@ def handle_events(event, game_state):
                         )
 
         elif event.button == 3:
+            # Clic droit => set target
             if selected_player and 'selected_units' in game_state and len(game_state['selected_units']) > 0:
                 entity_target = closest_entity(game_state, mouse_x, mouse_y)
                 for unit_selected in game_state['selected_units']:
                     unit_selected.set_target(entity_target)
                     unit_selected.path = None
+                # On calcule la destination en 2.5D
                 mouse_x, mouse_y = screen_to_2_5d(
                     mouse_x, mouse_y, screen_width, screen_height,
-                    camera, HALF_TILE_SIZE , HALF_TILE_SIZE / 2
+                    camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
                 )
                 for unit_selected in game_state['selected_units']:
                     unit_selected.set_destination((mouse_x, mouse_y), game_state['game_map'])
 
-        elif event.button == 4:  # molette haut
+        elif event.button == 4:  # molette haut => zoom avant
             camera.set_zoom(camera.zoom * 1.1)
+            debug_print("[GUI] molette haut => zoom avant")
 
-        elif event.button == 5:  # molette bas
+        elif event.button == 5:  # molette bas => zoom arrière
             camera.set_zoom(camera.zoom / 1.1)
+            debug_print("[GUI] molette bas => zoom arrière")
 
+    #
+    # (10) - MOUSEMOTION
+    #
     elif event.type == pygame.MOUSEMOTION:
         if game_state['minimap_dragging']:
             current_x, current_y = event.pos
@@ -226,14 +314,19 @@ def handle_events(event, game_state):
             camera.offset_y = -iso_y
             camera.limit_camera()
         else:
+            # Drag box pour la sélection de multiples entités
             if game_state.get('selecting_entities', False):
                 game_state['selection_end'] = event.pos
 
+    #
+    # (11) - MOUSEBUTTONUP
+    #
     elif event.type == pygame.MOUSEBUTTONUP:
         if event.button == 1:
             game_state['minimap_dragging'] = False
             if game_state.get('selecting_entities'):
                 finalize_box_selection(game_state)
+
 
 def select_single_entity(entity, game_state, ctrl_pressed):
     if 'selected_entities' not in game_state:
@@ -253,6 +346,7 @@ def select_single_entity(entity, game_state, ctrl_pressed):
         if entity.team == selected_player.teamID:
             if entity not in game_state['selected_units']:
                 game_state['selected_units'].append(entity)
+
 
 def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_state, ctrl_pressed=False):
     players = game_state['players']
@@ -283,6 +377,7 @@ def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_st
     from Controller.utils import to_isometric
     from Entity.Building import TownCentre
 
+    # Vérifie si on a cliqué sur le panel "joueurs"
     for index, player_obj in enumerate(reversed(players)):
         col = index % columns
         row = index // columns
@@ -295,6 +390,7 @@ def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_st
                 game_state['selected_player'] = player_obj
                 game_state['player_selection_updated'] = True
                 game_state['player_info_updated'] = True
+                # On centre la caméra sur le TownCentre s’il existe
                 for building_obj in player_obj.buildings:
                     if isinstance(building_obj, TownCentre):
                         iso_x, iso_y = to_isometric(
@@ -311,10 +407,12 @@ def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_st
             break
 
     if not clicked_player_panel:
+        # On commence peut-être une zone de sélection
         game_state['selecting_entities'] = True
         game_state['selection_start'] = (mouse_x, mouse_y)
         game_state['selection_end'] = (mouse_x, mouse_y)
         game_state['box_additive'] = ctrl_pressed
+
 
 def finalize_box_selection(game_state):
     import pygame
@@ -347,11 +445,13 @@ def finalize_box_selection(game_state):
     camera = game_state['camera']
     game_map = game_state['game_map']
 
+    # On récupère toutes les entités sur la map
     all_entities = set()
     for entities_set in game_map.grid.values():
         for entity_obj in entities_set:
             all_entities.add(entity_obj)
 
+    # On regarde lesquelles sont dans la zone
     for entity_obj in all_entities:
         screen_x, screen_y = tile_to_screen(
             entity_obj.x, 
@@ -370,6 +470,7 @@ def finalize_box_selection(game_state):
                 if entity_obj not in game_state['selected_units']:
                     game_state['selected_units'].append(entity_obj)
 
+
 def closest_entity(game_state, mouse_x, mouse_y, search_radius=2):
     game_map = game_state['game_map']
     camera = game_state['camera']
@@ -385,14 +486,15 @@ def closest_entity(game_state, mouse_x, mouse_y, search_radius=2):
         HALF_TILE_SIZE / 4
     )
     entity_set = game_map.grid.get((tile_x, tile_y), [])
-    shortest_distance = 0
-    closest_entity = None
+    shortest_distance = 999999
+    closest_ent = None
     for entity in entity_set:
-        distance = math.dist(mouse_2_5d,(entity.x, entity.y)) - entity.hitbox
+        distance = math.dist(mouse_2_5d, (entity.x, entity.y)) - entity.hitbox
         if distance < shortest_distance:
             shortest_distance = distance
-            closest_entity = entity
-    return closest_entity
+            closest_ent = entity
+    return closest_ent
+
 
 def find_entity_by_id(game_state, entity_id):
     game_map = game_state['game_map']

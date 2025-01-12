@@ -6,6 +6,7 @@ from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
 from Models.Map import GameMap
+from Controller.terminal_display_debug import debug_print
 
 class Team:
     def __init__(self, difficulty, teamID):
@@ -36,17 +37,17 @@ class Team:
 
             if isinstance(entity, Building):
                 if entity.population + self.maximum_population > MAXIMUM_POPULATION :
-                    print("Maximum population reached")
+                    debug_print("Maximum population reached")
                     return False
 
                 self.buildings.add(entity)
                 self.maximum_population += entity.population
-                print(f'addded {entity} : {entity.entity_id} to team #{entity.team}')
+                debug_print(f'addded {entity} : {entity.entity_id} to team #{entity.team}')
                 return True
 
             elif isinstance(entity, Unit):
                 if self.population + 1 > self.maximum_population:
-                    print("Failed to add entity : Not enough space")
+                    debug_print("Failed to add entity : Not enough space")
                     return False
 
                 self.units.add(entity)
@@ -76,7 +77,6 @@ class Team:
         self.resources['food'] += Resources.food 
         self.resources['wood'] += Resources.wood 
         self.resources['gold'] += Resources.gold
-        game_map.game_state['player_info_updated'] = True
     
     def manage_creation(self, clock):
         """
@@ -105,16 +105,16 @@ class Team:
 
     def buildBuilding(self, building, clock, nb, game_map):
         if all([v.task for v in self.units if isinstance(v, Villager)]):
-            print("All villagers are busy.")
+            debug_print("All villagers are busy.")
             return False
 
         if self.resources["wood"] >= building.cost.wood:
             self.resources["wood"] -= building.cost.wood
         else:
-            print(f"Team {self.teamID}: Not enough wood.")
+            debug_print(f"Team {self.teamID}: Not enough wood.")
             return False
         if not game_map.place_building(building,self):
-            print("cannot place")
+            debug_print("cannot place")
             return False
        
         i=0
@@ -144,7 +144,7 @@ class Team:
             total_build_time = chosen_villager.buildTime(building, j)
             self.en_cours[building] = clock + total_build_time
         else:
-            print("No free villager found to build.")
+            debug_print("No free villager found to build.")
             return False
 
         self.buildings.append(building)
@@ -161,7 +161,7 @@ class Team:
         for i in range(0,len(t.units)):
             soldier=t.units[i]
             if not(soldier.task) and not(isinstance(soldier,Villager)):
-                print("ok")
+                debug_print("ok")
                 soldier.task=True
                 soldier.attack(self,map)
     

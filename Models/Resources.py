@@ -1,3 +1,5 @@
+from Controller.terminal_display_debug import debug_print
+
 class Resources:
     def __init__(self, food=0, gold=0, wood=0):
         self.food = food
@@ -54,8 +56,8 @@ class Resources:
         return (removed_food, removed_gold, removed_wood)
 
     def has_enough(self, costs):
-        print("Resources:", self.get())  # Should print a tuple of numbers
-        print("Costs:", costs)          # Should print a tuple of numbers
+        debug_print("Resources:", self.get())  # Should debug_print a tuple of numbers
+        debug_print("Costs:", costs)          # Should debug_print a tuple of numbers
         return all(resource >= cost for resource, cost in zip(self.get(), costs))
 
     def get(self):
