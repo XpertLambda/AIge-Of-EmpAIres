@@ -272,4 +272,5 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     return scaled
 
 def fill_grass(screen, screen_x, screen_y, camera):
+    from Controller.drawing import draw_sprite
     draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)
