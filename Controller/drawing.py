@@ -213,10 +213,10 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
     return surface_map, scale_factor, offset_x, offset_y, min_iso_x, min_iso_y
 
-def display_fps(screen, clock, font):
-    fps_value = f"{clock.get_fps():.2f}"  # Format to 2 decimal places
+def display_fps(screen, screen_width, clock, font):
+    fps_value = f"FPS {int(clock.get_fps())}"
     fps_surface = font.render(fps_value, True, (255, 255, 255))  # White text
-    screen.blit(fps_surface, (10, 10))  # (x, y) coordinates for top-left
+    screen.blit(fps_surface, (screen_width - 70, 10))  # (x, y) coordinates for top-left
 
 def draw_pointer(screen):
     from Controller.gui import get_scaled_gui  # Déplacé ici pour éviter l'import circulaire
@@ -343,3 +343,6 @@ def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_
         (rect_left, rect_top, rect_width, rect_height), 
         2
     )
+
+def fill_grass(screen, screen_x, screen_y, camera):
+    draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)

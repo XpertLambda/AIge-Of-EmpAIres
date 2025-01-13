@@ -240,7 +240,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['screen_height'],
                             game_state['camera']
                         )
-            display_fps(screen, clock, font)
+            display_fps(screen, screen_width, clock, font)
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False
