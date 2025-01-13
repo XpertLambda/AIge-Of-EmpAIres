@@ -13,7 +13,9 @@ from Controller.drawing import (
     create_minimap_background,
     display_fps,
     generate_team_colors,
-    draw_pointer
+    draw_pointer,
+    draw_gui_elements,
+    draw_minimap_viewport
 )
 import copy
 from Controller.event_handler import handle_events
@@ -22,10 +24,8 @@ from Controller.gui import (
     create_player_selection_surface,
     create_player_info_surface,
     get_scaled_gui,
-    draw_gui_elements,
     get_centered_rect_in_bottom_right,
     update_minimap_elements,
-    draw_minimap_viewport
 )
 from Controller.utils import tile_to_screen
 from Settings.setup import (
@@ -131,7 +131,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     draw_timer = 0
     while running:
-        raw_dt = clock.tick(120) / ONE_SECOND
+        raw_dt = clock.tick(160) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
 

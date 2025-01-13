@@ -270,26 +270,6 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     scaled = pygame.transform.smoothscale(original, (target_width, target_height))
     gui_cache[key] = scaled
     return scaled
-  
-def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
-    name = Entity_Acronym[category][acronym]
-    scaled_sprite = get_scaled_sprite(name, category, zoom, state, direction, frame, variant)
-    if scaled_sprite is None:
-        return
-    scaled_width = scaled_sprite.get_width()
-    scaled_height = scaled_sprite.get_height()
-    screen.blit(scaled_sprite, (screen_x - scaled_width // 2, screen_y - scaled_height // 2))
 
 def fill_grass(screen, screen_x, screen_y, camera):
     draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)
-
-def draw_hitbox(screen, corners, zoom):
-    if len(corners) != 4:
-        raise ValueError("Hitbox must have exactly 4 corners.")
-    scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
-    pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
-
-def draw_path(screen, unit_center, screenPath, zoom, color):
-    if len(screenPath) >= 2:
-        pygame.draw.lines(screen, color, False, screenPath, max(1, int(4 * zoom)))
-    pygame.draw.circle(screen, color, unit_center, int(5 * zoom))

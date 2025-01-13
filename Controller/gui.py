@@ -12,8 +12,6 @@ from Entity.Building import Building
 pygame.init()
 font = pygame.font.SysFont(None, 32)
 
-# On garde la structure user_choices déjà présente
-# On force l'index par défaut à 2 => "Terminal and Gui Display" (both)
 user_choices["index_terminal_display"] = 2
 
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
@@ -46,39 +44,6 @@ def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height
     center_y = screen_height - margin - (height // 2)
     rect.center = (center_x, center_y)
     return rect
-
-def draw_gui_elements(screen, screen_width, screen_height):
-    """
-    Dessine le panneau de ressources (en haut) et autres éléments.
-    """
-    resources_panel_img = get_scaled_gui('ResourcesPanel', 0, target_width=screen_width // 2)
-    screen.blit(resources_panel_img, (0, 0))
-
-    pw, ph = resources_panel_img.get_width(), resources_panel_img.get_height()
-    icon_scale_width = pw // 22
-
-    # On place 3 icônes (gold, wood, food) alignées, petit offset vertical
-    gold_img = get_scaled_gui('gold', 0, target_width=icon_scale_width)
-    gold_x = 12
-    screen.blit(gold_img, (gold_x, ph // 15))
-
-    wood_img = get_scaled_gui('wood', 0, target_width=icon_scale_width)
-    wood_x = gold_x + gold_img.get_width() + (2 * gold_img.get_width())
-    screen.blit(wood_img, (wood_x, ph // 15))
-
-    food_img = get_scaled_gui('food', 0, target_width=icon_scale_width)
-    food_x = wood_x + wood_img.get_width() + (2 * wood_img.get_width())
-    screen.blit(food_img, (food_x, ph // 15))
-
-    # Minimap panel
-    panel_width = int(screen_width * PANEL_RATIO)
-    panel_height = int(screen_height * PANEL_RATIO)
-    minimap_panel_sprite = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
-    minimap_panel_rect = get_centered_rect_in_bottom_right(
-        panel_width, panel_height, screen_width, screen_height, MINIMAP_MARGIN
-    )
-
-    screen.blit(minimap_panel_sprite, minimap_panel_rect.topleft)
 
 def update_minimap_elements(game_state):
     from Entity.Building import Building
@@ -132,32 +97,6 @@ def update_minimap_elements(game_state):
                 gold_color = get_color_for_terrain('gold')
                 radius_val = max(MIN_UNIT_RADIUS, ent.size)
                 pygame.draw.circle(minimap_surface, (*gold_color, 150), (mini_x, mini_y), radius_val)
-
-def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
-    half_screen_w = camera.width / (2 * camera.zoom)
-    half_screen_h = camera.height / (2 * camera.zoom)
-    center_iso_x = -camera.offset_x
-    center_iso_y = -camera.offset_y
-
-    left_iso_x = center_iso_x - half_screen_w
-    left_iso_y = center_iso_y - half_screen_h
-    right_iso_x = center_iso_x + half_screen_w
-    right_iso_y = center_iso_y + half_screen_h
-
-    rect_left = (left_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
-    rect_top = (left_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
-    rect_right = (right_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
-    rect_bottom = (right_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
-
-    rect_width = rect_right - rect_left
-    rect_height = rect_bottom - rect_top
-
-    pygame.draw.rect(
-        screen, 
-        (255, 255, 255), 
-        (rect_left, rect_top, rect_width, rect_height), 
-        2
-    )
 
 def run_gui_menu(screen, sw, sh):
     """

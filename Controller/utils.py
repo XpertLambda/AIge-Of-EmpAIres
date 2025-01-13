@@ -62,18 +62,45 @@ def get_color_for_terrain(terrain_type):
     if terrain_type == 'gold':
         return (255, 215, 0)
 
+def generate_team_colors(num_players):
+    color_list = []
+    step = 1.0 / num_players
+    for i in range(num_players):
+        hue = (i * step) % 1.0
+        if 0.25 <= hue <= 0.4167:
+            hue = (hue + 0.2) % 1.0
+        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 0.7)
+        color_list.append((int(r * 255), int(g * 255), int(b * 255)))
+    return color_list
+
 def compute_map_bounds(game_map):
     tile_width = HALF_TILE_SIZE
     tile_height = HALF_TILE_SIZE / 2
     map_width = game_map.num_tiles_x
     map_height = game_map.num_tiles_y
-    corners = [(0, 0), (0, map_height - 1), (map_width - 1, map_height - 1), (map_width - 1, 0)]
-    iso_coords = [to_isometric(x, y, tile_width, tile_height) for (x, y) in corners]
+
+    corners = [
+        (0, 0),
+        (0, map_height - 1),
+        (map_width - 1, map_height - 1),
+        (map_width - 1, 0)
+    ]
+    iso_coords = [
+        to_isometric(x, y, tile_width, tile_height) 
+        for (x, y) in corners
+    ]
+
     min_iso_x = min(c[0] for c in iso_coords) - MAP_PADDING
     max_iso_x = max(c[0] for c in iso_coords) + MAP_PADDING
     min_iso_y = min(c[1] for c in iso_coords) - MAP_PADDING
     max_iso_y = max(c[1] for c in iso_coords) + MAP_PADDING
+
     return min_iso_x, max_iso_x, min_iso_y, max_iso_y
+
+def get_entity_bar_color(entity, game_state, team_colors):
+    if entity.team is None:
+        return (50, 255, 50)
+    return team_colors[entity.team % len(team_colors)]
 
 def generate_team_colors(num_players):
     color_list = []

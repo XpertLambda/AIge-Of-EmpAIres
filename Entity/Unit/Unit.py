@@ -6,7 +6,7 @@ from Entity.Entity import Entity
 from Entity.Building import Building
 from Settings.setup import FRAMES_PER_UNIT, HALF_TILE_SIZE,TILE_SIZE, ALLOWED_ANGLES, ATTACK_RANGE_EPSILON, UNIT_HITBOX
 from Controller.utils import tile_to_screen, get_direction, get_snapped_angle, normalize
-from Controller.init_assets import draw_sprite, draw_hitbox, draw_path
+from Controller.drawing import draw_sprite, draw_hitbox, draw_path
 
 class Unit(Entity):
     def __init__(

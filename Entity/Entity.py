@@ -1,9 +1,9 @@
 import time
 import math
 from Models.Resources import Resources
-from Controller.init_assets import draw_hitbox, HALF_TILE_SIZE
+from Settings.setup import HALF_TILE_SIZE
 from Controller.utils import tile_to_screen
-from Controller.drawing import draw_healthBar
+from Controller.drawing import draw_healthBar, draw_hitbox
 import pygame
 
 class Entity:

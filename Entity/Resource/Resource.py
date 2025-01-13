@@ -1,7 +1,7 @@
 from Entity.Entity import Entity
 from Settings.setup import HALF_TILE_SIZE
 from Controller.utils import tile_to_screen
-from Controller.init_assets import draw_sprite
+from Controller.drawing import draw_sprite
 from copy import copy
 
 class Resource(Entity):

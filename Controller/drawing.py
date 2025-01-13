@@ -10,37 +10,11 @@ from Settings.setup import (
     HEALTH_BAR_OFFSET_Y,
     UNIT_HITBOX
 )
-from Controller.utils import (
-    to_isometric,
-    get_color_for_terrain,
-    screen_to_tile,
-    tile_to_screen,
-)
-from Controller.init_assets import fill_grass
+from Controller.utils import *
+from Controller.init_assets import *
 from Controller.gui import get_scaled_gui
 
-def generate_team_colors(num_players):
-    color_list = []
-    step = 1.0 / num_players
-    for i in range(num_players):
-        hue = (i * step) % 1.0
-        if 0.25 <= hue <= 0.4167:
-            hue = (hue + 0.2) % 1.0
-        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 0.7)
-        color_list.append((int(r * 255), int(g * 255), int(b * 255)))
-    return color_list
-
-def draw_map(
-    screen,
-    screen_width,
-    screen_height,
-    game_map,
-    camera,
-    players,
-    team_colors,
-    game_state,
-    delta_time
-):
+def draw_map(screen, screen_width, screen_height, game_map, camera, players, team_colors, game_state, delta_time):
     corners_screen = [
         (0, 0),
         (screen_width, 0),
@@ -207,35 +181,6 @@ def draw_map(
                 color_val = get_entity_bar_color(entity, game_state, team_colors)
                 entity.display_healthbar(screen, screen_width, screen_height, camera, color_val)
 
-def get_entity_bar_color(entity, game_state, team_colors):
-    if entity.team is None:
-        return (50, 255, 50)
-    return team_colors[entity.team % len(team_colors)]
-
-def compute_map_bounds(game_map):
-    tile_width = HALF_TILE_SIZE
-    tile_height = HALF_TILE_SIZE / 2
-    map_width = game_map.num_tiles_x
-    map_height = game_map.num_tiles_y
-
-    corners = [
-        (0, 0),
-        (0, map_height - 1),
-        (map_width - 1, map_height - 1),
-        (map_width - 1, 0)
-    ]
-    iso_coords = [
-        to_isometric(x, y, tile_width, tile_height) 
-        for (x, y) in corners
-    ]
-
-    min_iso_x = min(c[0] for c in iso_coords) - MAP_PADDING
-    max_iso_x = max(c[0] for c in iso_coords) + MAP_PADDING
-    min_iso_y = min(c[1] for c in iso_coords) - MAP_PADDING
-    max_iso_y = max(c[1] for c in iso_coords) + MAP_PADDING
-
-    return min_iso_x, max_iso_x, min_iso_y, max_iso_y
-
 def create_minimap_background(game_map, minimap_width, minimap_height):
     surface_map = pygame.Surface((minimap_width, minimap_height), pygame.SRCALPHA)
     surface_map.fill((0, 0, 0, 0))
@@ -291,3 +236,110 @@ def draw_healthBar(screen, screen_x, screen_y, ratio, color_val):
     fill_width = int(HEALTH_BAR_WIDTH * ratio)
     fill_rect = pygame.Rect(bg_rect.x, bg_rect.y, fill_width, HEALTH_BAR_HEIGHT)
     pygame.draw.rect(screen, color_val, fill_rect)
+
+def draw_hitbox(screen, corners, zoom):
+    if len(corners) != 4:
+        raise ValueError("Hitbox must have exactly 4 corners.")
+    scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
+    pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
+
+def draw_path(screen, unit_center, screenPath, zoom, color):
+    if len(screenPath) >= 2:
+        pygame.draw.lines(screen, color, False, screenPath, max(1, int(4 * zoom)))
+    pygame.draw.circle(screen, color, unit_center, int(5 * zoom))
+
+def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
+    name = Entity_Acronym[category][acronym]
+    scaled_sprite = get_scaled_sprite(name, category, zoom, state, direction, frame, variant)
+    if scaled_sprite is None:
+        return
+    scaled_width = scaled_sprite.get_width()
+    scaled_height = scaled_sprite.get_height()
+    screen.blit(scaled_sprite, (screen_x - scaled_width // 2, screen_y - scaled_height // 2))
+
+
+def draw_gui_elements(screen, screen_width, screen_height):
+    """
+    Dessine le panneau de ressources (en haut) et autres éléments.
+    """
+    resources_panel_img = get_scaled_gui('ResourcesPanel', 0, target_width=screen_width // 2)
+    screen.blit(resources_panel_img, (0, 0))
+
+    pw, ph = resources_panel_img.get_width(), resources_panel_img.get_height()
+    icon_scale_width = pw // 22
+
+    # On place 3 icônes (gold, wood, food) alignées, petit offset vertical
+    gold_img = get_scaled_gui('gold', 0, target_width=icon_scale_width)
+    gold_x = 12
+    screen.blit(gold_img, (gold_x, ph // 15))
+
+    wood_img = get_scaled_gui('wood', 0, target_width=icon_scale_width)
+    wood_x = gold_x + gold_img.get_width() + (2 * gold_img.get_width())
+    screen.blit(wood_img, (wood_x, ph // 15))
+
+    food_img = get_scaled_gui('food', 0, target_width=icon_scale_width)
+    food_x = wood_x + wood_img.get_width() + (2 * wood_img.get_width())
+    screen.blit(food_img, (food_x, ph // 15))
+
+    # Minimap panel
+    panel_width = int(screen_width * PANEL_RATIO)
+    panel_height = int(screen_height * PANEL_RATIO)
+    minimap_panel_sprite = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
+    minimap_panel_rect = get_centered_rect_in_bottom_right(
+        panel_width, panel_height, screen_width, screen_height, MINIMAP_MARGIN
+    )
+
+    screen.blit(minimap_panel_sprite, minimap_panel_rect.topleft)
+
+
+def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
+    half_screen_w = camera.width / (2 * camera.zoom)
+    half_screen_h = camera.height / (2 * camera.zoom)
+    center_iso_x = -camera.offset_x
+    center_iso_y = -camera.offset_y
+
+    left_iso_x = center_iso_x - half_screen_w
+    left_iso_y = center_iso_y - half_screen_h
+    right_iso_x = center_iso_x + half_screen_w
+    right_iso_y = center_iso_y + half_screen_h
+
+    rect_left = (left_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
+    rect_top = (left_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
+    rect_right = (right_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
+    rect_bottom = (right_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
+
+    rect_width = rect_right - rect_left
+    rect_height = rect_bottom - rect_top
+
+    pygame.draw.rect(
+        screen, 
+        (255, 255, 255), 
+        (rect_left, rect_top, rect_width, rect_height), 
+        2
+    )
+
+def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_y, min_iso_x, min_iso_y):
+    half_screen_w = camera.width / (2 * camera.zoom)
+    half_screen_h = camera.height / (2 * camera.zoom)
+    center_iso_x = -camera.offset_x
+    center_iso_y = -camera.offset_y
+
+    left_iso_x = center_iso_x - half_screen_w
+    left_iso_y = center_iso_y - half_screen_h
+    right_iso_x = center_iso_x + half_screen_w
+    right_iso_y = center_iso_y + half_screen_h
+
+    rect_left = (left_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
+    rect_top = (left_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
+    rect_right = (right_iso_x - min_iso_x) * scale + minimap_rect.x + offset_x
+    rect_bottom = (right_iso_y - min_iso_y) * scale + minimap_rect.y + offset_y
+
+    rect_width = rect_right - rect_left
+    rect_height = rect_bottom - rect_top
+
+    pygame.draw.rect(
+        screen, 
+        (255, 255, 255), 
+        (rect_left, rect_top, rect_width, rect_height), 
+        2
+    )

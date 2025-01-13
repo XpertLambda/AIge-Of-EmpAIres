@@ -2,7 +2,7 @@ from Entity.Entity import Entity
 from Controller.utils import tile_to_screen
 from Settings.setup import HALF_TILE_SIZE, FRAMES_PER_BUILDING, GAME_SPEED
 from Settings.setup import HALF_TILE_SIZE, GAME_SPEED
-from Controller.init_assets import draw_sprite
+from Controller.drawing import draw_sprite
 from random import randint
 from AiUtils.aStar import a_star
 from Entity.Unit.Archer import Archer
