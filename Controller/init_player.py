@@ -1,9 +1,8 @@
 from Models.Team import Team
-from Settings.setup import DIFFICULTY
 
-def init_players(number_of_players):
+def init_players(number_of_players, difficulty):
     players = []
     for playerId in range(number_of_players):
-        team = Team(DIFFICULTY, playerId)
+        team = Team(difficulty, playerId)
         players.append(team)
     return players

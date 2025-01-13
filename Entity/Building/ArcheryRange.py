@@ -1,5 +1,6 @@
 from Entity.Building import Building
-from Settings.setup import Resources
+from Models.Resources import Resources
+from Entity.Unit import Archer
 
 class ArcheryRange(Building):
     def __init__(self, x=0, y=0, team=0):

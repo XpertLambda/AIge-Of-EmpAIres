@@ -2,7 +2,7 @@ import sys
 import pygame
 from Models.Map import GameMap
 from Models.Team import Team
-from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT, DIFFICULTY
+from Settings.setup import WINDOW_WIDTH, WINDOW_HEIGHT
 from Controller.game_loop import game_loop
 from Controller.init_player import init_players
 
@@ -12,10 +12,8 @@ def init_pygame():
 
     # Fenêtre directement maximisée.
     screen = pygame.display.set_mode((0, 0), pygame.RESIZABLE | pygame.WINDOWMAXIMIZED)
-
     screen_width, screen_height = screen.get_width(), screen.get_height()
 
-    # (Éventuellement, on poste un VIDEORESIZE, mais ce n’est plus forcément nécessaire)
     pygame.event.post(
         pygame.event.Event(
             pygame.VIDEORESIZE,

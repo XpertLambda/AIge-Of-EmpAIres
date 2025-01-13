@@ -5,9 +5,14 @@ import time
 from collections import OrderedDict, Counter
 from Settings.setup import *
 from Controller.init_assets import *
+from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, PANEL_RATIO, BG_RATIO
+from Controller.utils import to_isometric, get_color_for_terrain
+from Entity.Building import Building
 
 pygame.init()
 font = pygame.font.SysFont(None, 32)
+
+user_choices["index_terminal_display"] = 2
 
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     global gui_cache
@@ -33,33 +38,72 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     gui_cache[key] = scaled
     return scaled
 
-def draw_gui_elements(screen, screen_width, screen_height):
-    """
-    Dessine le panneau de ressources (en haut) et autres éléments.
-    """
-    resources_panel_img = get_scaled_gui('ResourcesPanel', 0, target_width=screen_width // 2)
-    screen.blit(resources_panel_img, (0, 0))
+def get_centered_rect_in_bottom_right(width, height, screen_width, screen_height, margin=10):
+    rect = pygame.Rect(0, 0, width, height)
+    center_x = screen_width - margin - (width // 2)
+    center_y = screen_height - margin - (height // 2)
+    rect.center = (center_x, center_y)
+    return rect
 
-    pw, ph = resources_panel_img.get_width(), resources_panel_img.get_height()
-    icon_scale_width = pw // 22
+def update_minimap_elements(game_state):
+    from Entity.Building import Building
+    from Entity.Resource.Gold import Gold
 
-    # On place 3 icônes (gold, wood, food) alignées, petit offset vertical
-    gold_img = get_scaled_gui('gold', 0, target_width=icon_scale_width)
-    gold_x = 12
-    screen.blit(gold_img, (gold_x, ph // 15))
+    camera = game_state['camera']
+    game_map = game_state['game_map']
+    team_colors = game_state['team_colors']
+    scale_factor = game_state['minimap_scale']
+    offset_x = game_state['minimap_offset_x']
+    offset_y = game_state['minimap_offset_y']
+    min_iso_x = game_state['minimap_min_iso_x']
+    min_iso_y = game_state['minimap_min_iso_y']
+    minimap_surface = game_state['minimap_entities_surface']
 
-    wood_img = get_scaled_gui('wood', 0, target_width=icon_scale_width)
-    wood_x = gold_x + gold_img.get_width() + (2 * gold_img.get_width())
-    screen.blit(wood_img, (wood_x, ph // 15))
+    minimap_surface.fill((0, 0, 0, 0))
 
-    food_img = get_scaled_gui('food', 0, target_width=icon_scale_width)
-    food_x = wood_x + wood_img.get_width() + (2 * wood_img.get_width())
-    screen.blit(food_img, (food_x, ph // 15))
+    tile_width = HALF_TILE_SIZE
+    tile_height = HALF_TILE_SIZE / 2
+
+    entity_set = set()
+    for pos, active_entities in game_map.grid.items():
+        for ent in active_entities:
+            entity_set.add(ent)
+
+    MIN_BUILDING_SIZE = 3
+    MIN_UNIT_RADIUS = 2
+
+    for ent in entity_set:
+        x_val, y_val = ent.x, ent.y
+        iso_x, iso_y = to_isometric(x_val, y_val, tile_width, tile_height)
+        mini_x = (iso_x - min_iso_x) * scale_factor + offset_x
+        mini_y = (iso_y - min_iso_y) * scale_factor + offset_y
+
+        if ent.team is not None:
+            color_draw = team_colors[ent.team % len(team_colors)]
+            if isinstance(ent, Building):
+                half_dim = max(MIN_BUILDING_SIZE, ent.size)
+                rect_building = pygame.Rect(
+                    mini_x - half_dim, 
+                    mini_y - half_dim, 
+                    half_dim * 2, 
+                    half_dim * 2
+                )
+                pygame.draw.rect(minimap_surface, (*color_draw, 150), rect_building)
+            else:
+                radius_val = max(MIN_UNIT_RADIUS, ent.size)
+                pygame.draw.circle(minimap_surface, (*color_draw, 150), (mini_x, mini_y), radius_val)
+        else:
+            if isinstance(ent, Gold):
+                gold_color = get_color_for_terrain('gold')
+                radius_val = max(MIN_UNIT_RADIUS, ent.size)
+                pygame.draw.circle(minimap_surface, (*gold_color, 150), (mini_x, mini_y), radius_val)
 
 def run_gui_menu(screen, sw, sh):
     """
     Menu GUI bloquant : boucle Pygame jusqu'à ce que user_choices["validated"] == True
     ou fermeture de la fenêtre.
+
+    Par défaut, toggle_button["index"] = 2 => Both (Terminal + GUI).
     """
     clock = pygame.time.Clock()
     show_main_menu   = True
@@ -72,10 +116,13 @@ def run_gui_menu(screen, sw, sh):
         {"text": "Quitter",         "rect": pygame.Rect(0,0,200,50)},
     ]
     
+    back_button = {"text": "Retour", "rect": pygame.Rect(20, 20, 100, 40)}
+
+    # On force la valeur par défaut à "Both" = index = 2
     toggle_button = {
         "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
         "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
-        "index": 0  # État actuel
+        "index": 2  # => Both
     }
 
     save_files = []
@@ -113,7 +160,6 @@ def run_gui_menu(screen, sw, sh):
                     else:
                         if combo_scroll_positions["grid"] > 0:
                             combo_scroll_positions["grid"] -= 1
-
                 elif combo_open == "nbot":
                     if event.y < 0:
                         if combo_scroll_positions["nbot"] < len(VALID_BOTS_COUNT) - MAX_VISIBLE_ITEMS:
@@ -121,7 +167,6 @@ def run_gui_menu(screen, sw, sh):
                     else:
                         if combo_scroll_positions["nbot"] > 0:
                             combo_scroll_positions["nbot"] -= 1
-
                 elif combo_open == "lvl":
                     if event.y < 0:
                         if combo_scroll_positions["lvl"] < len(VALID_LEVELS) - MAX_VISIBLE_ITEMS:
@@ -131,14 +176,17 @@ def run_gui_menu(screen, sw, sh):
                             combo_scroll_positions["lvl"] -= 1
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if toggle_button["rect"].collidepoint(mx, my):
-                    toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
-                    
+                # Bouton "Retour"
+                if (show_config_menu or show_load_menu) and back_button["rect"].collidepoint(mx, my):
+                    show_main_menu = True
+                    show_config_menu = False
+                    show_load_menu = False
+                    continue
+
                 if combo_open == "grid":
                     start_idx = combo_scroll_positions["grid"]
                     visible_items = VALID_GRID_SIZES[start_idx:start_idx + MAX_VISIBLE_ITEMS]
                     item_height = ITEM_HEIGHT
-
                     expanded_rect = pygame.Rect(sw//2 - 100, 100 + item_height, 200, item_height * len(visible_items))
                     if expanded_rect.collidepoint(mx,my):
                         relative_y = my - (100 + item_height)
@@ -181,37 +229,37 @@ def run_gui_menu(screen, sw, sh):
                     combo_rect_nbot = pygame.Rect(sw//2 - 100, 160, 200, 30)
                     combo_rect_lvl  = pygame.Rect(sw//2 - 100, 220, 200, 30)
 
+                    # Si on clique en dehors, on referme
                     if not (combo_rect_grid.collidepoint(mx,my) or 
                             combo_rect_nbot.collidepoint(mx,my) or 
                             combo_rect_lvl.collidepoint(mx,my)):
-                        if combo_open not in ["", None]:
-                            combo_open = None
+                        combo_open = None
 
                 if show_main_menu:
                     for i, btn in enumerate(main_buttons):
                         if btn["rect"].collidepoint(mx,my):
                             if i == 0:
                                 user_choices["load_game"] = False
-                                show_main_menu   = False
+                                show_main_menu = False
                                 show_config_menu = True
                             elif i == 1:
                                 user_choices["load_game"] = True
-                                show_main_menu   = False
-                                show_load_menu   = True
+                                show_main_menu = False
+                                show_load_menu = True
                             else:
                                 pygame.quit()
                                 sys.exit()
 
                 elif show_config_menu:
-                    combo_rect = pygame.Rect(sw//2 - 100, 100, 200, 30)
-                    combo_rect2= pygame.Rect(sw//2 - 100, 160, 200, 30)
-                    combo_rect3= pygame.Rect(sw//2 - 100, 220, 200, 30)
-                    if combo_rect.collidepoint(mx,my):
-                        combo_open = ("grid" if combo_open!="grid" else None)
-                    elif combo_rect2.collidepoint(mx,my):
-                        combo_open = ("nbot" if combo_open!="nbot" else None)
-                    elif combo_rect3.collidepoint(mx,my):
-                        combo_open = ("lvl" if combo_open!="lvl" else None)
+                    combo_rect_grid = pygame.Rect(sw//2 - 100, 100, 200, 30)
+                    combo_rect_nbot = pygame.Rect(sw//2 - 100, 160, 200, 30)
+                    combo_rect_lvl  = pygame.Rect(sw//2 - 100, 220, 200, 30)
+                    if combo_rect_grid.collidepoint(mx,my):
+                        combo_open = ("grid" if combo_open != "grid" else None)
+                    elif combo_rect_nbot.collidepoint(mx,my):
+                        combo_open = ("nbot" if combo_open != "nbot" else None)
+                    elif combo_rect_lvl.collidepoint(mx,my):
+                        combo_open = ("lvl" if combo_open != "lvl" else None)
 
                     chk_rect = pygame.Rect(sw//2 - 100, 280, 30, 30)
                     if chk_rect.collidepoint(mx,my):
@@ -222,6 +270,11 @@ def run_gui_menu(screen, sw, sh):
                     if valid_rect.collidepoint(mx,my):
                         user_choices["validated"] = True
                         running = False
+
+                    # Insert toggle_button logic here
+                    if toggle_button["rect"].collidepoint(mx, my):
+                        toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
+                        user_choices["index_terminal_display"] = toggle_button["index"]
 
                 elif show_load_menu:
                     start_y = 100
@@ -244,11 +297,20 @@ def run_gui_menu(screen, sw, sh):
         elif show_config_menu:
             draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, combo_open)
             draw_choose_display(screen, toggle_button)
+            pygame.draw.rect(screen, (100, 100, 200), back_button["rect"])
+            txt = font.render(back_button["text"], True, (255,255,255))
+            screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
+
         elif show_load_menu:
             draw_load_menu(screen, sw, sh, save_files)
+            pygame.draw.rect(screen, (100, 100, 200), back_button["rect"])
+            txt = font.render(back_button["text"], True, (255,255,255))
+            screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
 
         pygame.display.flip()
         
+        # Met à jour la variable globale index_terminal_display
+        # d'après l'état du bouton toggle_button
         user_choices["index_terminal_display"] = toggle_button["index"]
 
 def draw_choose_display(screen, toggle_button):
@@ -257,7 +319,6 @@ def draw_choose_display(screen, toggle_button):
     text_surface = font.render(toggle_button["texts"][toggle_button["index"]], True, (255, 255, 255))
     text_rect = text_surface.get_rect(center=toggle_button["rect"].center)
     screen.blit(text_surface, text_rect)
-
 
 def draw_main_menu(screen, sw, sh, buttons):
     gap = 20
@@ -270,11 +331,11 @@ def draw_main_menu(screen, sw, sh, buttons):
         screen.blit(txt, txt.get_rect(center=btn["rect"].center))
 
 def draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, combo_open):
-    if combo_open!="grid":
+    if combo_open != "grid":
         draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Taille: {VALID_GRID_SIZES[idx_grid]}", None, idx_grid)
-    if combo_open!="nbot":
+    if combo_open != "nbot":
         draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}", None, idx_nbot)
-    if combo_open!="lvl":
+    if combo_open != "lvl":
         draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}", None, idx_lvl)
 
     chk_rect = pygame.Rect(sw//2 - 100, 280, 30, 30)
@@ -290,13 +351,13 @@ def draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, 
     screen.blit(vtxt, vtxt.get_rect(center=valid_rect.center))
 
     if combo_open == "grid":
-        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Taille: {VALID_GRID_SIZES[idx_grid]}", 
+        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Taille: {VALID_GRID_SIZES[idx_grid]}",
                        VALID_GRID_SIZES, idx_grid, combo_type="grid")
     elif combo_open == "nbot":
-        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}", 
+        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}",
                        VALID_BOTS_COUNT, idx_nbot, combo_type="nbot")
     elif combo_open == "lvl":
-        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}", 
+        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}",
                        VALID_LEVELS, idx_lvl, combo_type="lvl")
 
 def draw_load_menu(screen, sw, sh, save_files):
@@ -312,10 +373,6 @@ def draw_load_menu(screen, sw, sh, save_files):
         screen.blit(txt2, txt2.get_rect(center=rect.center))
 
 def draw_combo_box(screen, x, y, w, h, text, items_list, selected_idx, combo_type=None):
-    """
-    Dessine un combo box. Si items_list est None, c'est un combo fermé.
-    Si items_list existe, on l'affiche sous forme d'une liste scrollable (max 5 items).
-    """
     box_rect = pygame.Rect(x, y, w, h)
     pygame.draw.rect(screen, (60,60,160), box_rect)
     screen.blit(font.render(text, True, (255,255,255)), (x+5, y+3))
@@ -368,7 +425,7 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
     total_height = selection_height * rows + padding * (rows - 1)
 
     surface = pygame.Surface((minimap_rect.width, total_height), pygame.SRCALPHA)
-    font = pygame.font.Font(None, 24)
+    font_sel = pygame.font.Font(None, 24)
 
     for index, player in enumerate(reversed(players)):
         col = index % columns
@@ -383,40 +440,44 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
             color = team_colors[player.teamID % len(team_colors)]
 
         pygame.draw.rect(surface, color, rect)
-        player_text = font.render(f'Player {player.teamID}', True, (0, 0, 0))
+        player_text = font_sel.render(f'Player {player.teamID}', True, (0, 0, 0))
         text_rect = player_text.get_rect(center=rect.center)
         surface.blit(player_text, text_rect)
 
     return surface
 
 def create_player_info_surface(selected_player, screen_width, team_colors):
-    font = pygame.font.Font(None, 24)
+    font_info = pygame.font.Font(None, 24)
     padding = 5
-    info_height = 160
+    info_height = 200
     surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
 
     team_color = team_colors[selected_player.teamID % len(team_colors)]
-    player_name_surface = font.render(f"Player {selected_player.teamID}", True, team_color)
+    player_name_surface = font_info.render(f"Player {selected_player.teamID}", True, team_color)
     surface.blit(player_name_surface, (padding, 0))
 
-    resources_text = (f"Resources - Food: {selected_player.resources['food']}, "
-                      f"Wood: {selected_player.resources['wood']}, "
-                      f"Gold: {selected_player.resources['gold']}")
+    resources_text = (f"Resources - Food: {selected_player.resources.food}, "
+                      f"Wood: {selected_player.resources.wood}, "
+                      f"Gold: {selected_player.resources.gold}")
     resources_surface = font.render(resources_text, True, (255, 255, 255))
     surface.blit(resources_surface, (padding, 30))
 
     unit_counts = Counter(unit.acronym for unit in selected_player.units)
     units_text = "Units - " + ", ".join([f"{acronym}: {count}" for acronym, count in unit_counts.items()])
-    units_surface = font.render(units_text, True, (255, 255, 255))
+    units_surface = font_info.render(units_text, True, (255, 255, 255))
     surface.blit(units_surface, (padding, 60))
 
     building_counts = Counter(building.acronym for building in selected_player.buildings)
     buildings_text = "Buildings - " + ", ".join([f"{acronym}: {count}" for acronym, count in building_counts.items()])
-    buildings_surface = font.render(buildings_text, True, (255, 255, 255))
+    buildings_surface = font_info.render(buildings_text, True, (255, 255, 255))
     surface.blit(buildings_surface, (padding, 90))
 
     maximum_population_text = (f"Maximum population : {selected_player.maximum_population}")
-    maximum_population = font.render(maximum_population_text, True, (255, 255, 255))
+    maximum_population = font_info.render(maximum_population_text, True, (255, 255, 255))
     surface.blit(maximum_population, (padding, 120))
+
+    population_text = (f"population : {selected_player.population}")
+    population = font.render(population_text, True, (255, 255, 255))
+    surface.blit(population, (padding, 150))
 
     return surface
