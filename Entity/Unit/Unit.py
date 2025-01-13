@@ -43,6 +43,7 @@ class Unit(Entity):
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
+        self.animator(dt)
         if self.isAlive():
             self.setIdle()
             self.seekAttack(game_map, dt)
@@ -98,8 +99,10 @@ class Unit(Entity):
                 
             if abs(dx) <= abs(step[0]) and abs(dy) <= abs(step[1]):
                 self.path.pop(0)
-                game_map.remove_entity(self)
-                game_map.add_entity(self, self.x, self.y)
+                old_position = game_map.remove_entity(self)
+                if not game_map.add_entity(self, self.x, self.y):
+                    game_map.add_entity(self, old_position[0], old_position[1])
+
 
             return self.path
 
@@ -176,8 +179,7 @@ class Unit(Entity):
             self.state = ''
         self.death_timer+=dt
 
-    # ---------------- Display Logic ----------------
-    def display(self, screen, screen_width, screen_height, camera, dt):
+    def animator(self, dt):
         if self.state:
             self.frame_duration += dt
             frame_time = 1.0 / self.frames
@@ -188,8 +190,10 @@ class Unit(Entity):
             if self.cooldown_frame:
                 self.current_frame = self.cooldown_frame
 
-            sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-            draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame, direction=self.direction)
+    # ---------------- Display Logic ----------------
+    def display(self, screen, screen_width, screen_height, camera, dt):
+        sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame, direction=self.direction)
 
     def display_hitbox(self, screen, screen_width, screen_height, camera):
         center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)

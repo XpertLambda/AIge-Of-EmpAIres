@@ -9,7 +9,7 @@ class Tree(Resource):
         y, 
         acronym = 'W', 
         storage = Resources(food=0, gold=0, wood=100),
-        max_hp=15
+        max_hp=100
         ):
 
         super().__init__(x=x, y=y, acronym=acronym, storage=storage, max_hp=max_hp, variant=random.randint(0, sprite_config['resources']['tree']['variant'] - 1))

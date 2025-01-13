@@ -13,6 +13,7 @@ class Resource(Entity):
         self.variant = variant
 
     def update(self, game_map, dt):
+        self.animator(dt)
         if not self.isAlive():
             self.kill()
 
@@ -21,8 +22,9 @@ class Resource(Entity):
         self.hp = 0
         self.state = ''
 
+    def animator(self, dt):
+        self.variant = self.get_variant()
+
     def display(self, screen, screen_width, screen_height, camera, dt):
-        category = 'resources'
-        variant = self.get_variant()
         screen_x, screen_y = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, category, screen_x, screen_y, camera.zoom, variant=variant)
+        draw_sprite(screen, self.acronym, 'resources', screen_x, screen_y, camera.zoom, variant=self.variant)

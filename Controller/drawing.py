@@ -268,25 +268,10 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
     return surface_map, scale_factor, offset_x, offset_y, min_iso_x, min_iso_y
 
-
-
-def display_fps(screen):
-    if not hasattr(display_fps, 'last_time'):
-        display_fps.last_time = time.time()
-        display_fps.frame_count = 0
-        display_fps.fps = 0
-
-    display_fps.frame_count += 1
-    now_time = time.time()
-    elapsed = now_time - display_fps.last_time
-    if elapsed >= 1.0:
-        display_fps.fps = display_fps.frame_count / elapsed
-        display_fps.frame_count = 0
-        display_fps.last_time = now_time
-
-    font_obj = pygame.font.SysFont(None, 24)
-    fps_text = font_obj.render(f'FPS: {int(display_fps.fps)}', True, pygame.Color('white'))
-    screen.blit(fps_text, (10, 10))
+def display_fps(screen, clock, font):
+    fps_value = f"{clock.get_fps():.2f}"  # Format to 2 decimal places
+    fps_surface = font.render(fps_value, True, (255, 255, 255))  # White text
+    screen.blit(fps_surface, (10, 10))  # (x, y) coordinates for top-left
 
 def draw_pointer(screen):
     from Controller.gui import get_scaled_gui  # Déplacé ici pour éviter l'import circulaire

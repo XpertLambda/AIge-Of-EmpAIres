@@ -36,7 +36,8 @@ from Settings.setup import (
     GAME_SPEED,
     PANEL_RATIO,
     BG_RATIO,
-    ONE_SECOND
+    ONE_SECOND,
+    FPS_DRAW_LIMITER
 )
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
@@ -45,6 +46,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     camera = Camera(screen_width, screen_height)
     team_colors = generate_team_colors(len(players))
     pygame.mouse.set_visible(False)
+    font = pygame.font.SysFont(None, 24)
 
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
@@ -127,8 +129,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     for p in players:
         old_resources[p.teamID] = p.resources.copy()
 
+    draw_timer = 0
     while running:
-        raw_dt = clock.tick(200) / ONE_SECOND
+        raw_dt = clock.tick(120) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
 
@@ -185,7 +188,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 old_resources[selected_player.teamID] = current_res.copy()
 
         # Rendu Pygame (GUI)
-        if screen is not None:
+        draw_timer += raw_dt
+
+        if screen is not None and draw_timer >= 1/FPS_DRAW_LIMITER:
+            draw_timer = 0
             screen.fill((0, 0, 0))
             draw_map(
                 screen,
@@ -223,7 +229,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     inf_h = player_info_surface.get_height()
                     screen.blit(player_info_surface, (0, screen_height - inf_h))
 
-            display_fps(screen)
             draw_pointer(screen)
 
             for pl in game_map.players:
@@ -235,7 +240,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['screen_height'],
                             game_state['camera']
                         )
-
+            display_fps(screen, clock, font)
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False

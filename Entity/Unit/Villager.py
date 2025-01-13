@@ -4,6 +4,8 @@ from Settings.setup import MAXIMUM_CARRY, RESOURCE_RATE_PER_SEC, Resources, FRAM
 from Entity.Unit.Unit import Unit
 from AiUtils.aStar import a_star
 from Controller.utils import get_direction, get_snapped_angle
+from Controller.terminal_display_debug import debug_print
+
 
 class Villager(Unit):
     def __init__(self, team=None, x=0, y=0):
@@ -31,6 +33,7 @@ class Villager(Unit):
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
+        self.animator(dt)
         if self.isAlive():
             self.setIdle()
             self.seekAttack(game_map, dt)
@@ -81,27 +84,46 @@ class Villager(Unit):
         if self.task != 'collect':
             return
 
-        if self.collect_target and self.collect_target.isAlive():
-            distance = math.dist((self.x, self.y), (self.collect_target.x, self.collect_target.y)) - self.collect_target.hitbox - self.attack_range
+        if not self.collect_target or not self.collect_target.isAlive():
+            self.task = 'stock'
+            return
 
-            if distance <= 0 and self.carry.total() < MAXIMUM_CARRY :
-                self.state = 'task'
-                self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.collect_target.x, self.collect_target.y)))
-                if self.task_timer == 0 :
-                    self.current_frame = 0
-                    self.set_destination(None, game_map)
-                self.task_timer += dt
-                amount = min(self.resource_rate * dt, abs(MAXIMUM_CARRY - self.carry.total()))
-                resource_collected = self.collect_target.storage.decrease_resources((amount, amount, amount))
-                hp_damage = amount*self.collect_target.max_hp / self.collect_target.maximum_storage.total()
-                self.collect_target.hp -= hp_damage
-                self.carry.increase_resources(resource_collected)
-                if self.carry.total() >= MAXIMUM_CARRY or not self.collect_target.isAlive():
-                    self.task = 'stock'
+        distance = math.dist((self.x, self.y), (self.collect_target.x, self.collect_target.y)) \
+                   - self.collect_target.hitbox - self.attack_range
 
-            elif not self.path:
+        # Stop if carrying too much or far away
+        if distance > 0 or self.carry.total() >= MAXIMUM_CARRY:
+            if not self.path:
                 self.set_destination((self.collect_target.x, self.collect_target.y), game_map)
                 self.task_timer = 0
+            return
+
+        # Collect resources
+        self.state = 'task'
+        self.direction = get_direction(get_snapped_angle((self.x, self.y),
+                                                         (self.collect_target.x, self.collect_target.y)))
+
+        # Initialize partial collect amount
+        if self.task_timer == 0:
+            self.current_frame = 0
+            self.temp_collect_amount = 0
+            self.set_destination(None, game_map)
+
+        self.task_timer += dt
+        self.temp_collect_amount += min(self.resource_rate * dt, abs(MAXIMUM_CARRY - self.carry.total()))
+
+        # Resource transaction
+        if self.temp_collect_amount >= 1:
+            collected_whole = round(self.temp_collect_amount)
+            resource_collected = self.collect_target.storage.decrease_resources((collected_whole,
+                                                                                 collected_whole,
+                                                                                 collected_whole))
+            self.collect_target.hp -= max(resource_collected)
+            self.carry.increase_resources(resource_collected)
+            self.temp_collect_amount = 0
+
+        if self.carry.total() >= MAXIMUM_CARRY or not self.collect_target.isAlive():
+            self.task = 'stock'
 
     def seekStock(self, game_map):
         if self.task != 'stock':
@@ -114,7 +136,8 @@ class Villager(Unit):
             if distance <= 0:
                 self.state = 'idle'
                 self.set_destination(None, game_map)
-                self.carry.decrease_resources(self.stock_target.stock(game_map, self.carry.get()))
+                self.stock_target.stock(game_map, self.carry.get())
+                self.carry.reset()
             elif not self.path:
                 self.set_destination((self.stock_target.x, self.stock_target.y), game_map)
        

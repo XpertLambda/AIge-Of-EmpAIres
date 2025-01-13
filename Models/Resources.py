@@ -6,10 +6,16 @@ class Resources:
         self.gold = gold
         self.wood = wood
 
+    def reset(self):
+        self.food = 0
+        self.gold = 0
+        self.wood = 0
+        
     def set_resources(self, food=0, gold=0, wood=0):
         self.food = food
         self.gold = gold
         self.wood = wood
+
 
     def add_food(self, amount):
         self.food += amount
@@ -56,8 +62,6 @@ class Resources:
         return (removed_food, removed_gold, removed_wood)
 
     def has_enough(self, costs):
-        debug_print("Resources:", self.get())  # Should debug_print a tuple of numbers
-        debug_print("Costs:", costs)          # Should debug_print a tuple of numbers
         return all(resource >= cost for resource, cost in zip(self.get(), costs))
 
     def get(self):

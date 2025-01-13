@@ -72,6 +72,7 @@ class Building(Entity):
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
+        self.animator(dt)
         if self.isAlive():
             if self.spawnsUnits:
                 self.update_training(dt, game_map, self.team)
@@ -99,10 +100,9 @@ class Building(Entity):
                     break
             game_map.remove_entity(self)
             game_map.game_state['player_info_updated'] = True
-
     
     # ---------------- Display Logic ----------------
-    def display(self, screen, screen_width, screen_height, camera, dt):
+    def animator(self, dt):
         if self.state:
             if self.state != 'idle':
                 self.frame_duration += dt
@@ -114,8 +114,9 @@ class Building(Entity):
             if self.cooldown_frame:
                 self.current_frame = self.cooldown_frame
 
-            sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-            draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
+    def display(self, screen, screen_width, screen_height, camera, dt):
+        sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
 
     def is_walkable(self):
         return self.walkable
@@ -221,7 +222,6 @@ class Building(Entity):
                 new_unit.set_destination((target_x, target_y), game_map)
                 new_unit.destination = (target_x, target_y)
                 return
-
 
     def stock(self, game_map, resources):
         if self.resourceDropPoint:

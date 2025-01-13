@@ -10,7 +10,7 @@ class Gold(Resource):
         y, 
         acronym = 'G', 
         storage = Resources(food=0, gold=800, wood=0),
-        max_hp=350
+        max_hp=800
         ):
 
         super().__init__(x=x, y=y, acronym=acronym, storage=storage, max_hp=max_hp, variant=random.randint(0, sprite_config['resources']['tree']['variant'] - 1))

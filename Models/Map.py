@@ -72,7 +72,7 @@ class GameMap:
                     if remove_counter >= entity.size * entity.size:
                         if entity.team != None:
                             self.players[entity.team].remove_member(entity)
-                        return True
+                        return pos
         return False
 
     def walkable_position(self, position):
