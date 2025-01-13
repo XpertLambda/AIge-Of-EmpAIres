@@ -17,6 +17,19 @@ def write_full_html(players, game_map):
         template += f"""
         <h2>Joueur {team.teamID}</h2>
         <details>
+            <summary>infos générales</summary>
+            <p>
+                <!-- Exemples : mimic create_player_info_surface -->
+                <b>Resources</b>: Food={team.resources.food}, Wood={team.resources.wood}, Gold={team.resources.gold}<br>
+                <b>Population</b>: {team.population}/{team.maximum_population}<br>
+                <!-- Données supplémentaires -->
+                <b>Team Color</b>: <!-- team color placeholder --><br>
+                <b>Ennemis tués</b>: <!-- number of enemies killed placeholder --><br>
+                <!-- Autres statistiques de combat, exp, etc. -->
+            </p>
+        </details>
+
+        <details>
             <summary>Unités</summary>
             <ul>
         """
