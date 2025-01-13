@@ -3,6 +3,12 @@ import os
 import sys
 import threading
 import time
+import platform
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
+
 from select import select
 
 from Controller.init_map import init_pygame, game_loop
@@ -14,6 +20,18 @@ from Controller.gui import run_gui_menu, user_choices, VALID_GRID_SIZES, VALID_B
 
 # Import du curses terminal display
 from Controller.terminal_display import start_terminal_interface
+
+
+def get_input_non_blocking():
+    if platform.system() == "Windows" and msvcrt:
+        if msvcrt.kbhit():
+            return msvcrt.getwche()
+        return None
+    else:
+        rlist, _, _ = select([sys.stdin], [], [], 0)
+        if rlist:
+            return sys.stdin.readline()
+        return None
 
 
 def ask_terminal_inputs_non_blocking():
@@ -62,9 +80,9 @@ def ask_terminal_inputs_non_blocking():
             step = 11
 
         # Lecture non bloquante
-        rlist, _, _ = select([sys.stdin], [], [], 0.1)
-        if rlist:
-            line = sys.stdin.readline().strip()
+        line_in = get_input_non_blocking()
+        if line_in is not None:
+            line = line_in.strip()
 
             if step == 1:
                 if line == "":
