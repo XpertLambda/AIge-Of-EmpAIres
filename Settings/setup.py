@@ -6,7 +6,7 @@ import os
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 10
+GAME_SPEED = 3
 FPS_DRAW_LIMITER = 50
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_RATE_PER_SEC = 25 / 60
@@ -21,6 +21,7 @@ ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
 FRAMES_PER_BUILDING = 15
 UNIT_HITBOX = 0.3
+UNIT_ATTACKRANGE = 0.6
 ATTACK_RANGE_EPSILON = 0.5
 
 # -------------------
@@ -67,19 +68,19 @@ difficulty_config = {
     'DEBUG' : {
         'Resources' : Resources(food=99999, gold=99999, wood=99999),
         'Units' : {
-            'Villager' : 10,
-            'Archer' : 10,
-            'Horseman' : 10,
-            'Swordsman' : 10
+            'Villager' : 1,
+            'Archer' : 100,
+            'Horseman' : 100,
+            'Swordsman' : 1
         },
         'Buildings' : {
-            'TownCenter' : 5,
+            'TownCenter' : 40,
             'Barracks' : 1,
             'Stable' : 1, 
             'ArcheryRange' : 1,
             'Farm' : 1,
             'Keep' : 1,
-            'House' : 5,
+            'House' : 2,
             'Camp' : 2,
         }
     }

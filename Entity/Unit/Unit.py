@@ -35,26 +35,27 @@ class Unit(Entity):
         self.speed = speed
         self.training_time = training_time
         self.path = []
+        self.path_corrector = []
         self.collision_timer = 0
 
         self.frames = FRAMES_PER_UNIT
         self.direction = 0
-        self.removed = False
+
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
         self.animator(dt)
         if self.isAlive():
-            self.setIdle()
             self.seekAttack(game_map, dt)
-            self.seekCollision(game_map, dt)
             self.seekMove(game_map, dt)
+            self.seekCollision(game_map, dt)
+            self.seekIdle()
         else:
             self.death(game_map, dt)
 
     # ---------------- Controller ----------------
-    def setIdle(self):
-        if self.state != 'idle':
+    def seekIdle(self):
+        if not self.attack_target and not self.path:
             self.state = 'idle'
         self.cooldown_frame = None
 
@@ -82,7 +83,6 @@ class Unit(Entity):
     def seekMove(self, game_map, dt, ALLOWED_ANGLES=ALLOWED_ANGLES):
         if self.path:
             self.state = 'walk'
-
             target_tile = self.path[0]        
             snapped_angle = get_snapped_angle(((self.x, self.y)), (target_tile[0], target_tile[1]))
             self.direction = get_direction(snapped_angle)
@@ -90,7 +90,8 @@ class Unit(Entity):
             diff = normalize(diff)
             if diff:
                 step = [component * dt *  self.speed for component in diff]
-
+            else :
+                step = (0, 0)
             self.x += step[0]
             self.y += step[1]
 
@@ -103,41 +104,68 @@ class Unit(Entity):
                 if not game_map.add_entity(self, self.x, self.y):
                     game_map.add_entity(self, old_position[0], old_position[1])
 
-
             return self.path
 
     def seekCollision(self, game_map, dt):
-        if not self.path:
-            rounded_position = (round(self.x), round(self.y))
-            entities = game_map.grid.get(rounded_position, None)
-            if entities:
-                for entity in entities:
-                    if entity.entity_id != self.entity_id:
-                        distance = math.dist((entity.x, entity.y), (self.x, self.y))
-                        hitbox_difference = distance - abs(self.hitbox + entity.hitbox)
-                        if hitbox_difference < 0:
-                            diff = [self.x - entity.x, self.y - entity.y]
-                            diff = normalize(diff)
-                            if diff:
-                                force = [component * self.hitbox for component in diff]
-                                '''
-                                if self.path:
-                                    perp = [-diff[1], diff[0]]
-                                    perp_factor = 0.3
-                                    force[0] += perp[0] * perp_factor
-                                    force[1] += perp[1] * perp_factor
-                                '''
-                                new_pos = (self.x + force[0], self.y + force[1])
-                                if game_map.walkable_position(new_pos):
-                                    self.path.insert(0, new_pos)
+        if self.path:
+            return
+        rounded_position = (round(self.x), round(self.y))
+        relative_positions = [
+            (-1, -1), (0, -1), (1, -1),  # row above
+            (-1, 0), (0, 0), (1, 0),     # current row
+            (-1, 1), (0, 1), (1, 1)      # row below
+        ]
+        entities = set()
+
+        for dx, dy in relative_positions:
+            surrounding_position = (rounded_position[0] + dx, rounded_position[1] + dy)
+            entity_at_position = game_map.grid.get(surrounding_position, set())
+            entities.update(entity_at_position)
+
+        self.hitbox_color = (255, 255, 255)
+        if entities:
+            for entity in entities.copy():
+                if entity.entity_id != self.entity_id:
+                    distance = math.dist((entity.x, entity.y), (self.x, self.y))
+                    hitbox_difference = distance - abs(self.hitbox/2 + entity.hitbox/2)
+                    if hitbox_difference < 0:
+                        diff = [self.x - entity.x, self.y - entity.y]
+                        diff = normalize(diff)
+                        if diff:
+                            force = [component * self.hitbox for component in diff]
+                            force = [f / 7 for f in force]
+                            new_pos = (self.x + force[0], self.y + force[1])
+                            if game_map.walkable_position(new_pos):
+                                old_position = game_map.remove_entity(self)
+                                self.hitbox_color = (255, 0, 0)
+                                if not game_map.add_entity(self, new_pos[0], new_pos[1]):
+                                    game_map.add_entity(self, old_position[0], old_position[1])
             return True
 
     # ---------------- Attack Logic ----------------
     def seekAttack(self, game_map, dt):
+        self.range_color = (255, 255, 255)
         if self.attack_target and self.attack_target.isAlive():
-            distance = math.dist((self.x, self.y), (self.attack_target.x, self.attack_target.y)) - self.attack_target.hitbox - self.attack_range
-
+            if isinstance(self.attack_target, Unit):
+                distance = math.dist((self.x, self.y), (self.attack_target.x, self.attack_target.y))
+                distance -= (self.attack_target.hitbox + self.attack_range)
+            else:
+                corner_distance = self.attack_target.size / 2.0
+                left = self.attack_target.x - corner_distance
+                right = self.attack_target.x + corner_distance
+                top = self.attack_target.y - corner_distance
+                bottom = self.attack_target.y + corner_distance
+                closest_point = (
+                    max(left, min(self.x, right)),
+                    max(top, min(self.y, bottom))
+                )
+                distance = math.dist(closest_point, (self.x, self.y)) - self.attack_range          
+            
             if distance <= 0 :
+                ## DEBUG INSTRUCTIONS
+                self.range_color = (255, 0, 0)
+                ## END HERE
+
                 self.state = 'attack'
                 self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.attack_target.x, self.attack_target.y))) 
                 if self.attack_timer == 0:
@@ -153,10 +181,16 @@ class Unit(Entity):
                     self.attack_timer = 0
                     self.cooldown_frame = None
             else :
-                if self.path:
-                    self.path = [self.path[0]] + a_star((self.x, self.y), (self.attack_target.x,self.attack_target.y), game_map)
+                self.hitbox_color = (255, 255, 255)
+                self.attack_target.hitbox_color = (255, 255, 255)
+                if isinstance(self.attack_target, Unit):
+                    if self.path:
+                        self.path = [self.path[0]] + a_star((self.x, self.y), (self.attack_target.x,self.attack_target.y), game_map)
+                    else:
+                        self.set_destination((self.attack_target.x,self.attack_target.y), game_map)
                 else:
-                    self.set_destination((self.attack_target.x,self.attack_target.y), game_map)
+                    if not self.path:
+                        self.set_destination((self.attack_target.x,self.attack_target.y), game_map)
 
                 self.attack_timer = 0
         else: 
@@ -194,25 +228,16 @@ class Unit(Entity):
     def display(self, screen, screen_width, screen_height, camera, dt):
         sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
         draw_sprite(screen, self.acronym, 'units', sx, sy, camera.zoom, state=self.state, frame=self.current_frame, direction=self.direction)
+    
+    def display_path(self, screen, screen_width, screen_height, camera):
+        unit_position = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        color = ((self.entity_id * 30) % 255, (self.entity_id*20) % 255, (self.entity_id*2) % 255)
+        transformed_path = [unit_position, *[ tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height) for x, y in self.path ] ]
+        draw_path(screen, unit_position, transformed_path, camera.zoom, color)
+    
+    def display_path(self, screen, screen_width, screen_height, camera):
+        unit_position = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+        color = ((self.entity_id * 30) % 255, (self.entity_id*20) % 255, (self.entity_id*2) % 255)
+        transformed_path = [unit_position, *[ tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height) for x, y in self.path ] ]
+        draw_path(screen, unit_position, transformed_path, camera.zoom, color)
 
-    def display_hitbox(self, screen, screen_width, screen_height, camera):
-        center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        hitbox_iso = self.hitbox / math.cos(math.radians(45))
-        width =  hitbox_iso * camera.zoom * HALF_TILE_SIZE
-        height = hitbox_iso * camera.zoom * HALF_TILE_SIZE / 2
-        x = center[0] - width // 2
-        y = center[1] - height // 2 
-        pygame.draw.ellipse(screen, (255, 255, 255), (x, y, width, height), 1)
-        #pygame.draw.rect(screen, (0, 0, 255), (x, y, width, height), 1)
-    
-    def display_path(self, screen, screen_width, screen_height, camera):
-        unit_position = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        color = ((self.entity_id * 30) % 255, (self.entity_id*20) % 255, (self.entity_id*2) % 255)
-        transformed_path = [unit_position, *[ tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height) for x, y in self.path ] ]
-        draw_path(screen, unit_position, transformed_path, camera.zoom, color)
-    
-    def display_path(self, screen, screen_width, screen_height, camera):
-        unit_position = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        color = ((self.entity_id * 30) % 255, (self.entity_id*20) % 255, (self.entity_id*2) % 255)
-        transformed_path = [unit_position, *[ tile_to_screen(x, y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height) for x, y in self.path ] ]
-        draw_path(screen, unit_position, transformed_path, camera.zoom, color)

@@ -272,7 +272,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     screen.blit(player_info_surface, (0, screen_height - inf_h))
 
             draw_pointer(screen)
-
+            '''
             for pl in game_map.players:
                 for unit in pl.units:
                     if unit.path:
@@ -282,6 +282,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['screen_height'],
                             game_state['camera']
                         )
+            '''
             display_fps(screen, clock, font)
             if game_state.get('game_over', False):
                 draw_game_over_overlay(screen, game_state)

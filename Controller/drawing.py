@@ -214,7 +214,7 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
     return surface_map, scale_factor, offset_x, offset_y, min_iso_x, min_iso_y
 
 def display_fps(screen, clock, font):
-    fps_value = f"{clock.get_fps():.2f}"  # Format to 2 decimal places
+    fps_value = f"{int(clock.get_fps())}"  # Format to 2 decimal places
     fps_surface = font.render(fps_value, True, (255, 255, 255))  # White text
     screen.blit(fps_surface, (10, 10))  # (x, y) coordinates for top-left
 
@@ -237,11 +237,11 @@ def draw_healthBar(screen, screen_x, screen_y, ratio, color_val):
     fill_rect = pygame.Rect(bg_rect.x, bg_rect.y, fill_width, HEALTH_BAR_HEIGHT)
     pygame.draw.rect(screen, color_val, fill_rect)
 
-def draw_hitbox(screen, corners, zoom):
+def draw_hitbox(screen, corners, zoom, color):
     if len(corners) != 4:
         raise ValueError("Hitbox must have exactly 4 corners.")
     scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
-    pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
+    pygame.draw.polygon(screen, color, corners, width=1)
 
 def draw_path(screen, unit_center, screenPath, zoom, color):
     if len(screenPath) >= 2:
