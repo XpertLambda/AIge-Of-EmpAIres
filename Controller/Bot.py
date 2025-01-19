@@ -87,13 +87,13 @@ def repair_critical_buildings(player_team):
 
 #Priorty seven avoid ressources shortage 
 
-def get_resource_shortage(current_resources, thresholds):
+def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
     # Access the specific resource attributes from the Resources object
-    if current_resources.food < thresholds['food']:
+    if current_resources.food < RESOURCE_THRESHOLDS['food']:
         return 'food'
-    if current_resources.wood < thresholds['wood']:
+    if current_resources.wood < RESOURCE_THRESHOLDS['wood']:
         return 'wood'
-    if current_resources.gold < thresholds['gold']:
+    if current_resources.gold < RESOURCE_THRESHOLDS['gold']:
         return 'gold'
     return None
 def find_resource_location(game_map, resource_acronym):
