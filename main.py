@@ -207,59 +207,113 @@ def main():
 
     3) Selon le choix, on se comporte différemment (lancement curses, etc.).
     """
-    # 1) Initialisation pygame + chargement des sprites
-    screen, sw, sh = init_pygame()
-    load_sprites(screen, sw, sh)
+    while True:
+        # 1) Initialisation pygame + chargement des sprites
+        screen, sw, sh = init_pygame()
 
-    # 2) On lance le menu terminal en thread (non-bloquant)
-    t_menu = threading.Thread(target=ask_terminal_inputs_non_blocking)
-    t_menu.start()
+        from Controller.init_assets import load_sprites, ASSETS_LOADED
+        if not ASSETS_LOADED:
+            load_sprites(screen, sw, sh)
 
-    # 3) On lance la GUI menu => si l'utilisateur veut "Terminal only",
-    #    on aura quand même un fenêtrage, mais on va l'arrêter aussitôt
-    #    qu'il aura validé le choix. On peut laisser le code existant:
-    from Controller.gui import run_gui_menu
-    run_gui_menu(screen, sw, sh)
+        # 2) On lance le menu terminal en thread (non-bloquant)
+        t_menu = threading.Thread(target=ask_terminal_inputs_non_blocking)
+        t_menu.start()
 
-    # on attend la fin du thread menu
-    if t_menu.is_alive():
-        t_menu.join()
+        # 3) On lance la GUI menu => si l'utilisateur veut "Terminal only",
+        #    on aura quand même un fenêtrage, mais on va l'arrêter aussitôt
+        #    qu'il aura validé le choix. On peut laisser le code existant:
+        from Controller.gui import run_gui_menu
+        run_gui_menu(screen, sw, sh)
 
-    # => user_choices est fixé
-    mode_index = user_choices["index_terminal_display"]
-    # si c'est Terminal only => on ne veut plus de GUI => on clos la fenêtre
-    if mode_index == 1:
-        # Quitter pygame
-        pygame.display.quit()
-        # On remet screen=None
-        screen = None
+        # on attend la fin du thread menu
+        if t_menu.is_alive():
+            t_menu.join()
 
-    # 4) Lecture des paramètres finaux
-    load_game    = user_choices["load_game"]
-    chosen_save  = user_choices["chosen_save"]
-    grid_size    = user_choices["grid_size"]
-    nb_bots      = user_choices["num_bots"]
-    bot_level    = user_choices["bot_level"]
-    gold_c       = user_choices["gold_at_center"]
+        # => user_choices est fixé
+        mode_index = user_choices["index_terminal_display"]
+        # si c'est Terminal only => on ne veut plus de GUI => on clos la fenêtre
+        if mode_index == 1:
+            # Quitter pygame
+            pygame.display.quit()
+            # On remet screen=None
+            screen = None
 
-    # 5) Création ou chargement de la map
-    if load_game and chosen_save:
-        game_map = GameMap(0, False, [], generate=False)
-        game_map.load_map(chosen_save)
-        players = game_map.players
-    else:
-        players = init_players(nb_bots, bot_level)
-        game_map = GameMap(grid_size, gold_c, players)
+        # 4) Lecture des paramètres finaux
+        load_game    = user_choices["load_game"]
+        chosen_save  = user_choices["chosen_save"]
+        grid_size    = user_choices["grid_size"]
+        nb_bots      = user_choices["num_bots"]
+        bot_level    = user_choices["bot_level"]
+        gold_c       = user_choices["gold_at_center"]
 
-    # 6) Si mode Terminal only ou Both => lancer curses
-    if mode_index in [1, 2]:
-        t_curses = threading.Thread(target=start_terminal_interface, args=(game_map,), daemon=True)
-        t_curses.start()
+        # 5) Création ou chargement de la map
+        if load_game and chosen_save:
+            game_map = GameMap(0, False, [], generate=False)
+            game_map.load_map(chosen_save)
+            players = game_map.players
+        else:
+            players = init_players(nb_bots, bot_level)
+            game_map = GameMap(grid_size, gold_c, players)
 
-    # 7) Lancer la boucle de jeu => s'il n'y a pas de screen => pas d'affichage Pygame
-    from Controller.game_loop import game_loop
-    game_loop(screen, game_map, sw, sh, players)
+        # 6) Si mode Terminal only ou Both => lancer curses
+        if mode_index in [1, 2]:
+            t_curses = threading.Thread(target=start_terminal_interface, args=(game_map,), daemon=True)
+            t_curses.start()
 
+        # 7) Lancer la boucle de jeu => s'il n'y a pas de screen => pas d'affichage Pygame
+        from Controller.game_loop import game_loop
+        game_loop(screen, game_map, sw, sh, players)
+
+        menu_result = user_choices.get("menu_result")
+        if menu_result == "main_menu":
+            from Controller.terminal_display import stop_curses
+            stop_curses()
+            pygame.quit()
+            user_choices.clear()
+            user_choices["menu_result"] = None
+            user_choices.update({
+                "index_terminal_display": 2,
+                "load_game": False,
+                "chosen_save": "",
+                "grid_size": 120,
+                "num_bots": 2,
+                "bot_level": "lean",
+                "gold_at_center": False,
+                "validated": False
+            })
+            continue
+        elif menu_result == "quit":
+            break
+
+        # Check if user wants to return to menu
+        if game_map.game_state.get('return_to_menu'):
+            from Controller.terminal_display import stop_curses
+            stop_curses()
+            # If curses is running, stop it (stub or custom function)
+            # stop_curses()  # Example if you have a dedicated stop function
+
+            # Fully close the old window
+            pygame.quit()
+
+            # Reset user choices
+            user_choices.clear()
+            user_choices.update({
+                "index_terminal_display": 2,
+                "load_game": False,
+                "chosen_save": "",
+                "grid_size": 120,
+                "num_bots": 2,
+                "bot_level": "lean",
+                "gold_at_center": False,
+                "validated": False
+            })
+
+            # Restart from scratch
+            continue
+        else:
+            break
+
+    # ...existing code...
 
 if __name__ == "__main__":
     main()

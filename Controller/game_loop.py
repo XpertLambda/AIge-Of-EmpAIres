@@ -7,6 +7,7 @@ from Entity.Building import *
 from Entity.Unit import *
 from Models.Team import Team
 from Controller.camera import Camera
+from Controller.terminal_display_debug import debug_print
 from Controller.drawing import (
     draw_map,
     compute_map_bounds,
@@ -39,6 +40,36 @@ from Settings.setup import (
     ONE_SECOND,
     FPS_DRAW_LIMITER
 )
+
+def is_player_dead(player):
+    # Simple check: no units, no buildings, and zero resources to rebuild
+    if not player.units and not player.buildings:
+        if (player.resources.food <= 50 and
+            player.resources.gold <= 225):
+            return True
+    return False
+
+def draw_game_over_overlay(screen, game_state):
+    font = pygame.font.SysFont(None, 48)
+    text = font.render(f"Joueur {game_state['winner_id']} est gagnant!", True, (255, 255, 255))
+    text_rect = text.get_rect(center=(game_state['screen_width'] // 2, game_state['screen_height'] // 2 - 50))
+    screen.blit(text, text_rect)
+
+    button_font = pygame.font.SysFont(None, 36)
+    button_text = button_font.render("Quitter le jeu", True, (255, 255, 255))
+    button_rect = button_text.get_rect(center=(game_state['screen_width'] // 2, game_state['screen_height'] // 2 + 50))
+    pygame.draw.rect(screen, (0, 0, 0), button_rect.inflate(20, 10))
+    screen.blit(button_text, button_rect)
+    game_state['game_over_button_rect'] = button_rect
+
+    # Nouveau bouton "Menu Principal"
+    main_menu_text = button_font.render("Menu Principal", True, (255, 255, 255))
+    main_menu_rect = main_menu_text.get_rect(
+        center=(game_state['screen_width'] // 2, game_state['screen_height'] // 2 + 100)
+    )
+    pygame.draw.rect(screen, (0, 0, 0), main_menu_rect.inflate(20, 10))
+    screen.blit(main_menu_text, main_menu_rect)
+    game_state['main_menu_button_rect'] = main_menu_rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
     clock = pygame.time.Clock()
@@ -114,7 +145,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'force_full_redraw': False,
         'show_all_health_bars': False,
         'show_player_info': True,
-        'show_gui_elements': True,  # Nouveau flag pour F1
+        'show_gui_elements': True,
+        'return_to_menu': False,  # Nouveau flag
     }
     
     game_map.set_game_state(game_state)
@@ -140,6 +172,26 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             handle_events(event, game_state)
             if event.type == pygame.QUIT:
                 running = False
+            if game_state.get('game_over', False):
+                # On rend la souris visible pour cliquer sur les boutons
+                pygame.mouse.set_visible(True)
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    mx, my = pygame.mouse.get_pos()
+                    if 'game_over_button_rect' in game_state:
+                        if game_state['game_over_button_rect'].collidepoint(mx, my):
+                            user_choices["menu_result"] = "quit"
+                            running = False
+                    if 'main_menu_button_rect' in game_state:
+                        if game_state['main_menu_button_rect'].collidepoint(mx, my):
+                            user_choices["menu_result"] = "main_menu"
+                            # Retour au menu
+                            game_state['game_over'] = False
+                            user_choices["validated"] = False
+                            game_state['return_to_menu'] = True
+
+        if game_state.get('return_to_menu'):
+            # On sort de la boucle => retour menu
+            break
 
         screen = game_state['screen']
         screen_width = game_state['screen_width']
@@ -179,6 +231,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = False
 
         update_game_state(game_state, dt)
+
+        # Remove players who are dead
+        for p in players[:]:
+            if is_player_dead(p):
+                debug_print(f"[GAME] Joueur {p.teamID} est éliminé.")
+                players.remove(p)
+
+        if len(players) == 1 and not game_state.get('game_over', False):
+            debug_print(f"[GAME] Joueur {players[0].teamID} est gagnant.")
+            game_state['winner_id'] = players[0].teamID
+            game_state['game_over'] = True
+            game_state['paused'] = True
 
         if selected_player is not None:
             current_res = selected_player.resources
@@ -241,6 +305,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['camera']
                         )
             display_fps(screen, clock, font)
+            if game_state.get('game_over', False):
+                draw_game_over_overlay(screen, game_state)
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False

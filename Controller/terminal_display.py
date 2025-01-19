@@ -1,4 +1,3 @@
-
 import curses
 import time
 import os
@@ -8,6 +7,9 @@ from Models.Map import GameMap  # si besoin
 from Settings.setup import user_choices
 from Models.html import write_full_html
 
+
+def stop_curses():
+    curses.endwin()
 
 def start_terminal_interface(game_map):
     """
@@ -106,8 +108,31 @@ def _curses_main(stdscr, game_map):
         except:
             key = -1
 
+        # -- Fin de partie ? --
+        if game_map.game_state and game_map.game_state.get('game_over', False):
+            # On affiche un message global
+            debug_print("=== GAME OVER ===")
+            debug_print("[M] Menu principal | [Q] Quitter")
+
+            # Ici on attend un choix bloquant => on enlève le nodelay
+            stdscr.nodelay(False)
+            chosen = None
+            while chosen is None:
+                c = stdscr.getch()
+                if c in [ord('m'), ord('M')]:
+                    user_choices["menu_result"] = "main_menu"
+                    chosen = 'm'
+                elif c in [ord('q'), ord('Q')]:
+                    user_choices["menu_result"] = "quit"
+                    chosen = 'q'
+                time.sleep(0.05)
+            # On referme curses
+            running = False
+            break
+
         if key != -1:
-            if key in [27]:  # 27 = ESC fermer curses et faire un clear du terminal
+            # ESC => fermer curses
+            if key in [27]:  # 27 = ESC
                 running = False
                 debug_print("Fermeture curses demandée (ESC).")
                 break
@@ -116,7 +141,6 @@ def _curses_main(stdscr, game_map):
 
             if key in [ord('Z'), ord('S'), ord('Q'), ord('D')]:
                 move_amount = 2
-
 
             if key == curses.KEY_UP or key == ord('z') or key == ord('Z'):
                 game_map.terminal_view_y -= move_amount
@@ -140,12 +164,12 @@ def _curses_main(stdscr, game_map):
                     is_paused = not game_map.game_state.get('paused', False)
                     game_map.game_state['paused'] = is_paused
                     if is_paused:
-                        # Générer la snapshot HTML (same que GUI)
                         if hasattr(game_map, 'players'):
                             write_full_html(game_map.players, game_map)
                         debug_print("[CURSES] Tab => Pause ON + snapshot générée")
                     else:
                         debug_print("[CURSES] Tab => Unpause => reprise du jeu")
+
             elif key == ord('p'):
                 if game_map.game_state is not None:
                     is_paused = not game_map.game_state.get('paused', False)
@@ -154,7 +178,7 @@ def _curses_main(stdscr, game_map):
                         debug_print("[CURSES] 'p' => Pause ON")
                     else:
                         debug_print("[CURSES] 'p' => Unpause => reprise du jeu")
-            #6 ET 7 A REFAIRE!!!!!!!!!!!!!!
+
             # 6) Touche F11 => Sauvegarde
             elif key == curses.KEY_F11:
                 debug_print("[CURSES] F11 => Sauvegarde en cours...")
@@ -184,7 +208,6 @@ def _curses_main(stdscr, game_map):
         else:
             game_map.patch(0.01)
 
-        # On dort un peu => fluidité
         time.sleep(0.01)
 
     debug_print("=== Fin mode curses ===")

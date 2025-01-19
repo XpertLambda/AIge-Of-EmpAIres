@@ -17,6 +17,15 @@ def write_full_html(players, game_map):
         template += f"""
         <h2>Joueur {team.teamID}</h2>
         <details>
+            <summary>infos générales</summary>
+            <p>
+                <!-- Exemples : mimic create_player_info_surface -->
+                <b>Resources</b>: Food={team.resources.food}, Wood={team.resources.wood}, Gold={team.resources.gold}<br>
+                <b>Population</b>: {team.population}/{team.maximum_population}<br>
+            </p>
+        </details>
+
+        <details>
             <summary>Unités</summary>
             <ul>
         """
@@ -54,6 +63,31 @@ def write_full_html(players, game_map):
                 </details>
             </li>
             """
+        template += """
+            </ul>
+        </details>
+
+        <details>
+            <summary>Tâches en cours</summary>
+            <ul>
+        """
+        # Display buildings/units under construction
+        for entity, start_time in team.en_cours.items():
+            template += f"""
+            <li>{type(entity).__name__} en cours de construction/formation</li>
+            """
+        # Display busy units (e.g. collecting, fighting)
+        for unit in team.units:
+            if getattr(unit, 'task', False):
+                template += f"""
+            <li>Unit ID {unit.id} occupée: {unit.state}</li>
+                """
+        # Display buildings training units
+        for building in team.buildings:
+            if hasattr(building, 'current_training_unit') and building.current_training_unit:
+                template += f"""
+            <li>Bâtiment ID {building.entity_id} forme: {building.current_training_unit}</li>
+                """
         template += """
             </ul>
         </details>

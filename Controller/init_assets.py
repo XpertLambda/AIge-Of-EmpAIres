@@ -12,6 +12,8 @@ MAX_ZOOM_CACHE_PER_SPRITE = 60
 gui_elements = {}
 gui_cache = {}
 
+ASSETS_LOADED = False
+
 def load_sprite(filepath=None, scale=None, adjust=None):
     if filepath:
         sprite = pygame.image.load(filepath).convert_alpha()
@@ -93,6 +95,11 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
     pygame.display.flip()  
 
 def load_sprites(screen, screen_width, screen_height):
+    global ASSETS_LOADED
+    if ASSETS_LOADED:
+        return
+    ASSETS_LOADED = True
+
     global gui_elements
     gui_elements.clear()
     
@@ -216,14 +223,18 @@ def load_sprites(screen, screen_width, screen_height):
 
     print("Sprites loaded successfully.")
     
-def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant):
-    # same as before except we clamp scaled_width, scaled_height >=1
+def get_scaled_sprite(name, category, zoom=1.0, state='idle', direction=0, frame=0, variant=0):
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
-    cache_key = (zoom, state, frame_id, variant, direction)
+    cache_key = (zoom, state, frame, variant, direction)
     if cache_key in zoom_cache[name]:
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
+
+    if not state or state not in sprites[category][name]:
+        state = 'idle'
+
+    frame_id = frame  # Define frame_id here
 
     if category == 'buildings':
         frame_id = frame_id % len(sprites[category][name][state])

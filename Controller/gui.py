@@ -481,3 +481,27 @@ def create_player_info_surface(selected_player, screen_width, team_colors):
     surface.blit(population, (padding, 150))
 
     return surface
+
+def draw_game_over_overlay(screen, game_state):
+    overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
+    overlay.fill((50, 50, 50, 150))
+    font_big = pygame.font.SysFont(None, 60)
+    font_small = pygame.font.SysFont(None, 40)
+
+    winner_id = game_state.get('winner_id', '?')
+    text_surf = font_big.render(f"Bravo ! Joueur {winner_id} a gagné", True, (255, 255, 255))
+    text_rect = text_surf.get_rect(center=(screen.get_width()//2, screen.get_height()//3))
+    overlay.blit(text_surf, text_rect)
+
+    button_text = "Quitter le jeu"
+    button_surf = font_small.render(button_text, True, (255, 255, 255))
+    button_width = button_surf.get_width() + 20
+    button_height = button_surf.get_height() + 10
+    button_x = (screen.get_width() - button_width) // 2
+    button_y = screen.get_height() // 2
+    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+    pygame.draw.rect(overlay, (100, 100, 100), button_rect)
+    overlay.blit(button_surf, button_surf.get_rect(center=button_rect.center))
+
+    game_state['game_over_button_rect'] = button_rect
+    screen.blit(overlay, (0, 0))
