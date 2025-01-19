@@ -1,19 +1,16 @@
 from collections import namedtuple
+from Models.Resources import Resources
 import os
 
 # -------------------
 # Global Constants
-# Classe Villager / Team restriction
+# Classe Villager
 # -------------------
+GAME_SPEED = 10
+FPS_DRAW_LIMITER = 50
 BUILDING_TIME_REDUCTION = 0.75
-RESOURCE_COLLECTION_RATE = 25
-RESOURCE_CAPACITY = 20
-START_MAXIMUM_POPULATION = 200
-
-# -------------------
-# Entity Resources NamedTuple
-# -------------------
-Resources = namedtuple("Resources", ["food", "gold", "wood"])
+RESOURCE_RATE_PER_SEC = 25 / 60
+MAXIMUM_CARRY = 20
 
 # -------------------
 # Unit constants
@@ -22,35 +19,71 @@ ALLOWED_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
 UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
-UNIT_HITBOX = 0.2
+FRAMES_PER_BUILDING = 15
+UNIT_HITBOX = 0.3
 ATTACK_RANGE_EPSILON = 0.5
 
 # -------------------
-# Difficulty Settings
+# Config For Teams
 # -------------------
-# LEAN
-LEAN_STARTING_FOOD = 50
-LEAN_STARTING_GOLD = 200
-LEAN_STARTING_WOOD = 50
-LEAN_STARTING_VILLAGERS = 3
-LEAN_NUMBER_OF_TOWER_CENTRE = 1
+MAXIMUM_POPULATION = 200
 
-# MEAN
-MEAN_STARTING_FOOD = 2000
-MEAN_STARTING_GOLD = 2000
-MEAN_STARTING_WOOD = 2000
-MEAN_STARTING_VILLAGERS = 3
-MEAN_NUMBER_OF_TOWER_CENTRE = 1
+difficulty_config = {
+    'lean' : {
+        'Resources' : Resources(food=50, gold=200, wood=50),
+        'Units' : {
+            'Villager' : 3
+        },
+        'Buildings' : {
+            'TownCenter' : 1
+        }
 
-# MARINES
-MARINES_STARTING_FOOD = 20000
-MARINES_STARTING_GOLD = 20000
-MARINES_STARTING_WOOD = 20000
-MARINES_STARTING_VILLAGERS = 15
-MARINES_NUMBER_OF_TOWER_CENTRE = 3
-MARINES_NUMBER_OF_BARRACKS = 2
-MARINES_NUMBER_OF_STABLES = 2
-MARINES_NUMBER_OF_ARCHERY_RANGES = 2
+    },
+
+    'mean' : {
+        'Resources' : Resources(food=2000, gold=2000, wood=2000),
+        'Units' : {
+            'Villager' : 3
+        },
+        'Buildings' : {
+            'TownCenter' : 1
+        }
+
+    },
+
+    'marines' : {
+        'Resources' : Resources(food=20000, gold=20000, wood=20000),
+        'Units' : {
+            'Villager' : 15
+        },
+        'Buildings' : {
+            'TownCenter' : 3,
+            'Barracks' : 2,
+            'Stable' : 2, 
+            'ArcheryRange' : 2,
+        }
+    },
+
+    'DEBUG' : {
+        'Resources' : Resources(food=99999, gold=99999, wood=99999),
+        'Units' : {
+            'Villager' : 10,
+            'Archer' : 10,
+            'Horseman' : 10,
+            'Swordsman' : 10
+        },
+        'Buildings' : {
+            'TownCenter' : 5,
+            'Barracks' : 1,
+            'Stable' : 1, 
+            'ArcheryRange' : 1,
+            'Farm' : 1,
+            'Keep' : 1,
+            'House' : 5,
+            'Camp' : 2,
+        }
+    }
+}
 
 # -------------------
 # Map Configuration
@@ -66,7 +99,6 @@ WINDOW_HEIGHT = 1200
 NUM_GOLD_TILES = 500
 NUM_WOOD_TILES = 500
 NUM_FOOD_TILES = 500
-DIFFICULTY = 'DEBUG'
 GOLD_SPAWN_MIDDLE = False
 MAP_PADDING = 650
 
@@ -76,6 +108,8 @@ MAP_PADDING = 650
 MINIMAP_WIDTH = 600
 MINIMAP_HEIGHT = 280
 MINIMAP_MARGIN = 20
+PANEL_RATIO = 0.25
+BG_RATIO    = 0.20
 
 # -------------------
 # Save Directory
@@ -127,7 +161,7 @@ BAR_BORDER_RADIUS = 30
 PROGRESS_BAR_WIDTH_RATIO = 0.8
 PROGRESS_BAR_Y_RATIO = 0.9
 
-BUILDING_RATIO = 200
+BUILDING_RATIO = 100
 UNIT_RATIO = 100
 
 HEALTH_BAR_WIDTH = 40
@@ -165,43 +199,90 @@ states = {
      2: 'attack',
      3: 'death',
      4: 'decay',
-     5: 'task'
+     5: 'task',
+     7: 'inactive'
 }
+
+villager_tasks = {
+        "attack": "attack_target",
+        "collect": "collect_target",
+        "build": "build_target",
+        "stock": "stock_target"
+    }
 
 sprite_config = {
     'buildings': {
         'towncenter': {
             'directory': 'assets/buildings/towncenter/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states': 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'barracks': {
             'directory': 'assets/buildings/barracks/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'stable': {
             'directory': 'assets/buildings/stable/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'archeryrange': {
             'directory': 'assets/buildings/archeryrange/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'keep': {
             'directory': 'assets/buildings/keep/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'camp': {
             'directory': 'assets/buildings/camp/',
-            'adjust_scale': TILE_SIZE / BUILDING_RATIO
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / BUILDING_RATIO,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'house': {
             'directory': 'assets/buildings/house/',
+            'states' : 2,
             'adjust_scale': TILE_SIZE / BUILDING_RATIO,
-            'variant': 4
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
         'farm': {
             'directory': 'assets/buildings/farm/',
-            'adjust_scale': TILE_SIZE / 120
+            'states' : 2,
+            'adjust_scale': TILE_SIZE / 120,
+            'sheet_config': {
+                'columns': 10,
+                'rows': 10
+            },
         },
     },
     'resources': {
@@ -212,7 +293,7 @@ sprite_config = {
         'gold': {
             'directory': 'assets/resources/gold/',
             'scale': (TILE_SIZE, TILE_SIZE),
-            'variant': 4
+            'variant': 6
         },
         'tree': {
             'directory': 'assets/resources/tree/',
@@ -290,3 +371,8 @@ ITEM_HEIGHT = 25
 
 
 
+RESOURCE_THRESHOLDS = {
+    'food': 50,  # Minimum acceptable food level
+    'wood': 50, # Minimum acceptable wood level
+    'gold': 50   # Minimum acceptable gold level
+}

@@ -1,5 +1,5 @@
 from Settings.setup import MAX_ZOOM, MIN_ZOOM
-from Controller.isometric_utils import screen_to_tile, tile_to_screen
+from Controller.utils import screen_to_tile, tile_to_screen
 
 class Camera:
     def __init__(self, width, height):

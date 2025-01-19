@@ -1,139 +1,97 @@
-# Chemin de /home/cyril/Documents/INSA/Projet_python/Models/Team.py
-from Settings.setup import (
-    LEAN_STARTING_GOLD, LEAN_STARTING_FOOD, LEAN_STARTING_WOOD,
-    LEAN_STARTING_VILLAGERS, LEAN_NUMBER_OF_TOWER_CENTRE, MEAN_STARTING_GOLD,
-    MEAN_STARTING_FOOD, MEAN_STARTING_WOOD, MEAN_STARTING_VILLAGERS,
-    MEAN_NUMBER_OF_TOWER_CENTRE, MARINES_STARTING_GOLD, MARINES_STARTING_FOOD,
-    MARINES_STARTING_WOOD, MARINES_NUMBER_OF_BARRACKS, MARINES_NUMBER_OF_STABLES,
-    MARINES_NUMBER_OF_ARCHERY_RANGES, MARINES_STARTING_VILLAGERS,
-    START_MAXIMUM_POPULATION
-)
+from collections import Counter
+from Settings.setup import *
+from Settings.entity_mapping import *
+from Entity.Entity import *
 from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
 from Models.Map import GameMap
-
-def get_building_tiles(building, game_map):
-    """
-    Return all (x,y) tiles that 'building' occupies in game_map.grid.
-    """
-    results = []
-    x_min = max(0, round(building.x) - building.size)
-    x_max = min(game_map.num_tiles_x, round(building.x) + building.size)
-    y_min = max(0, round(building.y) - building.size)
-    y_max = min(game_map.num_tiles_y, round(building.y) + building.size)
-    for x in range(x_min, x_max + 1):
-        for y in range(y_min, y_max + 1):
-            tile_pos = (x, y)
-            ent_set = game_map.grid.get(tile_pos, None)
-            if ent_set and building in ent_set:
-                results.append((x, y))
-    return results
+from Controller.terminal_display_debug import debug_print
 
 class Team:
-    def __init__(self, difficulty, teamID, maximum_population=START_MAXIMUM_POPULATION):
-        self.resources = {"gold": 0, "wood": 0, "food": 0}
-        self.units = []
-        self.buildings = []
+    def __init__(self, difficulty, teamID):
+        self.resources = difficulty_config[difficulty]['Resources'].copy()
+
+        self.units = set()
+        self.buildings = set()
         self.teamID = teamID
-        self.maximum_population = maximum_population
-        self.en_cours = dict()
 
-        if difficulty == 'DEBUG':
-            self.resources["gold"] = LEAN_STARTING_GOLD
-            self.resources["food"] = LEAN_STARTING_FOOD
-            self.resources["wood"] = LEAN_STARTING_WOOD
+        self.population = 0
+        self.maximum_population = 0
+        self.en_cours = {}
 
-            for _ in range(10):
-                self.units.append(Horseman(team=teamID))
-                self.units.append(Villager(team=teamID))
-                self.units.append(Archer(team=teamID))
-                self.units.append(Swordsman(team=teamID))
+        for building, amount in difficulty_config[difficulty]['Buildings'].items():
+            for _ in range(amount):
+                if building in building_class_map:
+                    self.add_member(building_class_map[building](team=teamID))
 
-            for _ in range(20):
-                self.buildings.append(TownCentre(team=teamID))
-                self.buildings.append(ArcheryRange(team=teamID))
-                self.buildings.append(Stable(team=teamID))
-                self.buildings.append(Barracks(team=teamID))
-                self.buildings.append(Keep(team=teamID))
-                self.buildings.append(Camp(team=teamID))
-                self.buildings.append(House(team=teamID))
-                self.buildings.append(Farm(team=teamID))
+        for unit, amount in difficulty_config[difficulty]['Units'].items():
+            for _ in range(amount):
+                if unit in unit_class_map:
+                    self.add_member(unit_class_map[unit](team=teamID))
 
-        elif difficulty == 'lean':
-            self.resources["gold"] = LEAN_STARTING_GOLD
-            self.resources["food"] = LEAN_STARTING_FOOD
-            self.resources["wood"] = LEAN_STARTING_WOOD
+    def add_member(self, entity):
+        if entity.team == self.teamID :
+            if entity in self.buildings or entity in self.units:
+                return False
 
-            for _ in range(LEAN_STARTING_VILLAGERS):
-                self.units.append(Villager(team=teamID))
-            for _ in range(LEAN_NUMBER_OF_TOWER_CENTRE):
-                self.buildings.append(TownCentre(team=teamID))
+            if isinstance(entity, Building):
+                if entity.population + self.maximum_population > MAXIMUM_POPULATION :
+                    debug_print("Maximum population reached")
+                    return False
 
-        elif difficulty == 'mean':
-            self.resources["gold"] = MEAN_STARTING_GOLD
-            self.resources["food"] = MEAN_STARTING_FOOD
-            self.resources["wood"] = MEAN_STARTING_WOOD
-            for _ in range(MEAN_STARTING_VILLAGERS):
-                self.units.append(Villager(team=teamID))
-            for _ in range(MEAN_NUMBER_OF_TOWER_CENTRE):
-                self.buildings.append(TownCentre(team=teamID))
-                self.units = set()
+                self.buildings.add(entity)
+                self.maximum_population += entity.population
+                debug_print(f'addded {entity} : {entity.entity_id} to team #{entity.team}')
+                return True
 
-        elif difficulty == 'marines':
-            self.resources["gold"] = MARINES_STARTING_GOLD
-            self.resources["food"] = MARINES_STARTING_FOOD
-            self.resources["wood"] = MARINES_STARTING_WOOD
-            # Ajout des bâtiments
-            for _ in range(MARINES_NUMBER_OF_BARRACKS):
-                self.buildings.append(Barracks(team=teamID))
-            for _ in range(MARINES_NUMBER_OF_STABLES):
-                self.buildings.append(Stable(team=teamID))
-            for _ in range(MARINES_NUMBER_OF_ARCHERY_RANGES):
-                self.buildings.append(ArcheryRange(team=teamID))
-            for _ in range(MARINES_STARTING_VILLAGERS):
-                self.units.append(Villager(team=teamID))
+            elif isinstance(entity, Unit):
+                if self.population + 1 > self.maximum_population:
+                    debug_print("Failed to add entity : Not enough space")
+                    return False
 
-    def manage_life(self, game_map):
+                self.units.add(entity)
+                self.population += 1
+                return True
+        return False
+
+    def remove_member(self, entity):
+        if entity.team == self.teamID:
+            if isinstance(entity, Building):
+                if entity in self.buildings:
+                    self.buildings.remove(entity)
+                    self.maximum_population -= entity.population
+                    return True
+            elif isinstance(entity, Unit):
+                if entity in self.units:
+                    self.units.remove(entity)
+                    self.population -= 1
+                    return True
+        return False
+
+    def modify_resources(self, Resources):
         """
-        Removes dead units and buildings from both team-lists 
-        and from game_map.grid. 
-        Ensures building vanish from the map if hp <=0.
+        Modifie directement les ressources de l'équipe (ex: +100 gold, -50 wood, etc.).
+        Note : appelle un refresh GUI.
         """
-        # Remove dead units
-        for u in self.units[:]:
-            if u.hp <= 0:
-                game_map.remove_entity(u, round(u.x), round(u.y))
-                self.units.remove(u)
-
-        # Remove dead buildings
-        for b in self.buildings[:]:
-            if b.hp <= 0:
-                # remove from all relevant tiles
-                tiles = get_building_tiles(b, game_map)
-                for (tx, ty) in tiles:
-                    ent_set = game_map.grid.get((tx, ty), None)
-                    if ent_set and b in ent_set:
-                        ent_set.remove(b)
-                    if ent_set and len(ent_set) == 0:
-                        del game_map.grid[(tx, ty)]
-                self.buildings.remove(b)
-
-        # Non-Villager => .task=False
-        for s in self.units:
-            if not isinstance(s, Villager):
-                s.task = False
-
+        self.resources['food'] += Resources.food 
+        self.resources['wood'] += Resources.wood 
+        self.resources['gold'] += Resources.gold
+    
     def manage_creation(self, clock):
         """
-        Manages creation of buildings/units in self.en_cours.
-        Once time is up => place them in .units or .buildings.
+        Gère la création de bâtiments/unités (self.en_cours).
+        Une fois le temps écoulé => on les place dans .units ou .buildings.
         """
         to_remove = []
         for entity, start_time in self.en_cours.items():
             if isinstance(entity, Building):
                 if start_time - clock <= 0:
                     self.buildings.append(entity)
+                    for villager in entity.constructors:
+                        villager.task=False
+                    if isinstance(entity,House) or isinstance(entity,TownCentre):
+                        self.maximum_population+=5
                     to_remove.append(entity)
                     for villager in entity.constructors:
                         villager.task = False
@@ -145,19 +103,31 @@ class Team:
         for entity in to_remove:
             del self.en_cours[entity]
 
-    def buildBatiment(self, building, clock, nb, game_map):
-        """
-        Up to nb villagers build a new building => cost wood => en_cours building
-        """
+    def buildBuilding(self, building, clock, nb, game_map):
         if all([v.task for v in self.units if isinstance(v, Villager)]):
-            print("All villagers are busy.")
+            debug_print("All villagers are busy.")
             return False
 
         if self.resources["wood"] >= building.cost.wood:
             self.resources["wood"] -= building.cost.wood
         else:
-            print(f"Team {self.teamID}: Not enough wood.")
+            debug_print(f"Team {self.teamID}: Not enough wood.")
             return False
+        if not game_map.place_building(building,self):
+            debug_print("cannot place")
+            return False
+       
+        i=0
+        num_constructors=0
+        while(i<len(self.units) and num_constructors<nb):
+            unit=self.units[i]
+            if isinstance(unit,Villager) and not(unit.task):
+                unit.build(map,building)
+                num_constructors +=1
+                v1=v
+            i+=1
+         
+        self.en_cours[building]=clock+v1.buildTime(building,num_constructors) 
 
         i = 0
         j = 0
@@ -174,22 +144,116 @@ class Team:
             total_build_time = chosen_villager.buildTime(building, j)
             self.en_cours[building] = clock + total_build_time
         else:
-            print("No free villager found to build.")
+            debug_print("No free villager found to build.")
             return False
+
+        self.buildings.append(building)
+        if hasattr(building, 'population'): #rajouter condition pour pas depasser MAXIMUM_POPULATION a 200
+            self.maximum_population += building.population
+        game_map.game_state['player_info_updated'] = True
+
         return True
 
-    def battle(self, t, game_map, nb):
+    def battle(self,t,map,nb):
         """
-        Example usage for a 'battle' command.
-        Not used in your code by default.
+        Attaque t, et l'adversaire défend.
         """
-        for s in t.units:
-            if not s.task and not isinstance(s, Villager):
-                s.task = True
-                s.attaquer(False, self, game_map)
+        for i in range(0,len(t.units)):
+            soldier=t.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
+                debug_print("ok")
+                soldier.task=True
+                soldier.attack(self,map)
+    
+        for i in range(0,min(nb,len(self.units))):
+            soldier=self.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
+               
+                soldier.task=True
+                soldier.attack(t,map)
 
-        for i in range(0, min(nb, len(self.units))):
-            s = self.units[i]
-            if not isinstance(s, Villager):
-                s.task = True
-                s.attaquer(True, t, game_map)
+    def battle_v2(self,t,map,nb):
+        """
+        Attaque t, et l'adversaire ne défend pas.
+        """
+        i=0
+        nb_soldier=0
+        while(i<len(self.units) and nb_soldier< nb):
+            soldier=self.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
+                nb_soldier+=1
+                soldier.task=True
+                if soldier.target:
+                    soldier.attack(t,map)
+            i+=1
+
+    def modify_target(self,target,players_target):
+        """
+        Met à jour la cible de l'équipe (arrête toutes les attaques de la team)
+        pour la remplacer par la nouvelle 'target'.
+        """
+        players_target[self.teamID]=target
+        for unit in self.units:
+            if not isinstance(unit,Villager):
+                unit.target=None
+                unit.task=True
+                if unit.target:
+                    unit.attack(target,map)
+
+    def collectResource(self, villager, resource_tile, duration, game_map):
+        """
+        Méthode de récolte de ressources : villager se déplace et récolte sur 'resource_tile'.
+        La quantité récoltée dépend de 'duration' et du 'resource_rate' du villager.
+        """
+        if not isinstance(villager, Villager):
+            return
+        if not villager.isAvailable():
+            return
+        villager.task = True
+        villager.move(resource_tile.x, resource_tile.y, game_map)
+
+        collected = min(
+            villager.resource_rate * duration,
+            villager.carry_capacity - getattr(villager.resources, resource_tile.acronym.lower(), 0)
+        )
+        setattr(
+            villager.resources,
+            resource_tile.acronym.lower(),
+            getattr(villager.resources, resource_tile.acronym.lower(), 0) + collected
+        )
+        
+        resource_tile.storage = Resources(
+            food=resource_tile.storage.food - (collected if resource_tile.acronym == "F" else 0),
+            gold=resource_tile.storage.gold - (collected if resource_tile.acronym == "G" else 0),
+            wood=resource_tile.storage.wood - (collected if resource_tile.acronym == "W" else 0),
+        )
+        
+        if (resource_tile.storage.food <= 0 
+            and resource_tile.storage.gold <= 0 
+            and resource_tile.storage.wood <= 0):
+            game_map.remove_entity(resource_tile, resource_tile.x, resource_tile.y)
+
+        villager.task = False
+        # ----------- AJOUT POUR METTRE A JOUR L'AFFICHAGE -----------
+        game_map.game_state['player_info_updated'] = True
+        # ------------------------------------------------------------
+
+    def stockResources(self, villager, building, game_map):
+        """
+        Le villager va déposer ses ressources dans 'building' s'il le peut.
+        """
+        if not isinstance(villager, Villager):
+            return
+        if not villager.isAvailable() or not hasattr(building, 'resourceDropPoint') or not building.resourceDropPoint:
+            return
+        villager.task = True
+        villager.move(building.x, building.y, game_map)
+        self.resources = Resources(
+            food=self.resources["food"] + villager.resources.food,
+            gold=self.resources["gold"] + villager.resources.gold,
+            wood=self.resources["wood"] + villager.resources.wood,
+        )
+        villager.resources = Resources(food=0, gold=0, wood=0)
+        villager.task = False
+        # On refresh l'UI
+        game_map.game_state['player_info_updated'] = True

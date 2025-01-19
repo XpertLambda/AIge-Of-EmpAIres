@@ -1,5 +1,6 @@
 import webbrowser
 import os
+from Entity.Resource.Resource import Resource
 
 def write_full_html(players, game_map):
     template = """
@@ -15,6 +16,15 @@ def write_full_html(players, game_map):
     for team in players:
         template += f"""
         <h2>Joueur {team.teamID}</h2>
+        <details>
+            <summary>infos générales</summary>
+            <p>
+                <!-- Exemples : mimic create_player_info_surface -->
+                <b>Resources</b>: Food={team.resources.food}, Wood={team.resources.wood}, Gold={team.resources.gold}<br>
+                <b>Population</b>: {team.population}/{team.maximum_population}<br>
+            </p>
+        </details>
+
         <details>
             <summary>Unités</summary>
             <ul>
@@ -56,6 +66,31 @@ def write_full_html(players, game_map):
         template += """
             </ul>
         </details>
+
+        <details>
+            <summary>Tâches en cours</summary>
+            <ul>
+        """
+        # Display buildings/units under construction
+        for entity, start_time in team.en_cours.items():
+            template += f"""
+            <li>{type(entity).__name__} en cours de construction/formation</li>
+            """
+        # Display busy units (e.g. collecting, fighting)
+        for unit in team.units:
+            if getattr(unit, 'task', False):
+                template += f"""
+            <li>Unit ID {unit.id} occupée: {unit.state}</li>
+                """
+        # Display buildings training units
+        for building in team.buildings:
+            if hasattr(building, 'current_training_unit') and building.current_training_unit:
+                template += f"""
+            <li>Bâtiment ID {building.entity_id} forme: {building.current_training_unit}</li>
+                """
+        template += """
+            </ul>
+        </details>
         """
 
     template += """
@@ -67,12 +102,12 @@ def write_full_html(players, game_map):
     # On considère que game_map.grid contient des ressources
     for pos, entities in game_map.grid.items():
         for entity in entities:
-            # On affiche seulement les ressources
-            if hasattr(entity, 'capacity') and not hasattr(entity, 'spawnsUnits'):
+            if isinstance(entity, Resource):
                 template += f"""
                 <p>
                     <b>Type</b>: {entity.acronym}<br>
                     <b>Position</b>: ({entity.x}, {entity.y})<br>
+                    <b>Capacité restante</b>: {entity.storage}<br>
                 </p>
                 """
 
