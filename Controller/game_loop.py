@@ -29,6 +29,7 @@ from Controller.gui import (
     update_minimap_elements,
 )
 from Controller.utils import tile_to_screen
+from Controller.Bot import *
 from Settings.setup import (
     HALF_TILE_SIZE,
     MINIMAP_MARGIN,

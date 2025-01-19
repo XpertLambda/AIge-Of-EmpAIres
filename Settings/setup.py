@@ -371,3 +371,8 @@ ITEM_HEIGHT = 25
 
 
 
+RESOURCE_THRESHOLDS = {
+    'food': 50,  # Minimum acceptable food level
+    'wood': 50, # Minimum acceptable wood level
+    'gold': 50   # Minimum acceptable gold level
+}
