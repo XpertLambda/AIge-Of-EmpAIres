@@ -108,17 +108,17 @@ def handle_events(event, game_state):
             debug_print(f"[GUI] F2 => show_all_health_bars={game_state['show_all_health_bars']}")
 
         #
-        # (2) - Touche F11 => Sauvegarde
+        # (2) - Touche L => Sauvegarde
         #
-        elif event.key == pygame.K_F11:
+        elif event.key in [pygame.K_k]:
             game_state['game_map'].save_map()
-            debug_print("[GUI] F11 => Sauvegarde effectuée.")
+            debug_print("[GUI] L => Sauvegarde effectuée.")
 
         #
-        # (3) - Touche F12 => Chargement
+        # (3) - Touche M => Chargement
         #
-        elif event.key == pygame.K_F12:
-            debug_print("[GUI] F12 => Menu chargement (filedialog).")
+        elif event.key in [pygame.K_l]:
+            debug_print("[GUI] M => Menu chargement (filedialog).")
             try:
                 root = Tk()
                 root.withdraw()
@@ -147,7 +147,7 @@ def handle_events(event, game_state):
                     camera.set_bounds(min_x, max_x, min_y, max_y)
                     game_state['force_full_redraw'] = True
                 else:
-                    debug_print("[GUI] F12 => Aucune sauvegarde choisie (annulé).")
+                    debug_print("[GUI] M => Aucune sauvegarde choisie (annulé).")
 
             except Exception as e:
                 debug_print(f"[GUI] Error loading: {e}")
