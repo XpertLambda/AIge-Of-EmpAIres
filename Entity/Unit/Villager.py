@@ -41,7 +41,9 @@ class Villager(Unit):
             self.seekCollect(game_map, dt)
             self.seekStock(game_map)
             self.seekMove(game_map, dt)
-            #self.seekBuild(game_map, dt)
+            # Make sure self.state reflects the current task if not doing another action
+            if self.task and self.state == 'idle':
+                self.state = self.task
         else:
             self.death(game_map, dt)
 
@@ -111,7 +113,6 @@ class Villager(Unit):
 
         self.task_timer += dt
         self.temp_collect_amount += min(self.resource_rate * dt, abs(MAXIMUM_CARRY - self.carry.total()))
-
         # Resource transaction
         if self.temp_collect_amount >= 1:
             collected_whole = round(self.temp_collect_amount)

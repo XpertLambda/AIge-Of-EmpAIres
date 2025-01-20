@@ -472,11 +472,7 @@ def create_player_info_surface(selected_player, screen_width, team_colors):
     buildings_surface = font_info.render(buildings_text, True, (255, 255, 255))
     surface.blit(buildings_surface, (padding, 90))
 
-    maximum_population_text = (f"Maximum population : {selected_player.maximum_population}")
-    maximum_population = font_info.render(maximum_population_text, True, (255, 255, 255))
-    surface.blit(maximum_population, (padding, 120))
-
-    population_text = (f"population : {selected_player.population}")
+    population_text = (f"population : {selected_player.population} / {selected_player.maximum_population}")
     population = font.render(population_text, True, (255, 255, 255))
     surface.blit(population, (padding, 150))
 

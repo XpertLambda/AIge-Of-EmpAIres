@@ -76,6 +76,11 @@ class Building(Entity):
         if self.isAlive():
             if self.spawnsUnits:
                 self.update_training(dt, game_map, self.team)
+            # New code to switch building state to 'training'
+            if self.current_training_unit:
+                self.state = 'training'
+            elif self.state == 'training':
+                self.state = 'idle'
         else:
             self.death(game_map)
 
