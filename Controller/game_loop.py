@@ -2,6 +2,7 @@ import time
 import pygame
 import sys
 import random
+from Controller.Bot import *
 from Models.Map import GameMap
 from Entity.Building import *
 from Entity.Unit import *
@@ -293,6 +294,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 if player_info_surface and game_state['show_player_info']:
                     inf_h = player_info_surface.get_height()
                     screen.blit(player_info_surface, (0, screen_height - inf_h))
+            archer = Archer(selected_player,0,0)
+            train_units(selected_player,archer)
 
             draw_pointer(screen)
 
@@ -313,5 +316,5 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['force_full_redraw'] = False
             else:
                 pygame.display.flip()
-
+    
     # fin de game_loop
