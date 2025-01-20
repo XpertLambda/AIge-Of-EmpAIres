@@ -133,8 +133,8 @@ class Building(Entity):
         unit_class = UNIT_CLASSES[unit_name]
         unit = unit_class(team=self.team)
 
-
-        if (team.resources.has_enough(unit.cost.get()) and team.population < team.maximum_population ):
+        if (team.resources.has_enough(unit.cost.get()) and 
+            team.population + len(self.training_queue) < team.maximum_population):
             team.resources.decrease_resources(unit.cost.get())
             self.training_queue.append(unit_name)
             return True
