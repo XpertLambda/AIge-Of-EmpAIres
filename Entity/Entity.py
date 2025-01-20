@@ -30,7 +30,7 @@ class Entity:
         self.cost = cost
         self.walkable = walkable
         self.hasResources = hasResources
-        
+  
         self.hp = max_hp
         self.hitbox = hitbox if hitbox > 0 else size/2
         self.last_damage_time = 0
@@ -81,7 +81,7 @@ class Entity:
 
     def display_hitbox(self, screen, screen_width, screen_height, camera):
         #if self.hitbox_color != (255, 0, 0):
-        return
+        #return
         corner_distance = self.size / 2.0
         corners = [
             (self.x - corner_distance, self.y - corner_distance),

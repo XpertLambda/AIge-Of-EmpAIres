@@ -283,9 +283,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['camera']
                         )
             '''
-            display_fps(screen, clock, font)
+            display_fps(screen, screen_width, clock, font)
             if game_state.get('game_over', False):
                 draw_game_over_overlay(screen, game_state)
+
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False

@@ -74,13 +74,13 @@ difficulty_config = {
             'Swordsman' : 1
         },
         'Buildings' : {
-            'TownCenter' : 40,
+            'TownCenter' : 20,
+            'House' : 21,
             'Barracks' : 1,
             'Stable' : 1, 
             'ArcheryRange' : 1,
             'Farm' : 1,
             'Keep' : 1,
-            'House' : 2,
             'Camp' : 2,
         }
     }

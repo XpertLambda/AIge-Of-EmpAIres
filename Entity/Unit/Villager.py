@@ -44,7 +44,8 @@ class Villager(Unit):
             self.seekStock(game_map)
             self.seekMove(game_map, dt)
             self.seekIdle()
-            #self.seekBuild(game_map, dt)
+            self.seekBuild(game_map)
+            self.seekRepair(game_map, dt)
         else:
             self.death(game_map, dt)
 
@@ -52,8 +53,8 @@ class Villager(Unit):
     def seekIdle(self):
         if not self.attack_target and not self.collect_target and not self.stock_target and not self.build_target  and not self.path :
             self.state = 'idle'
+            self.set_task(None)
         self.cooldown_frame = None
-
 
     def set_target(self, target):
         self.attack_target = None
@@ -67,28 +68,26 @@ class Villager(Unit):
             if target.hasResources:
                 self.set_task('collect', target)
 
-            elif target.team == self.team and hasattr(target, 'population'):
-                if target.resourceDropPoint and target.state == 'idle':
-                    self.set_task('stock', target)
-                else:
+            elif target.team == self.team and hasattr(target, 'buildTime'):
+                
+                if target.buildTime >= 0 :
                     self.set_task('build', target)
+                
+                elif hasattr(target, 'resourceDropPoint') and target.resourceDropPoint and target.state == 'idle':
+                    self.set_task('stock', target)
             
             elif target.team != self.team:
                 self.attack_target = target
 
     def set_task(self, task, target = None):
-        self.attack_target = None
-        self.collect_target = None
-        self.build_target = None
-        self.stock_target = None
-        self.task = None
-        
         if task in villager_tasks:
             self.task = task
             setattr(self, villager_tasks[task], target)
 
     def isAvailable(self):
-        return not self.task
+        if self.isAlive() and not self.task :
+            return True
+        return False
 
     def seekCollect(self, game_map, dt):
         if self.task != 'collect':
@@ -97,7 +96,7 @@ class Villager(Unit):
         if not self.collect_target or not self.collect_target.isAlive():
             self.task = 'stock'
             return
-
+        
         corner_distance = self.collect_target.size / 2.0 
         left = self.collect_target.x - corner_distance
         right = self.collect_target.x + corner_distance
@@ -115,9 +114,8 @@ class Villager(Unit):
                 self.set_destination((self.collect_target.x, self.collect_target.y), game_map)
                 self.task_timer = 0
             return
-
-        # Collect resources
         self.state = 'task'
+        # Collect resources
         self.direction = get_direction(get_snapped_angle((self.x, self.y),
                                                          (self.collect_target.x, self.collect_target.y)))
 
@@ -170,6 +168,63 @@ class Villager(Unit):
                         closest_building = building
             if closest_building:
                 self.stock_target = closest_building
+    
+    def seekBuild(self, game_map):
+        if self.task != 'build':
+            return
+        if not self.build_target or not self.build_target.isAlive() or self.build_target.buildTime <= 0:
+            self.task = None
+            return
+
+        corner_distance = self.build_target.size / 2.0
+        left = self.build_target.x - corner_distance
+        right = self.build_target.x + corner_distance
+        top = self.build_target.y - corner_distance
+        bottom = self.build_target.y + corner_distance
+        closest_point = (
+            max(left, min(self.x, right)),
+            max(top, min(self.y, bottom))
+        )
+        distance = math.dist(closest_point, (self.x, self.y)) - abs(self.attack_range)
+
+        if distance > 0 :
+            if self.path:
+                self.path = [self.path[0]] + a_star((self.x, self.y), (self.build_target.x,self.build_target.y), game_map)
+            else:
+                self.set_destination((self.build_target.x,self.build_target.y), game_map)
+        
+        else:
+            self.state = 'task'
+            self.path = []
+
+    def seekRepair(self, game_map, dt):
+        if self.task != 'repair':
+            return
+        if not self.build_target or not self.build_target.isAlive() or self.build_target.hp < self.build_target.max_hp:
+            self.task = None
+            return
+
+        corner_distance = self.build_target.size / 2.0
+        left = self.build_target.x - corner_distance
+        right = self.build_target.x + corner_distance
+        top = self.build_target.y - corner_distance
+        bottom = self.build_target.y + corner_distance
+        closest_point = (
+            max(left, min(self.x, right)),
+            max(top, min(self.y, bottom))
+        )
+        distance = math.dist(closest_point, (self.x, self.y))
+
+        if distance > self.attack_range:
+            self.set_destination((self.build_target.x, self.build_target.y), game_map)
+        else:
+            self.state = 'task'
+            # Simple repair logic
+            repair_amount = 2 * dt
+            self.build_target.hp = min(self.build_target.hp + repair_amount, self.build_target.max_hp)
+            if self.build_target.hp >= self.build_target.max_hp:
+                self.task = None
+
     '''
     def display_hitbox(self, screen, screen_width, screen_height, camera):
         corner_distance = self.size / 2.0
@@ -288,6 +343,5 @@ class Villager(Unit):
         building.constructors.append(self)
 
     
-    def buildTime(self, building, num_villagers):
-        return max(10, (3 * building.buildTime) / (num_villagers + 2)) if num_villagers > 0 else building.buildTime
+   
     '''

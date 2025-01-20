@@ -287,19 +287,28 @@ def handle_events(event, game_state):
                         )
 
         elif event.button == 3:
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                    if keys[pygame.K_1]:
+                        mouse_x, mouse_y = screen_to_2_5d(
+                            mouse_x, mouse_y, screen_width, screen_height,
+                            camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
+                        )
+                        print("pressed")
+                        selected_player.build(TownCentre(team=0, x=mouse_x, y=mouse_y),3,game_state['game_map'])
             # Clic droit => set target
-            if selected_player and 'selected_units' in game_state and len(game_state['selected_units']) > 0:
-                entity_target = closest_entity(game_state, mouse_x, mouse_y)
-                for unit_selected in game_state['selected_units']:
-                    unit_selected.set_target(entity_target)
-                    unit_selected.path = None
-                # On calcule la destination en 2.5D
-                mouse_x, mouse_y = screen_to_2_5d(
-                    mouse_x, mouse_y, screen_width, screen_height,
-                    camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
-                )
-                for unit_selected in game_state['selected_units']:
-                    unit_selected.set_destination((mouse_x, mouse_y), game_state['game_map'])
+                elif selected_player and 'selected_units' in game_state and len(game_state['selected_units']) > 0:
+                    entity_target = closest_entity(game_state, mouse_x, mouse_y)
+                    for unit_selected in game_state['selected_units']:
+                        unit_selected.set_target(entity_target)
+                        unit_selected.path = None
+                    # On calcule la destination en 2.5D
+                    mouse_x, mouse_y = screen_to_2_5d(
+                        mouse_x, mouse_y, screen_width, screen_height,
+                        camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
+                    )
+                    for unit_selected in game_state['selected_units']:
+                        unit_selected.set_destination((mouse_x, mouse_y), game_state['game_map'])
 
         elif event.button == 4:  # molette haut => zoom avant
             camera.set_zoom(camera.zoom * 1.1)

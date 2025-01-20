@@ -5,6 +5,7 @@ import time
 from collections import OrderedDict
 from Settings.setup import *
 
+
 sprites = {}
 zoom_cache = {}
 MAX_ZOOM_CACHE_PER_SPRITE = 60
@@ -270,7 +271,3 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     scaled = pygame.transform.smoothscale(original, (target_width, target_height))
     gui_cache[key] = scaled
     return scaled
-
-def fill_grass(screen, screen_x, screen_y, camera):
-    from Controller.drawing import draw_sprite
-    draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)

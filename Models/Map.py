@@ -39,6 +39,7 @@ class GameMap:
             or rounded_x + entity.size - 1 >= self.num_tiles_x
             or rounded_y + entity.size - 1 >= self.num_tiles_y):
             return False
+            
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
