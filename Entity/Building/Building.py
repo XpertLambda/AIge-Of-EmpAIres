@@ -81,6 +81,10 @@ class Building(Entity):
             if self.spawnsUnits:
                 self.update_training(dt, game_map, self.team)
             self.seekIdle()
+            if self.current_training_unit:
+                self.state = 'training'
+            elif self.state == 'training':
+                self.state = 'idle'
         else:
             self.death(game_map)
         self.animator(dt)
@@ -164,8 +168,8 @@ class Building(Entity):
         unit_class = UNIT_CLASSES[unit_name]
         unit = unit_class(team=self.team)
 
-
-        if (team.resources.has_enough(unit.cost.get()) and team.population < team.maximum_population ):
+        if (team.resources.has_enough(unit.cost.get()) and 
+            team.population + len(self.training_queue) < team.maximum_population):
             team.resources.decrease_resources(unit.cost.get())
             self.training_queue.append(unit_name)
             return True

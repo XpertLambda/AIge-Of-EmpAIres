@@ -46,6 +46,8 @@ class Villager(Unit):
             self.seekIdle()
             self.seekBuild(game_map)
             self.seekRepair(game_map, dt)
+            if self.task and self.state == 'idle':
+                self.state = self.task
         else:
             self.death(game_map, dt)
 
@@ -128,6 +130,7 @@ class Villager(Unit):
         self.task_timer += dt
         self.temp_collect_amount += min(self.resource_rate * dt, abs(MAXIMUM_CARRY - self.carry.total()))
         self.path = []
+
         # Resource transaction
         if self.temp_collect_amount >= 1:
             collected_whole = round(self.temp_collect_amount)

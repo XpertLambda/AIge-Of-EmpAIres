@@ -22,10 +22,6 @@ def write_full_html(players, game_map):
                 <!-- Exemples : mimic create_player_info_surface -->
                 <b>Resources</b>: Food={team.resources.food}, Wood={team.resources.wood}, Gold={team.resources.gold}<br>
                 <b>Population</b>: {team.population}/{team.maximum_population}<br>
-                <!-- Données supplémentaires -->
-                <b>Team Color</b>: <!-- team color placeholder --><br>
-                <b>Ennemis tués</b>: <!-- number of enemies killed placeholder --><br>
-                <!-- Autres statistiques de combat, exp, etc. -->
             </p>
         </details>
 
@@ -37,11 +33,12 @@ def write_full_html(players, game_map):
             template += f"""
             <li>
                 <details>
-                    <summary>Unité ID: {unit.id} ({unit.acronym})</summary>
+                    <summary>Unité ID: {unit.entity_id} ({unit.acronym})</summary>
                     <p>
                         <b>HP</b>: {unit.hp}/{unit.max_hp}<br>
                         <b>Position</b>: ({unit.x}, {unit.y})<br>
-                        <!-- Add any other relevant unit information -->
+                        <!-- Show current task/state -->
+                        <b>Tache</b>: {getattr(unit, 'task', unit.state) or unit.state}
                     </p>
                 </details>
             </li>
@@ -62,9 +59,30 @@ def write_full_html(players, game_map):
                     <p>
                         <b>HP</b>: {building.hp}/{building.max_hp}<br>
                         <b>Position</b>: ({building.x}, {building.y})<br>
-                        <!-- Add any other relevant building information -->
+                        <!-- Show current building state -->
+                        <b>Tache</b>: {building.state}
                     </p>
                 </details>
+            </li>
+            """
+        template += """
+            </ul>
+        </details>
+
+        <details>
+            <summary>Tâches en cours</summary>
+            <ul>
+        """
+        for entity_list in [team.units, team.buildings]:
+            for entity in entity_list:
+                if getattr(entity, 'task', None) or entity.state != 'idle':
+                    template += f"""
+            <li>
+                [ID {entity.id}] {type(entity).__name__} - État: {entity.state}
+            """
+                    if getattr(entity, 'task', None):
+                        template += f" (Tache: {entity.task})"
+                    template += """
             </li>
             """
         template += """
