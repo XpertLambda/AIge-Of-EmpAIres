@@ -46,10 +46,8 @@ class Villager(Unit):
             self.seekIdle()
             self.seekBuild(game_map)
             self.seekRepair(game_map, dt)
-            
-            #if self.task and self.state == 'idle':
-            #    self.state = self.task
-            # It's causing problems for building part 
+            if self.task and self.state == 'idle':
+                self.state = self.task
         else:
             self.death(game_map, dt)
 
