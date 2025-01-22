@@ -24,7 +24,7 @@ class Team:
             for _ in range(amount):
                 if building in building_class_map:
                     building_instance = building_class_map[building](team=teamID)
-                    building_instance.buildTime = 0
+                    building_instance.processTime = building_instance.buildTime
                     self.add_member(building_instance)
 
         for unit, amount in difficulty_config[difficulty]['Units'].items():
@@ -72,25 +72,35 @@ class Team:
                     return True
         return False
 
-    def build(self, building, nb, game_map):
-        print("tryna build")
+    def build(self, building, x, y, builders, game_map):
+        building = building_class_map[building](team=self.teamID)
+        x, y = round(x), round(y)
         if not self.resources.has_enough(building.cost.get()):
-            print("No resource")
+            del building
             return False
 
-        available_villagers = [unit for unit in self.units if unit.acronym == "v" and unit.isAvailable()]
+        available_villagers = {unit for unit in self.units if unit.acronym == "v" and unit.isAvailable()}
         if not available_villagers:
             print("no vills")
+            del building
             return False
         
-        if not game_map.add_entity(building, building.x, building.y):
-            print("failed to add")
+        for i in range(building.size):
+            for j in range(building.size):
+                pos = (x + i, y + j)
+                if pos in game_map.grid:
+                        del building
+                        return False
+
+        if not game_map.add_entity(building, x, y):
+            del building
             return False
 
-        building.construct(available_villagers)
-
+        self.resources.decrease_resources(building.cost.get())
         for villager in available_villagers:
             villager.set_task('build', building)
+
+        building.set_builders(available_villagers)
 
         return True
 

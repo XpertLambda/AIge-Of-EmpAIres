@@ -237,6 +237,16 @@ def draw_healthBar(screen, screen_x, screen_y, ratio, color_val):
     fill_rect = pygame.Rect(bg_rect.x, bg_rect.y, fill_width, HEALTH_BAR_HEIGHT)
     pygame.draw.rect(screen, color_val, fill_rect)
 
+def draw_buildProcess(screen, screen_x, screen_y, time, zoom, color=(255,255,255)):
+    minutes = time // 60
+    seconds = time % 60
+    time_text = f"{int(minutes)}:{int(seconds)}"
+    base_font_size = 36
+    font_size = int(base_font_size * zoom) 
+    font = pygame.font.Font(None, font_size)
+    time_surface = font.render(time_text, True, color)
+    screen.blit(time_surface, (screen_x - time_surface.get_width()//2, screen_y - time_surface.get_height()//2))
+
 def draw_hitbox(screen, corners, zoom, color):
     if len(corners) != 4:
         raise ValueError("Hitbox must have exactly 4 corners.")

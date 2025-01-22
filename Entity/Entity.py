@@ -60,6 +60,11 @@ class Entity:
             return True
         return False
 
+    def isIdle(self):
+        if self.state == 'idle':
+            return True
+        return False
+
     def notify_damage(self):
         self.last_damage_time = time.time()
 

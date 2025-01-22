@@ -289,13 +289,30 @@ def handle_events(event, game_state):
         elif event.button == 3:
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                    mouse_x, mouse_y = screen_to_2_5d(
+                        mouse_x, mouse_y, screen_width, screen_height,
+                        camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
+                    )
+
                     if keys[pygame.K_1]:
-                        mouse_x, mouse_y = screen_to_2_5d(
-                            mouse_x, mouse_y, screen_width, screen_height,
-                            camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
-                        )
-                        print("pressed")
-                        selected_player.build(TownCentre(team=0, x=mouse_x, y=mouse_y),3,game_state['game_map'])
+                        selected_player.build("TownCenter", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_2]:
+                        selected_player.build("House", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_3]:
+                        selected_player.build("ArcheryRange", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_4]:
+                        selected_player.build("Barracks", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_5]:
+                        selected_player.build("Camp", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_6]:
+                        selected_player.build("House", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_7]:
+                        selected_player.build("Keep", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_8]:
+                        selected_player.build("Stable", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_9]:
+                        selected_player.build("Stable", mouse_x, mouse_y, 3, game_state['game_map'])
+
             # Clic droit => set target
                 elif selected_player and 'selected_units' in game_state and len(game_state['selected_units']) > 0:
                     entity_target = closest_entity(game_state, mouse_x, mouse_y)

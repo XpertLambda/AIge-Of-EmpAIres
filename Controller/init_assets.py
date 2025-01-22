@@ -218,35 +218,36 @@ def load_sprites(screen, screen_width, screen_height):
     print("Sprites loaded successfully.")
     
 def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant):
-    # same as before except we clamp scaled_width, scaled_height >=1
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
+    
     cache_key = (zoom, state, frame_id, variant, direction)
     if cache_key in zoom_cache[name]:
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
 
-    if category == 'buildings':
-        frame_id = frame_id % len(sprites[category][name][state])
-        original_image = sprites[category][name][state][frame_id]
-    elif category == 'units':
-        frame_id = frame_id % len(sprites[category][name][state][direction])
-        original_image = sprites[category][name][state][direction][frame_id]
-    else: 
-        original_image = sprites[category][name][variant]
-
-    scaled_width = int(original_image.get_width() * zoom)
-    scaled_height= int(original_image.get_height()* zoom)
-
-    if scaled_width <1: scaled_width=1
-    if scaled_height<1: scaled_height=1
+    try:
+        if category == 'buildings':
+            frame_id = frame_id % len(sprites[category][name][state])
+            original_image = sprites[category][name][state][frame_id]
+        elif category == 'units':
+            frame_id = frame_id % len(sprites[category][name][state][direction])
+            original_image = sprites[category][name][state][direction][frame_id]
+        else:
+            original_image = sprites[category][name][variant]
+    except IndexError as e:
+        raise ValueError(f"Error accessing sprite: {e}")
+    
+    scaled_width = max(1, int(original_image.get_width() * zoom))
+    scaled_height = max(1, int(original_image.get_height() * zoom))
 
     scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
-
     zoom_cache[name][cache_key] = scaled_image
     zoom_cache[name].move_to_end(cache_key)
+
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
+    print("scaled")
     return scaled_image
 
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):

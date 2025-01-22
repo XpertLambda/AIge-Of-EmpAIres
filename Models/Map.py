@@ -316,19 +316,24 @@ class GameMap:
             del self.inactive_matrix[pos]
 
     def patch(self, dt):
-        for entities in list(self.grid.values()):
-            if entities:
-                for entity in list(entities):
-                    entity.update(self, dt)
-                    if not entity.isAlive():
-                        self.move_to_inactive(entity)
+        active_entities = set()
+        for entities in self.grid.values():
+            active_entities.update(entities)
 
-        for inactive_entities in list(self.inactive_matrix.values()):
-            if inactive_entities:
-                for entity in list(inactive_entities):
-                    entity.update(self, dt)
-                    if not entity.state:
-                        self.remove_inactive(entity)
+        for entity in active_entities:
+            entity.update(self, dt)
+            if not entity.isAlive():
+                self.move_to_inactive(entity)
+
+        
+        inactive_entities = set()
+        for entities in self.inactive_matrix.values():
+            inactive_entities.update(entities)
+
+        for entity in inactive_entities:
+            entity.update(self, dt)
+            if not entity.state:
+                self.remove_inactive(entity)
 
     def set_game_state(self, game_state):
         self.game_state = game_state

@@ -151,13 +151,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     old_resources = {}
     for p in players:
         old_resources[p.teamID] = p.resources.copy()
-
     draw_timer = 0
     while running:
-        raw_dt = clock.tick(160) / ONE_SECOND
+        raw_dt = clock.tick(1000) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
-        dt = dt * GAME_SPEED
-
+        dt = raw_dt * GAME_SPEED
         events = pygame.event.get()
         for event in events:
             handle_events(event, game_state)
@@ -272,7 +270,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     screen.blit(player_info_surface, (0, screen_height - inf_h))
 
             draw_pointer(screen)
-            '''
+            
             for pl in game_map.players:
                 for unit in pl.units:
                     if unit.path:
@@ -282,7 +280,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['screen_height'],
                             game_state['camera']
                         )
-            '''
             display_fps(screen, screen_width, clock, font)
             if game_state.get('game_over', False):
                 draw_game_over_overlay(screen, game_state)

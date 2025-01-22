@@ -70,7 +70,7 @@ class Villager(Unit):
 
             elif target.team == self.team and hasattr(target, 'buildTime'):
                 
-                if target.buildTime >= 0 :
+                if target.processTime < target.dynamicBuildTime:
                     self.set_task('build', target)
                 
                 elif hasattr(target, 'resourceDropPoint') and target.resourceDropPoint and target.state == 'idle':
@@ -172,10 +172,14 @@ class Villager(Unit):
     def seekBuild(self, game_map):
         if self.task != 'build':
             return
-        if not self.build_target or not self.build_target.isAlive() or self.build_target.buildTime <= 0:
+        if not self.build_target or not self.build_target.isAlive() or self.build_target.state != 'construction':
             self.task = None
+            self.build_target = None
+            self.path = []
             return
 
+        if self not in self.build_target.builders:
+            self.build_target.builders.add(self)
         corner_distance = self.build_target.size / 2.0
         left = self.build_target.x - corner_distance
         right = self.build_target.x + corner_distance
