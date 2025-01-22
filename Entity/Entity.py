@@ -115,8 +115,8 @@ class Entity:
         height = hitbox_iso * camera.zoom * HALF_TILE_SIZE / 2
         x = center[0] - width // 2
         y = center[1] - height // 2 
-        pygame.draw.ellipse(screen, (255, 0, 0), (x, y, width, height), 1)
-        pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
+        #pygame.draw.ellipse(screen, (255, 0, 0), (x, y, width, height), 1)
+        #pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
 
     def display_range(self, screen, screen_width, screen_height, camera):
         #if self.range_color != (255, 0, 0):

@@ -316,7 +316,6 @@ def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant)
 
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
-    print("scaled")
     return scaled_image
 
 
