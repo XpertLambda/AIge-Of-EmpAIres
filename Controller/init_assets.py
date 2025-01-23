@@ -295,6 +295,8 @@ def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant)
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
 
+    if state not in sprites[category][name]:
+        state = 'idle'
     try:
         if category == 'buildings':
             frame_id = frame_id % len(sprites[category][name][state])
