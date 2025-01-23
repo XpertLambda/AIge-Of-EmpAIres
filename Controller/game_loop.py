@@ -166,9 +166,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         old_resources[p.teamID] = p.resources.copy()
 
     draw_timer = 0
+    decision_timer = 0
 
     players_target=[None for _ in range(0,len(players))]
-    selected_player.units.add(Swordsman(team=selected_player.teamID))
     priority_2(players,selected_player,players_target)
     while running:
         raw_dt = clock.tick(160) / ONE_SECOND
@@ -221,12 +221,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 update_minimap_elements(game_state)
             update_counter += dt
 
-        manage_battle(selected_player,players_target,players,game_map,dt)
-        print("enemy unit")
-        for unit in players_target[selected_player.teamID].units:
-            print(unit.hp)
-        print("-----")
-
         # Surfaces
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):
@@ -265,8 +259,15 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = True
                 old_resources[selected_player.teamID] = current_res.copy()
 
-        # Rendu Pygame (GUI)
-        draw_timer += raw_dt
+        # BOT IMPLEMENTATION 
+        if decision_timer >= 1/DPS :
+            decision_timer = 0
+            manage_battle(selected_player,players_target,players,game_map,dt)
+
+            print("enemy unit")
+            for unit in players_target[selected_player.teamID].units:
+                print(unit.hp)
+            print("-----")
 
         if screen is not None and draw_timer >= 1/FPS_DRAW_LIMITER:
             draw_timer = 0
@@ -328,5 +329,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['force_full_redraw'] = False
             else:
                 pygame.display.flip()
+                    # Rendu Pygame (GUI)
+        draw_timer += raw_dt
+        decision_timer += raw_dt
     
     # fin de game_loop
