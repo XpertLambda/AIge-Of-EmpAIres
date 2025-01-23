@@ -1,7 +1,7 @@
 from Models.Team import *
-from Settings.setup import  RESOURCE_THRESHOLDS
+from Settings.setup import  RESOURCE_THRESHOLDS, UNIT_CLASSES, UNIT_TRAINING_MAP
 from Entity.Unit import Villager
-from Entity.Building import Building
+from Entity.Building import *
 
 #Priorité 5
 
@@ -9,12 +9,12 @@ def get_military_unit_count(player_team):
     return sum(1 for unit in player_team.units if not isinstance(unit, Villager))
 
 
-def train_units(player_team, unit_type, unit_cost):
+def train_units(player_team, unit):
     if add_to_training_queue(player_team):
-        player_team.resources["gold"] -= unit_cost["gold"]
-        player_team.resources["food"] -= unit_cost["food"]
-        player_team.units.append(unit_type())
-        print(f"Unité {unit_type.__name__} formée.")
+        player_team.resources["gold"] -= unit.cost.gold
+        player_team.resources["food"] -= unit.cost.food
+        player_team.units.append(unit())
+        print(f"Unité {unit.__name__} formée.")
 
 def balance_units(player_team):
     villager_count = sum(1 for unit in player_team.units if isinstance(unit, Villager))
@@ -241,3 +241,22 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
         selected_player.modify_target(None,players_target)
 
 
+def add_to_training_queue(self, team):
+        """
+        Attempt to enqueue a new unit if enough resources. 
+        Return True if successful, False otherwise.
+        """
+        if self.acronym not in UNIT_TRAINING_MAP:
+            return False
+
+        unit_name = UNIT_TRAINING_MAP[self.acronym]
+        unit_class = UNIT_CLASSES[unit_name]
+        unit = unit_class(team=self.team)
+
+
+        if (team.resources.has_enough(unit.cost.get()) and team.population < team.maximum_population ):
+            team.resources.decrease_resources(unit.cost.get())
+            self.training_queue.append(unit_name)
+            return True
+
+        return False
