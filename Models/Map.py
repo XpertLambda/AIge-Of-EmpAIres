@@ -23,6 +23,7 @@ class GameMap:
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
+        self.resources = {}
         self.inactive_matrix = {}
         self.game_state = None  
 
@@ -54,6 +55,11 @@ class GameMap:
                 if pos not in self.grid:
                     self.grid[pos] = set()
                 self.grid[pos].add(entity)
+                if entity.hasResources:
+                    if pos not in self.resources:
+                        self.resources[pos] = set()
+                    self.resources[pos].add(entity)
+
 
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
@@ -300,8 +306,6 @@ class GameMap:
         except Exception as e:
             debug_print(f"Error loading game map: {e}")
 
-
-
     def move_to_inactive(self, entity):
         self.remove_entity(entity)
         pos = (round(entity.x), round(entity.y))
@@ -324,7 +328,6 @@ class GameMap:
             entity.update(self, dt)
             if not entity.isAlive():
                 self.move_to_inactive(entity)
-
         
         inactive_entities = set()
         for entities in self.inactive_matrix.values():
