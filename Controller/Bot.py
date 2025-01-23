@@ -1,7 +1,7 @@
 from Models.Team import *
-from Settings.setup import  RESOURCE_THRESHOLDS, UNIT_CLASSES, UNIT_TRAINING_MAP
+#from Settings.setup import  RESOURCE_THRESHOLDS, UNIT_CLASSES, UNIT_TRAINING_MAP
 from Entity.Unit import Villager
-from Entity.Building import *
+from Entity.Building import Building
 
 #Priorité 5
 
@@ -232,6 +232,7 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
             print("hp",unit.hp,"target",unit.attack_target,"pos",unit.x,unit.y,"state",unit.state)
             if not isinstance(unit,Villager) or (len(selected_player.units)==0 and not attack_mode):
                 if unit.attack_target!=None and unit.attack_target.state!='death':
+                    print("attack")
                     unit.seekAttack(game_map,dt)
                 else:
                     search_for_target(unit,enemy,attack_mode)
@@ -241,22 +242,3 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
         selected_player.modify_target(None,players_target)
 
 
-def add_to_training_queue(self, team):
-        """
-        Attempt to enqueue a new unit if enough resources. 
-        Return True if successful, False otherwise.
-        """
-        if self.acronym not in UNIT_TRAINING_MAP:
-            return False
-
-        unit_name = UNIT_TRAINING_MAP[self.acronym]
-        unit_class = UNIT_CLASSES[unit_name]
-        unit = unit_class(team=self.team)
-
-
-        if (team.resources.has_enough(unit.cost.get()) and team.population < team.maximum_population ):
-            team.resources.decrease_resources(unit.cost.get())
-            self.training_queue.append(unit_name)
-            return True
-
-        return False
