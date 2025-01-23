@@ -72,38 +72,44 @@ class Team:
                     return True
         return False
 
-    def build(self, building, x, y, builders, game_map):
+    def build(self, building, x, y, num_builders, game_map):
         building = building_class_map[building](team=self.teamID)
         x, y = round(x), round(y)
         if not self.resources.has_enough(building.cost.get()):
             del building
             return False
 
-        available_villagers = {unit for unit in self.units if unit.acronym == "v" and unit.isAvailable()}
-        if not available_villagers:
-            print("no vills")
+        selected_villagers = []
+        for unit in self.units:
+            if unit.acronym == "v" and unit.isAvailable():
+                selected_villagers.append(unit)
+                if len(selected_villagers) == num_builders:
+                    break
+
+        if not selected_villagers:
+            print("No available villagers")
             del building
             return False
-        
+
         for i in range(building.size):
             for j in range(building.size):
                 pos = (x + i, y + j)
                 if pos in game_map.grid:
-                        del building
-                        return False
+                    del building
+                    return False
 
         if not game_map.add_entity(building, x, y):
             del building
             return False
 
         self.resources.decrease_resources(building.cost.get())
-        for villager in available_villagers:
+
+        for villager in selected_villagers:
             villager.set_task('build', building)
 
-        building.set_builders(available_villagers)
+        building.set_builders(selected_villagers)
 
         return True
-
     '''   
     def collectResource(self, villager, resource_tile, duration, game_map):
         """
