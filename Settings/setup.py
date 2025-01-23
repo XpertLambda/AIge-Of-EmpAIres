@@ -13,6 +13,11 @@ RESOURCE_RATE_PER_SEC = 25 / 60
 MAXIMUM_CARRY = 20
 
 # -------------------
+# BOT constants
+# -------------------
+DPS = 2 # 2 decisions per second
+
+# -------------------
 # Unit constants
 # -------------------
 ALLOWED_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
