@@ -6,7 +6,7 @@ import os
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 1
+GAME_SPEED = 5
 FPS_DRAW_LIMITER = 50
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_RATE_PER_SEC = 25 / 60
@@ -69,8 +69,8 @@ difficulty_config = {
         'Resources' : Resources(food=99999, gold=99999, wood=99999),
         'Units' : {
             'Villager' : 1,
-            'Archer' : 2,
-            'Horseman' : 0,
+            'Archer' : 5,
+            'Horseman' : 5,
             'Swordsman' : 0
         },
         'Buildings' : {
@@ -80,7 +80,7 @@ difficulty_config = {
             'Stable' : 0, 
             'ArcheryRange' : 0,
             'Farm' : 0,
-            'Keep' : 0,
+            'Keep' : 5,
             'Camp' : 0,
         }
     }
