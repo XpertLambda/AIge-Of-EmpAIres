@@ -156,7 +156,6 @@ def search_for_target(unit, enemy_team, attack_mode=True):
                     closest_entity = enemy
     if closest_entity!=None:
         unit.set_target(closest_entity)
-        print("ok")
         return unit.attack_target is not None
 
     targets=[unit for unit in enemy_team.units if not isinstance(unit,Villager)]
@@ -167,7 +166,6 @@ def search_for_target(unit, enemy_team, attack_mode=True):
             closest_entity = enemy
     if closest_entity!=None:
         unit.set_target(closest_entity)
-        print("ok")
         return unit.attack_target is not None
 
     if attack_mode:
@@ -217,7 +215,6 @@ def is_under_attack():
 def manage_battle(selected_player,players_target,players,game_map,dt):
     #réassigne une target a chaque unit d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense
     #arrete les combats
-    print("------------------")
     enemy=players_target[selected_player.teamID]
     attack_mode=True
     #defense
@@ -229,10 +226,8 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
                 attack_mode=False
     if enemy!=None and (len(enemy.units)!=0 or len(enemy.buildings)!=0):
         for unit in selected_player.units:
-            print("hp",unit.hp,"target",unit.attack_target,"pos",unit.x,unit.y,"state",unit.state)
             if not isinstance(unit,Villager) or (len(selected_player.units)==0 and not attack_mode):
                 if unit.attack_target!=None and unit.attack_target.state!='death':
-                    print("attack")
                     unit.seekAttack(game_map,dt)
                 else:
                     search_for_target(unit,enemy,attack_mode)

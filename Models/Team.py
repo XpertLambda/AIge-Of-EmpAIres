@@ -194,11 +194,8 @@ class Team:
         """
         players_target[self.teamID]=target
         for unit in self.units:
-            if not isinstance(unit,Villager):
-                unit.target=None
-                unit.task=True
-                if unit.target:
-                    unit.attack(target,map)
+            unit.set_target(None)
+                
 
     def collectResource(self, villager, resource_tile, duration, game_map):
         """

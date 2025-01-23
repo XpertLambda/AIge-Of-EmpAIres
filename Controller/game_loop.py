@@ -168,8 +168,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     draw_timer = 0
 
     players_target=[None for _ in range(0,len(players))]
-    selected_player.units.add(Swordsman(team=selected_player.teamID))
-    priority_2(players,selected_player,players_target)
     while running:
         raw_dt = clock.tick(160) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
@@ -222,11 +220,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             update_counter += dt
 
         manage_battle(selected_player,players_target,players,game_map,dt)
-        print("enemy unit")
-        for unit in players_target[selected_player.teamID].units:
-            print(unit.hp)
-        print("-----")
-
         # Surfaces
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):
