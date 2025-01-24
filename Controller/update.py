@@ -3,18 +3,11 @@ from Models.html import write_full_html
 
 def update_game_state(game_state, delta_time):
     camera = game_state['camera']
-    players = game_state['players']
     game_map = game_state['game_map']
 
     if not game_state.get('paused', False):
         handle_camera(camera, delta_time)
-
         game_map.patch(delta_time)
-
-        for player in players:
-            for building in player.buildings:
-                if building.spawnsUnits:
-                    building.update_training(delta_time, game_map, player)
 
 def handle_camera(camera, delta_time):
     keys = pygame.key.get_pressed()
