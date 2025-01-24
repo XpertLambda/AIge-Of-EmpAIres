@@ -179,24 +179,36 @@ def _curses_main(stdscr, game_map):
                     else:
                         debug_print("[CURSES] 'p' => Unpause => reprise du jeu")
 
-            # 6) Touche F11 => Sauvegarde
-            elif key == curses.KEY_F11:
-                debug_print("[CURSES] F11 => Sauvegarde en cours...")
+            # 6) Touche k => Sauvegarde
+            elif key in [ord('k'), ord('K')]:
+                debug_print("[CURSES] K => Sauvegarde en cours...")
                 game_map.save_map()
                 debug_print("[CURSES] => Sauvegarde effectuée !")
 
-            # 7) Touche F12 => Chargement
-            elif key == curses.KEY_F12:
-                debug_print("[CURSES] F12 => Chargement. (Pour simplifier, on charge la dernière save.)")
-                last_save = os.path.join('saves', 'last_save.pkl')
-                if os.path.exists(last_save):
-                    try:
-                        game_map.load_map(last_save)
-                        debug_print("[CURSES] => Chargement réussi depuis last_save.pkl.")
-                    except Exception as e:
-                        debug_print(f"[CURSES] Erreur load: {e}")
+            # 7) Touche L => Chargement
+            elif key in [ord('l'), ord('L')]:
+                debug_print("[CURSES] L => Chargement. Listing saves...")
+                saves_folder = 'saves'
+                if not os.path.isdir(saves_folder):
+                    debug_print("[CURSES] => Pas de dossier 'saves'")
                 else:
-                    debug_print("[CURSES] => Aucune last_save.pkl trouvée.")
+                    save_files = [f for f in os.listdir(saves_folder) if f.endswith('.pkl')]
+                    if not save_files:
+                        debug_print("[CURSES] => Aucune sauvegarde disponible")
+                    else:
+                        for i, sf in enumerate(save_files):
+                            debug_print(f"{i}: {sf}")
+                        debug_print("[CURSES] Entrez le numéro de la save (puis Entrée):")
+                        stdscr.nodelay(False)
+                        try:
+                            num_str = stdscr.getstr().decode('utf-8')
+                            choice_idx = int(num_str)
+                            chosen_file = save_files[choice_idx]
+                            game_map.load_map(os.path.join(saves_folder, chosen_file))
+                            debug_print(f"[CURSES] => Chargement réussi: {chosen_file}")
+                        except Exception as e:
+                            debug_print(f"[CURSES] => Erreur de chargement: {e}")
+                        stdscr.nodelay(True)
 
         # Redraw
         win_map.erase()
