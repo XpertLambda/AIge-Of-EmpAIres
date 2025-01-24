@@ -1,7 +1,7 @@
 from Models.Team import *
 from Settings.setup import  RESOURCE_THRESHOLDS
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
-from Entity.Building import *
+from Entity.Building import Building, add_to_training_queue
 
 #Priorité 5
 
@@ -11,24 +11,18 @@ def get_military_unit_count(player_team):
     return sum(1 for unit in player_team.units if not isinstance(unit, Villager))
     
 
-def train_units(player_team, unit, building):
-    for building in player_team.buildings:
-        if building.add_to_training_queue(player_team):
-            player_team.resources.gold -= unit.cost.gold
-            player_team.resources.food -= unit.cost.food
-            player_team.units.add(unit)
-            print(f"Unité {unit.acronym} formée.")
-            print(len(player_team.units))
+def train_units(player_team, building):
+    return building.add_to_training_queue(player_team)
 
 def balance_units(player_team):
     villager_count = sum(1 for unit in player_team.units if isinstance(unit, Villager))
     military_count = get_military_unit_count(player_team)
     if player_team.resources.food < 100 and villager_count < 10:
         train_units(player_team, Villager, {"gold": 0, "food": 50})
-
-    if military_count < 20:
+    elif military_count < 20:
         train_units(player_team, (unit for unit in player_team.units if not isinstance(unit, Villager)), {"gold": 50, "food": 50})
-        print("balance_units")
+    for b in player_team.buildings:
+        train_units(player_team,b)
 
 def choose_attack_composition(player_team):
     archers = [unit for unit in player_team.units if isinstance(unit, Archer)]
