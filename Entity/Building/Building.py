@@ -2,7 +2,7 @@ from Entity.Entity import Entity
 from Controller.utils import tile_to_screen
 from Settings.setup import HALF_TILE_SIZE, FRAMES_PER_BUILDING, GAME_SPEED
 from Settings.setup import HALF_TILE_SIZE, GAME_SPEED
-from Controller.drawing import draw_sprite
+from Controller.drawing import draw_sprite, draw_buildProcess
 from random import randint
 from AiUtils.aStar import a_star
 from Entity.Unit.Archer import Archer
@@ -54,7 +54,11 @@ class Building(Entity):
             walkable=walkable,
             hasResources=hasResources
         )
+        self.processTime = 0
         self.buildTime = buildTime
+        self.dynamicBuildTime = buildTime
+        self.builders = set()
+
         self.population = population
         self.resourceDropPoint = resourceDropPoint
         self.spawnsUnits = spawnsUnits
@@ -70,14 +74,28 @@ class Building(Entity):
         self.training_progress = 0.0
         self.removed = False
 
-    # ---------------- Update Unit ---------------
+    # ---------------- Update Entity --------------
     def update(self, game_map, dt):
-        self.animator(dt)
         if self.isAlive():
+            self.seekConstruction(dt)              
             if self.spawnsUnits:
                 self.update_training(dt, game_map, self.team)
+            self.seekIdle()
+            if self.current_training_unit:
+                self.state = 'training'
+            elif self.state == 'training':
+                self.state = 'idle'
         else:
             self.death(game_map)
+        self.animator(dt)
+
+    def seekIdle(self):
+        if self.processTime >= self.dynamicBuildTime and self.isAlive():
+            self.dynamicBuildTime = self.buildTime
+            self.processTime = self.buildTime
+            self.state = 'idle'
+            self.builders = set()
+        self.cooldown_frame = None
 
     # ---------------- Controller ----------------
     def kill(self):
@@ -100,28 +118,65 @@ class Building(Entity):
                     break
             game_map.remove_entity(self)
             game_map.game_state['player_info_updated'] = True
-    
-    # ---------------- Display Logic ----------------
-    def animator(self, dt):
-        if self.state:
-            if self.state != 'idle':
-                self.frame_duration += dt
-                frame_time = 1.0 / self.frames
-                if self.frame_duration >= frame_time:
-                    self.frame_duration -= frame_time
-                    self.current_frame = (self.current_frame + 1) % self.frames
-
-            if self.cooldown_frame:
-                self.current_frame = self.cooldown_frame
-
-    def display(self, screen, screen_width, screen_height, camera, dt):
-        sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
 
     def is_walkable(self):
         return self.walkable
-
     
+    # ---------------- Display Logic ----------------
+    def animator(self, dt):
+        if self.state != '':
+            self.frame_duration += dt
+            frame_time = 1.0 / self.frames
+            if self.frame_duration >= frame_time:
+                self.frame_duration -= frame_time
+                self.current_frame = (self.current_frame + 1) % self.frames
+
+        if self.cooldown_frame:
+            self.current_frame = self.cooldown_frame
+
+    def display(self, screen, screen_width, screen_height, camera, dt):
+        if self.state != '':
+            sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
+            self.display_buildProcess(screen, screen_width, screen_height, camera)
+    
+    def display_buildProcess(self, screen, screen_width, screen_height, camera):
+        if self.processTime >= self.dynamicBuildTime:
+            return
+        # Screen coordinates
+        sx, sy = tile_to_screen(
+            self.x, 
+            self.y, 
+            HALF_TILE_SIZE, 
+            HALF_TILE_SIZE / 2, 
+            camera, 
+            screen_width, 
+            screen_height
+        )
+
+        draw_buildProcess(screen, sx, sy, self.dynamicBuildTime - self.processTime, camera.zoom)
+
+    def add_to_training_queue(self, team):
+        """
+        Attempt to enqueue a new unit if enough resources. 
+        Return True if successful, False otherwise.
+        """
+        if self.acronym not in UNIT_TRAINING_MAP:
+            return False
+
+        unit_name = UNIT_TRAINING_MAP[self.acronym]
+        unit_class = UNIT_CLASSES[unit_name]
+        unit = unit_class(team=self.team)
+
+        if (team.resources.has_enough(unit.cost.get()) and 
+            team.population + len(self.training_queue) < team.maximum_population):
+            team.resources.decrease_resources(unit.cost.get())
+            self.training_queue.append(unit_name)
+            return True
+
+        return False
+
+    # ---------------- Train Logic ----------------
 
     def update_training(self, delta_time, game_map, team):
         """
@@ -205,9 +260,42 @@ class Building(Entity):
                 new_unit.destination = (target_x, target_y)
                 return
 
+    # ---------------- Stock Logic ----------------
+    
     def stock(self, game_map, resources):
         if self.resourceDropPoint:
             team_resources = game_map.players[self.team].resources
             if team_resources.increase_resources(resources):
                 return resources
         return None
+
+    # ---------------- Build Logic ----------------
+    def set_builders(self, builders):
+        self.builders = builders
+
+    def get_buildTime(self, num_builders):
+        return (3 * self.buildTime) / (num_builders + 2) if num_builders > 0 else self.buildTime
+
+    def seekConstruction(self, dt):
+        if self.processTime >= self.dynamicBuildTime or not self.builders:
+            return
+
+        self.state = 'construction'
+        
+        for builder in self.builders.copy():
+            if not builder.isAlive() or builder.state != 'task':
+                if builder.task != 'build' and builder.task != 'repair':
+                    self.builders.remove(builder)
+        
+        num_builders = sum(1 for builder in self.builders if builder.state == 'task')
+        if num_builders == 0:
+            return
+
+        if self.hp < self.max_hp:
+            for builder in self.builders:
+                if builder.task != 'repair':  
+                    builder.set_task('repair', builder)
+            return 
+
+        self.dynamicBuildTime = self.get_buildTime(num_builders)
+        self.processTime += dt
