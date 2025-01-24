@@ -294,8 +294,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 if player_info_surface and game_state['show_player_info']:
                     inf_h = player_info_surface.get_height()
                     screen.blit(player_info_surface, (0, screen_height - inf_h))
+            
             archer = Archer(selected_player,0,0)
-            train_units(selected_player,archer)
+            barrack = Barracks(selected_player,0,0)
+            print("priorite_5")
+            priorite_5(selected_player,archer,barrack)
+            
+            
 
             draw_pointer(screen)
 
