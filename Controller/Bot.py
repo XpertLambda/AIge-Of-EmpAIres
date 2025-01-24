@@ -87,52 +87,41 @@ def repair_critical_buildings(player_team):
 
 #Priorty seven avoid ressources shortage 
 
-def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
-    # Access the specific resource attributes from the Resources object
-    if current_resources.food < RESOURCE_THRESHOLDS['food']:
-        return 'food'
-    if current_resources.wood < RESOURCE_THRESHOLDS['wood']:
-        return 'wood'
-    if current_resources.gold < RESOURCE_THRESHOLDS['gold']:
-        return 'gold'
+def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
+    for resource in ['food', 'wood', 'gold']:
+        if getattr(current_resources, resource, 0) < RESOURCE_THRESHOLDS.get(resource, 0):
+            return resource
     return None
-def find_resource_location(game_map, resource_acronym):
-    for (x, y), cell_content in game_map.grid.items():
-        if resource_acronym in cell_content:
-            return (x, y)  
 
 
-def reallocate_villagers(resource_in_shortage, villagers, game_map):
-    for villager in villagers:
-        if villager.isAvailable() and not villager.task:
-            for x, y in game_map.grid:
-                resource_nodes = game_map.grid[(x, y)]
-                for resource_node in resource_nodes:
-                    if resource_node.acronym.lower() == resource_in_shortage[0].lower():
-                        villager.set_target(resource_node)
-                        return
+def find_resources(game_map, resource_type):
+    if not resource_type:
+        return []
+    resource_positions = []
+    for position, entities in game_map.grid.items():
+        for entity in entities:
+            if isinstance(entity, resource_type):
+                resource_positions.append(position)
+    return resource_positions
 
 
-def check_and_address_resources(team, game_map, thresholds):
-    resource_shortage = get_resource_shortage(team.resources, thresholds)
+def reallocate_villagers(resource_in_shortage, team, game_map):
+    for unit in team.units:  # Assuming `team.units` provides access to all units in the team
+        if hasattr(unit, "carry") and unit.isAvailable() and not unit.task:
+            resource_positions = find_resources(game_map, resource_in_shortage)
+            if resource_positions:
+                nearest_resource = min(
+                    resource_positions,
+                    key=lambda pos: math.sqrt((unit.x - pos[0]) ** 2 + (unit.y - pos[1]) ** 2)
+                )
+                unit.set_target(nearest_resource)
+                return
+
+
+def check_and_address_resources(team, game_map, RESOURCE_THRESHOLDS):
+    resource_shortage = get_resource_shortage(team.resources, RESOURCE_THRESHOLDS)
     if resource_shortage:
-        reallocate_villagers(resource_shortage, team.units, game_map)
-
-
-# AI resource management Logic
-
-# 1. Monitor resource levels for shortages
-# - Use the current resource levels and predefined thresholds.
-# - Identify if any resource is below its threshold.
-
-# 2. Reallocate villagers to address resource shortages
-# - Find idle villagers or villagers collecting less critical resources.
-# - Assign them to collect the resource in shortage.
-# - Ensure villagers are directed to the closest available resource node.
-
-# 3. Integrate into the game loop
-# - Periodically check resource levels and act accordingly.
-# - Address shortages by reallocating villagers.
+        reallocate_villagers(resource_shortage, team, game_map)
 
 
 
