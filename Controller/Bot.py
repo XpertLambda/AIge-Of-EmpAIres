@@ -222,8 +222,11 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
     #on cherche la team qui est entrain de nous attaquer si les frontieres on été violer:
         for i in range(0,len(players_target)):
             if players_target[i]==selected_player:
-                enemy=players[i]
-                attack_mode=False
+                for team in players:
+                    if team.teamID==i:
+                            players_target[selected_player.teamID]=None
+                            enemy=team
+                            attack_mode=False
     if enemy!=None and (len(enemy.units)!=0 or len(enemy.buildings)!=0):
         for unit in selected_player.units:
             if not isinstance(unit,Villager) or (len(selected_player.units)==0 and not attack_mode):
@@ -233,7 +236,7 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
                     search_for_target(unit,enemy,attack_mode)
     else:
         selected_player.modify_target(None,players_target)
-    if len(selected_player.units)==0:
+    if get_military_unit_count(selected_player)==0:
         selected_player.modify_target(None,players_target)
 
 

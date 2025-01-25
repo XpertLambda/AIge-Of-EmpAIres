@@ -262,12 +262,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # BOT IMPLEMENTATION 
         if decision_timer >= 1/DPS :
             decision_timer = 0
-            manage_battle(selected_player,players_target,players,game_map,dt)
-
-            print("enemy unit")
-            for unit in players_target[selected_player.teamID].units:
-                print(unit.hp)
-            print("-----")
+            for player in players:
+                manage_battle(player,players_target,players,game_map,dt)
 
         if screen is not None and draw_timer >= 1/FPS_DRAW_LIMITER:
             draw_timer = 0
