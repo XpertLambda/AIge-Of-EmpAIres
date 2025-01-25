@@ -28,7 +28,7 @@ from Controller.gui import (
     get_scaled_gui,
     get_centered_rect_in_bottom_right,
     update_minimap_elements,
-    draw_pause_menu  # add this import
+    draw_pause_menu  
 )
 from Controller.utils import tile_to_screen
 from Controller.Bot import *
@@ -330,7 +330,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 if time.time() - game_state['notification_start_time'] < 3:
                     notif_font = pygame.font.SysFont(None, 28)
                     notif_surf = notif_font.render(game_state['notification_message'], True, (255,255,0))
-                    screen.blit(notif_surf, (20, 20))
+                    screen.blit(notif_surf, (20, 100))
                 else:
                     game_state['notification_message'] = ""
 

@@ -2,7 +2,7 @@ import pygame
 import sys
 import os
 import time
-from tkinter import Tk, filedialog
+import tkinter as tk
 from Entity.Building import Building, TownCentre
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY, MINIMAP_MARGIN, PANEL_RATIO, BG_RATIO
 from Controller.utils import *
@@ -117,10 +117,10 @@ def handle_events(event, game_state):
             game_state['notification_start_time'] = time.time()
 
         #
-        # (3) - Touche M => Chargement
+        # (3) - Touche l => Chargement
         #
         elif event.key in [pygame.K_l]:
-            debug_print("[GUI] M => Menu chargement (filedialog).")
+            from tkinter import Tk, filedialog
             try:
                 root = Tk()
                 root.withdraw()
@@ -152,11 +152,12 @@ def handle_events(event, game_state):
                     game_state['notification_start_time'] = time.time()
                 else:
                     debug_print("[GUI] M => Aucune sauvegarde choisie (annulé).")
-
+            
             except Exception as e:
                 debug_print(f"[GUI] Error loading: {e}")
                 game_state['notification_message'] = f"Erreur: {str(e)}"
                 game_state['notification_start_time'] = time.time()
+            pass
 
         #
         # (4) - Zoom + / -
@@ -253,11 +254,10 @@ def handle_events(event, game_state):
                         game_state['pause_menu_active'] = False
                         game_state['paused'] = False
                     elif label == "Load Game":
-                        from tkinter import Tk, filedialog
                         try:
-                            root = Tk()
+                            root = tk.Tk()
                             root.withdraw()
-                            chosen_path = filedialog.askopenfilename(
+                            chosen_path = tk.filedialog.askopenfilename(
                                 initialdir=SAVE_DIRECTORY,
                                 filetypes=[("Pickle","*.pkl")]
                             )
