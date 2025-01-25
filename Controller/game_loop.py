@@ -295,10 +295,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     inf_h = player_info_surface.get_height()
                     screen.blit(player_info_surface, (0, screen_height - inf_h))
             
-            archer = Archer(selected_player,0,0)
-            barrack = Barracks(selected_player,0,0)
-            print("priorite_5")
-            priorite_5(selected_player,archer,barrack)
+            
             
             
 
@@ -321,5 +318,5 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['force_full_redraw'] = False
             else:
                 pygame.display.flip()
-    
+            
     # fin de game_loop
