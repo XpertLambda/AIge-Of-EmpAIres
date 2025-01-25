@@ -1,7 +1,7 @@
 from Models.Team import *
 from Settings.setup import  RESOURCE_THRESHOLDS
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
-from Entity.Building import Building, add_to_training_queue
+from Entity.Building import Building
 
 #Priorité 5
 
@@ -177,6 +177,20 @@ def priority_2(players,selected_player,players_target):
         #attaque déjà en cours
         return False
     return choose_target(players,selected_player,players_target)
+
+
+def modify_target(player,target,players_target):
+    """
+    Met à jour la cible de l'équipe (arrête toutes les attaques de la team)
+    pour la remplacer par la nouvelle 'target'.
+    """
+    players_target[player.teamID]=target
+    for unit in player.units:
+        if not isinstance(unit,Villager):
+            unit.target=None
+            unit.task=True
+            if unit.target:
+                unit.attack(target,map)
         
 def choose_target(players,selected_player,players_target):
     #testé
@@ -189,7 +203,7 @@ def choose_target(players,selected_player,players_target):
                 target=enemy_team
                 count_max=count
     if target!=None:
-        selected_player.modify_target(target,players_target)
+        modify_target(selected_player,target,players_target)
     return target!=None
 
 def is_under_attack():
@@ -218,8 +232,8 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
                 else:
                     search_for_target(unit,enemy,attack_mode)
     else:
-        selected_player.modify_target(None,players_target)
+        modify_target(selected_player,None,players_target)
     if get_military_unit_count(selected_player)==0:
-        selected_player.modify_target(None,players_target)
+        modify_target(selected_player,None,players_target)
 
 

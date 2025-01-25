@@ -305,7 +305,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             archer = Archer(selected_player,0,0)
             barrack = Barracks(selected_player,0,0)
             print("priorite_5")
-            priorite_5(selected_player,archer,barrack)
+            #priorite_5(selected_player,archer,barrack)
             
             
 

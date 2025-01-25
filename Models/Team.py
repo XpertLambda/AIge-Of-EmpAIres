@@ -263,17 +263,5 @@ class Team:
                     soldier.attack(t,map)
             i+=1
 
-    def modify_target(self,target,players_target):
-        """
-        Met à jour la cible de l'équipe (arrête toutes les attaques de la team)
-        pour la remplacer par la nouvelle 'target'.
-        """
-        players_target[self.teamID]=target
-        for unit in self.units:
-            if not isinstance(unit,Villager):
-                unit.target=None
-                unit.task=True
-                if unit.target:
-                    unit.attack(target,map)
         
     '''
