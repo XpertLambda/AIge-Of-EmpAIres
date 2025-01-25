@@ -164,7 +164,7 @@ def search_for_target(unit, enemy_team, attack_mode=True):
             dist = math.dist((unit.x, unit.y), (enemy_building.x, enemy_building.y))
             if dist < closest_distance:
               closest_distance = dist
-              closest_entity = enemy_buildin
+              closest_entity = enemy_building
 
 
 
