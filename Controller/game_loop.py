@@ -330,7 +330,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 if time.time() - game_state['notification_start_time'] < 3:
                     notif_font = pygame.font.SysFont(None, 28)
                     notif_surf = notif_font.render(game_state['notification_message'], True, (255,255,0))
-                    screen.blit(notif_surf, (20, 60))  # shifted down from (20, 20)
+                    screen.blit(notif_surf, (20, 20))
                 else:
                     game_state['notification_message'] = ""
 
