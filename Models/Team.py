@@ -72,7 +72,7 @@ class Team:
                     return True
         return False
 
-    def build(self, building, x, y, num_builders=1, game_map):
+    def build(self, building, x, y, num_builders, game_map):
         building = building_class_map[building](team=self.teamID)
         x, y = round(x), round(y)
         if not self.resources.has_enough(building.cost.get()):
