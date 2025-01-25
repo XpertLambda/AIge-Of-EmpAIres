@@ -108,17 +108,17 @@ def handle_events(event, game_state):
             debug_print(f"[GUI] F2 => show_all_health_bars={game_state['show_all_health_bars']}")
 
         #
-        # (2) - Touche F11 => Sauvegarde
+        # (2) - Touche L => Sauvegarde
         #
-        elif event.key == pygame.K_F11:
+        elif event.key in [pygame.K_k]:
             game_state['game_map'].save_map()
-            debug_print("[GUI] F11 => Sauvegarde effectuée.")
+            debug_print("[GUI] L => Sauvegarde effectuée.")
 
         #
-        # (3) - Touche F12 => Chargement
+        # (3) - Touche M => Chargement
         #
-        elif event.key == pygame.K_F12:
-            debug_print("[GUI] F12 => Menu chargement (filedialog).")
+        elif event.key in [pygame.K_l]:
+            debug_print("[GUI] M => Menu chargement (filedialog).")
             try:
                 root = Tk()
                 root.withdraw()
@@ -147,7 +147,7 @@ def handle_events(event, game_state):
                     camera.set_bounds(min_x, max_x, min_y, max_y)
                     game_state['force_full_redraw'] = True
                 else:
-                    debug_print("[GUI] F12 => Aucune sauvegarde choisie (annulé).")
+                    debug_print("[GUI] M => Aucune sauvegarde choisie (annulé).")
 
             except Exception as e:
                 debug_print(f"[GUI] Error loading: {e}")
@@ -231,9 +231,7 @@ def handle_events(event, game_state):
             else:
                 debug_print("[GUI] TAB => Unpause => reprise du jeu.")
 
-    #idem avec P mais sans la snapshot
-    elif event.type == pygame.KEYUP:
-        if event.key == pygame.K_p:
+        elif event.key == pygame.K_p:
             game_state['paused'] = not game_state.get('paused', False)
             if game_state['paused']:
                 debug_print("[GUI] 'p' => Pause activée.")
@@ -287,19 +285,45 @@ def handle_events(event, game_state):
                         )
 
         elif event.button == 3:
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                    mouse_x, mouse_y = screen_to_2_5d(
+                        mouse_x, mouse_y, screen_width, screen_height,
+                        camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
+                    )
+
+                    if keys[pygame.K_1]:
+                        selected_player.build("TownCenter", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_2]:
+                        selected_player.build("House", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_3]:
+                        selected_player.build("ArcheryRange", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_4]:
+                        selected_player.build("Barracks", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_5]:
+                        selected_player.build("Camp", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_6]:
+                        selected_player.build("House", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_7]:
+                        selected_player.build("Keep", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_8]:
+                        selected_player.build("Stable", mouse_x, mouse_y, 3, game_state['game_map'])
+                    elif keys[pygame.K_9]:
+                        selected_player.build("Stable", mouse_x, mouse_y, 3, game_state['game_map'])
+
             # Clic droit => set target
-            if selected_player and 'selected_units' in game_state and len(game_state['selected_units']) > 0:
-                entity_target = closest_entity(game_state, mouse_x, mouse_y)
-                for unit_selected in game_state['selected_units']:
-                    unit_selected.set_target(entity_target)
-                    unit_selected.path = None
-                # On calcule la destination en 2.5D
-                mouse_x, mouse_y = screen_to_2_5d(
-                    mouse_x, mouse_y, screen_width, screen_height,
-                    camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
-                )
-                for unit_selected in game_state['selected_units']:
-                    unit_selected.set_destination((mouse_x, mouse_y), game_state['game_map'])
+                elif selected_player and 'selected_units' in game_state and len(game_state['selected_units']) > 0:
+                    entity_target = closest_entity(game_state, mouse_x, mouse_y)
+                    for unit_selected in game_state['selected_units']:
+                        unit_selected.set_target(entity_target)
+                        unit_selected.path = None
+                    # On calcule la destination en 2.5D
+                    mouse_x, mouse_y = screen_to_2_5d(
+                        mouse_x, mouse_y, screen_width, screen_height,
+                        camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
+                    )
+                    for unit_selected in game_state['selected_units']:
+                        unit_selected.set_destination((mouse_x, mouse_y), game_state['game_map'])
 
         elif event.button == 4:  # molette haut => zoom avant
             camera.set_zoom(camera.zoom * 1.1)

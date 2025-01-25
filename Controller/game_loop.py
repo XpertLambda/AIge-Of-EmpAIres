@@ -164,16 +164,14 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     old_resources = {}
     for p in players:
         old_resources[p.teamID] = p.resources.copy()
-
     draw_timer = 0
     decision_timer = 0
 
     players_target=[None for _ in range(0,len(players))]
     while running:
-        raw_dt = clock.tick(160) / ONE_SECOND
+        raw_dt = clock.tick(1000) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
-        dt = dt * GAME_SPEED
-
+        dt = raw_dt * GAME_SPEED
         events = pygame.event.get()
         for event in events:
             handle_events(event, game_state)
@@ -303,11 +301,16 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 if player_info_surface and game_state['show_player_info']:
                     inf_h = player_info_surface.get_height()
                     screen.blit(player_info_surface, (0, screen_height - inf_h))
-            #archer = Archer(selected_player,0,0)
-            #train_units(selected_player,archer)
+            
+            archer = Archer(selected_player,0,0)
+            barrack = Barracks(selected_player,0,0)
+            print("priorite_5")
+            priorite_5(selected_player,archer,barrack)
+            
+            
 
             draw_pointer(screen)
-
+            
             for pl in game_map.players:
                 for unit in pl.units:
                     if unit.path:
@@ -317,9 +320,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['screen_height'],
                             game_state['camera']
                         )
-            display_fps(screen, clock, font)
+            display_fps(screen, screen_width, clock, font)
             if game_state.get('game_over', False):
                 draw_game_over_overlay(screen, game_state)
+
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False

@@ -61,8 +61,15 @@ class Resources:
         self.wood -= removed_wood
         return (removed_food, removed_gold, removed_wood)
 
-    def has_enough(self, costs):
-        return all(resource >= cost for resource, cost in zip(self.get(), costs))
+    def has_enough(self, resources=(0, 0, 0)):
+        food, gold, wood = resources
+        return not (
+            (food > 0 and self.food < food) or
+            (gold > 0 and self.gold < gold) or
+            (wood > 0 and self.wood < wood)
+        )
+
+
 
     def get(self):
         return (self.food, self.gold, self.wood)
