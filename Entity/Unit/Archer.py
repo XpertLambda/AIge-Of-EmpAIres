@@ -18,12 +18,12 @@ class Archer(Unit):
             y=y,
             team=team,
             acronym="a",
-            max_hp=1000, #30,
+            max_hp=30,
             cost=Resources(food=0, gold=45, wood=25),
             attack_power=4,
             attack_range=4,
             attack_speed=2.03,
-            speed=5,#1,
+            speed=1,
             training_time=35
         )
 

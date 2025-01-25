@@ -16,7 +16,7 @@ class Arrow:
         self.target = target
         self.distance = math.dist((launcher.x, launcher.y), (target.x ,target.y))
         self.attack_power = launcher.attack_power
-        self.speed = 3
+        self.speed = 5
         self.cooldown_frame = None
         self.impact = False
         self.impact_timer = 0
