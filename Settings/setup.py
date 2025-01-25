@@ -6,7 +6,7 @@ import os
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 5
+GAME_SPEED = 1
 FPS_DRAW_LIMITER = 50
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_RATE_PER_SEC = 25 / 60
@@ -20,6 +20,7 @@ UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
 FRAMES_PER_BUILDING = 15
+FRAMES_PER_PROJECTILE = 11
 UNIT_HITBOX = 0.3
 UNIT_ATTACKRANGE = 0.6
 ATTACK_RANGE_EPSILON = 0.5
@@ -164,12 +165,13 @@ PROGRESS_BAR_Y_RATIO = 0.9
 
 BUILDING_RATIO = 100
 UNIT_RATIO = 100
+PROJECTILE_RATIO = 75
 
 HEALTH_BAR_WIDTH = 40
 HEALTH_BAR_HEIGHT = 5
 HEALTH_BAR_OFFSET_Y = 30
 
-Entity_Acronym = {
+Acronym = {
     'resources': {
         ' ': 'grass',
         'W': 'tree',
@@ -191,6 +193,10 @@ Entity_Acronym = {
         'h': 'horseman',
         's': 'swordsman',
         'v': 'villager'
+    },
+    
+    'projectiles': {
+        'a': 'arrow'
     }
 }
 
@@ -212,6 +218,17 @@ villager_tasks = {
     }
 
 sprite_config = {
+    'projectiles':{
+        'arrow': {
+            'directory': 'assets/projectiles/arrow/',
+            'states': 1,
+            'adjust_scale': TILE_SIZE / PROJECTILE_RATIO,
+            'sheet_config': {
+                'columns': 11,
+                'rows': 8
+            },
+        }
+    },
     'buildings': {
         'towncenter': {
             'directory': 'assets/buildings/towncenter/',
@@ -338,8 +355,8 @@ sprite_config = {
                 'columns': 30,
                 'rows': 16
             },
-        }
-    }
+        },
+    },
 }
 
 

@@ -14,6 +14,6 @@ class Horseman(Unit):
             attack_power=10,
             attack_range=UNIT_ATTACKRANGE,
             attack_speed=1.90,
-            speed=1.2,
+            speed=5,#1.2,
             training_time=30
         )

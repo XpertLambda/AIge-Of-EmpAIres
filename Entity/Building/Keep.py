@@ -2,6 +2,7 @@ from collections import deque
 from Entity.Building import Building
 from Models.Resources import Resources
 import math
+from Projectile.Arrow import *
 
 class Keep(Building):
     def __init__(self, team, x=0, y=0):
@@ -90,6 +91,10 @@ class Keep(Building):
                 distance = math.dist(closest_point, (self.x, self.y)) - self.attack_range          
             
             if distance <= 0 :
+                if self.attack_timer == 0:
+                    arrow = Arrow(self, self.attack_target)
+                    arrow.launch(game_map, z_launch=5.5)
+
                 self.state = 'attack'
                 self.attack_timer += dt
                 if self.attack_timer >= self.attack_speed:
