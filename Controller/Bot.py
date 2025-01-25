@@ -7,7 +7,7 @@ from Entity.Building import *
 #Priorité 5
 
 def get_military_unit_count(player_team):
-    print(f"MUC : {sum(1 for unit in player_team.units if not isinstance(unit, Villager))}")
+    #print(f"MUC : {sum(1 for unit in player_team.units if not isinstance(unit, Villager))}")
 
     return sum(1 for unit in player_team.units if not isinstance(unit, Villager))
     

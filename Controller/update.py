@@ -4,9 +4,8 @@ from Models.html import write_full_html
 def update_game_state(game_state, delta_time):
     camera = game_state['camera']
     game_map = game_state['game_map']
-
+    handle_camera(camera, delta_time)
     if not game_state.get('paused', False):
-        handle_camera(camera, delta_time)
         game_map.patch(delta_time)
 
 def handle_camera(camera, delta_time):

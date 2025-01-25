@@ -501,3 +501,27 @@ def draw_game_over_overlay(screen, game_state):
 
     game_state['game_over_button_rect'] = button_rect
     screen.blit(overlay, (0, 0))
+
+def draw_pause_menu(screen, game_state):
+    font = pygame.font.SysFont(None, 50)
+    screen_width = game_state['screen_width']
+    screen_height = game_state['screen_height']
+
+    pause_text = font.render("Pause Menu", True, (255, 255, 255))
+    text_rect = pause_text.get_rect(center=(screen_width // 2, screen_height // 4))
+    screen.blit(pause_text, text_rect)
+
+    button_font = pygame.font.SysFont(None, 36)
+    labels = ["Resume", "Load Game", "Save Game", "Exit"]
+    y_start = text_rect.bottom + 40
+    button_rects = {}
+
+    for label in labels:
+        text_surf = button_font.render(label, True, (255, 255, 255))
+        rect = text_surf.get_rect(center=(screen_width // 2, y_start))
+        pygame.draw.rect(screen, (50, 50, 50), rect.inflate(100, 20))
+        screen.blit(text_surf, rect)
+        button_rects[label] = rect
+        y_start += 60
+
+    game_state['pause_menu_button_rects'] = button_rects

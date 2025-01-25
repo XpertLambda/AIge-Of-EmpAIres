@@ -113,6 +113,8 @@ def handle_events(event, game_state):
         elif event.key in [pygame.K_k]:
             game_state['game_map'].save_map()
             debug_print("[GUI] L => Sauvegarde effectuée.")
+            game_state['notification_message'] = "Partie sauvegardée."
+            game_state['notification_start_time'] = time.time()
 
         #
         # (3) - Touche M => Chargement
@@ -146,11 +148,15 @@ def handle_events(event, game_state):
                     min_x, max_x, min_y, max_y = compute_map_bounds(game_state['game_map'])
                     camera.set_bounds(min_x, max_x, min_y, max_y)
                     game_state['force_full_redraw'] = True
+                    game_state['notification_message'] = "Partie chargée."
+                    game_state['notification_start_time'] = time.time()
                 else:
                     debug_print("[GUI] M => Aucune sauvegarde choisie (annulé).")
 
             except Exception as e:
                 debug_print(f"[GUI] Error loading: {e}")
+                game_state['notification_message'] = f"Erreur: {str(e)}"
+                game_state['notification_start_time'] = time.time()
 
         #
         # (4) - Zoom + / -
@@ -174,13 +180,9 @@ def handle_events(event, game_state):
         # (6) - Touche ESC => on quitte l'application
         #
         elif event.key == pygame.K_ESCAPE:
-            try:
-                os.remove('full_snapshot.html')
-            except:
-                pass
-            debug_print("[GUI] ESC => Quitte le jeu.")
-            pygame.quit()
-            sys.exit()
+            game_state['pause_menu_active'] = not game_state.get('pause_menu_active', False)
+            game_state['paused'] = game_state['pause_menu_active']
+            debug_print("[GUI] ESC => Pause menu toggled.")
 
         #
         # (7) - Mouvements Terminal si on est en mode terminal/both
@@ -242,6 +244,67 @@ def handle_events(event, game_state):
     # (9) - MOUSEBUTTONDOWN
     #
     elif event.type == pygame.MOUSEBUTTONDOWN:
+        if game_state.get('pause_menu_active', False):
+            button_rects = game_state.get('pause_menu_button_rects', {})
+            mx, my = event.pos
+            for label, rect in button_rects.items():
+                if rect.collidepoint(mx, my):
+                    if label == "Resume":
+                        game_state['pause_menu_active'] = False
+                        game_state['paused'] = False
+                    elif label == "Load Game":
+                        from tkinter import Tk, filedialog
+                        try:
+                            root = Tk()
+                            root.withdraw()
+                            chosen_path = filedialog.askopenfilename(
+                                initialdir=SAVE_DIRECTORY,
+                                filetypes=[("Pickle","*.pkl")]
+                            )
+                            root.destroy()
+                            if chosen_path:
+                                from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
+                                from Models.Map import GameMap
+                                game_state['game_map'] = GameMap(0, False, [], generate=False)
+                                game_state['game_map'].load_map(chosen_path)
+                                game_state['players'].clear()
+                                game_state['players'].extend(game_state['game_map'].players)
+                                if game_state['players']:
+                                    game_state['selected_player'] = game_state['players'][0]
+                                else:
+                                    game_state['selected_player'] = None
+
+                                game_state['team_colors'] = generate_team_colors(len(game_state['players']))
+                                camera.offset_x = 0
+                                camera.offset_y = 0
+                                camera.zoom = 1.0
+                                min_x, max_x, min_y, max_y = compute_map_bounds(game_state['game_map'])
+                                camera.set_bounds(min_x, max_x, min_y, max_y)
+                                game_state['force_full_redraw'] = True
+                                game_state['notification_message'] = "Partie chargée."
+                                game_state['notification_start_time'] = time.time()
+                            else:
+                                debug_print("[GUI] M => Aucune sauvegarde choisie (annulé).")
+                        
+                        except Exception as e:
+                            debug_print(f"[GUI] Error loading: {e}")
+                            game_state['notification_message'] = f"Erreur: {str(e)}"
+                            game_state['notification_start_time'] = time.time()
+                        pass
+                    elif label == "Save Game":
+                        game_state['game_map'].save_map()  # Reuse existing save method
+                        debug_print("[GUI] L => Sauvegarde effectuée.")
+                        game_state['notification_message'] = "Partie sauvegardée."
+                        game_state['notification_start_time'] = time.time()
+                    elif label == "Exit":
+                        #delete the snapshot HTML
+                        try:
+                            os.remove('full_snapshot.html')
+                        except:
+                            pass
+                        pygame.quit()
+                        sys.exit()
+            return  # Do not process other events while pause menu is active
         mouse_x, mouse_y = event.pos
         mods = pygame.key.get_mods()
         ctrl_pressed = (mods & pygame.KMOD_CTRL)

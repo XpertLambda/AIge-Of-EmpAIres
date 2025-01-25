@@ -21,13 +21,14 @@ from Controller.drawing import (
 )
 import copy
 from Controller.event_handler import handle_events
-from Controller.update import update_game_state
+from Controller.update import update_game_state, handle_camera
 from Controller.gui import (
     create_player_selection_surface,
     create_player_info_surface,
     get_scaled_gui,
     get_centered_rect_in_bottom_right,
     update_minimap_elements,
+    draw_pause_menu  # add this import
 )
 from Controller.utils import tile_to_screen
 from Controller.Bot import *
@@ -151,6 +152,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'show_player_info': True,
         'show_gui_elements': True,
         'return_to_menu': False,  # Nouveau flag
+        'pause_menu_active': False,  # Nouveau flag
+        'notification_message': "",
+        'notification_start_time': 0.0,
     }
     
     game_map.set_game_state(game_state)
@@ -173,6 +177,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         raw_dt = clock.tick(160) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
+
+        handle_camera(camera, raw_dt * GAME_SPEED)
 
         events = pygame.event.get()
         for event in events:
@@ -318,8 +324,23 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['camera']
                         )
             display_fps(screen,screen_width, clock, font)
+
+            # Affichage de la notification
+            if game_state['notification_message']:
+                if time.time() - game_state['notification_start_time'] < 3:
+                    notif_font = pygame.font.SysFont(None, 28)
+                    notif_surf = notif_font.render(game_state['notification_message'], True, (255,255,0))
+                    screen.blit(notif_surf, (20, 60))  # shifted down from (20, 20)
+                else:
+                    game_state['notification_message'] = ""
+
             if game_state.get('game_over', False):
                 draw_game_over_overlay(screen, game_state)
+            if game_state.get('pause_menu_active'):
+                draw_pause_menu(screen, game_state)
+                draw_pointer(screen)  # draw pointer on top
+                pygame.display.flip()
+                continue
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False
