@@ -80,6 +80,9 @@ def write_full_html(players, game_map):
             <li>
                 [ID {entity.id}] {type(entity).__name__} - État: {entity.state}
             """
+                    # Optionally show training progress if relevant
+                    if getattr(entity, 'training_progress', 0) > 0:
+                        template += f" (progression: {entity.training_progress*100:.0f}%)"
                     if getattr(entity, 'task', None):
                         template += f" (Tache: {entity.task})"
                     template += """
