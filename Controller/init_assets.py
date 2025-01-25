@@ -122,9 +122,7 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     font = pygame.font.Font(None, 36)
     percentage_text = font.render(f"{int(progress * 100)}%", True, text_color)
-    # petit sleep éventuel (historique dans le code)
-    if int(progress * 100) == 96:
-        time.sleep(2)
+
     percentage_text_rect = percentage_text.get_rect(center=(bar_x + bar_width / 2, bar_y + BAR_HEIGHT / 2))
     screen.blit(percentage_text, percentage_text_rect)
 

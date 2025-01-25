@@ -23,12 +23,12 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     ]
     tile_indices = [
         screen_to_tile(
-            sx, sy, 
-            screen_width, screen_height, 
+            sx, sy,
+            screen_width, screen_height,
             camera,
-            HALF_TILE_SIZE / 2, 
+            HALF_TILE_SIZE / 2,
             HALF_TILE_SIZE / 4
-        ) 
+        )
         for sx, sy in corners_screen
     ]
 
@@ -43,14 +43,33 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
 
     visible_entities = set()
     visible_projectiles = set()
+
+    # Entities: Iterate through visible tiles and add entities from those tiles
+    for tile_y in range(min_tile_y, max_tile_y + 1):  # +1 to include max range
+        for tile_x in range(min_tile_x, max_tile_x + 1):  # +1 to include max range
+            entity_set_active = game_map.grid.get((tile_x, tile_y), None)
+            entity_set_inactive = game_map.inactive_matrix.get((tile_x, tile_y), None)
+
+            if entity_set_active:
+                visible_entities.update(entity_set_active)  # Use update for efficiency
+            if entity_set_inactive:
+                visible_entities.update(entity_set_inactive)  # Use update for efficiency
+
+    # Projectiles: Filter projectiles based on their tile position
+    for projectile in game_map.projectiles.values():
+        projx, projy = round(projectile.x), round(projectile.y)
+        if min_tile_x <= projx <= max_tile_x and min_tile_y <= projy <= max_tile_y:  # Check if projectile tile is visible
+            visible_projectiles.add(projectile)
+
+
     for tile_y in range(min_tile_y, max_tile_y):
         for tile_x in range(min_tile_x, max_tile_x):
             # Fill grass
             if tile_x % 10 == 0 and tile_y % 10 == 0:
                 grass_sx, grass_sy = tile_to_screen(
-                    tile_x + 4.5, 
-                    tile_y + 4.5, 
-                    HALF_TILE_SIZE, 
+                    tile_x + 4.5,
+                    tile_y + 4.5,
+                    HALF_TILE_SIZE,
                     HALF_TILE_SIZE / 2,
                     camera,
                     screen_width,
@@ -58,20 +77,6 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                 )
                 fill_grass(screen, grass_sx, grass_sy, camera)
 
-            entity_set_active = game_map.grid.get((tile_x, tile_y), None)
-            entity_set_inactive = game_map.inactive_matrix.get((tile_x, tile_y), None)
-
-            if entity_set_active:
-                for ent in entity_set_active:
-                    visible_entities.add(ent)
-            if entity_set_inactive:
-                for ent_inactive in entity_set_inactive:
-                    visible_entities.add(ent_inactive)
-
-    for projectile in game_map.projectiles.values():
-        projx, projy = round(projectile.x), round(projectile.y)
-        if min_tile_x < projx < max_tile_x and min_tile_y < projy < max_tile_y :
-            visible_projectiles.add(projectile)
 
     visible_list = list(visible_entities)
     visible_list.sort(key=lambda e: (e.x + e.y))
@@ -86,15 +91,15 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
         entity.display_range(screen, screen_width, screen_height, camera)
         if hasattr(entity, 'spawnsUnits') and entity.spawnsUnits:
             ent_screen_x, ent_screen_y = tile_to_screen(
-                entity.x, 
-                entity.y, 
-                HALF_TILE_SIZE, 
+                entity.x,
+                entity.y,
+                HALF_TILE_SIZE,
                 HALF_TILE_SIZE / 2,
                 camera,
                 screen_width,
                 screen_height
             )
-            
+
             # Always show training progress if there's an active training
             if entity.current_training_unit:
                 bar_width = 80
@@ -123,9 +128,9 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                 button_width = 120
                 button_height = 25
                 ent_screen_x, ent_screen_y = tile_to_screen(
-                    entity.x, 
-                    entity.y, 
-                    HALF_TILE_SIZE, 
+                    entity.x,
+                    entity.y,
+                    HALF_TILE_SIZE,
                     HALF_TILE_SIZE / 2,
                     camera,
                     screen_width,
@@ -164,7 +169,7 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
 
     for projectile in visible_projectiles:
         projectile.display(screen, screen_width, screen_height, camera, delta_time)
-    
+
 
     # Draw selection rectangle if needed
     if game_state.get('selecting_entities', False):

@@ -1,7 +1,7 @@
 import time
 import math
 from Models.Resources import Resources
-from Settings.setup import HALF_TILE_SIZE
+from Settings.setup import HALF_TILE_SIZE, user_choices
 from Controller.utils import tile_to_screen
 from Controller.drawing import draw_healthBar, draw_hitbox
 import pygame
@@ -87,41 +87,42 @@ class Entity:
     def display_hitbox(self, screen, screen_width, screen_height, camera):
         #if self.hitbox_color != (255, 0, 0):
         #return
-        corner_distance = self.size / 2.0
-        corners = [
-            (self.x - corner_distance, self.y - corner_distance),
-            (self.x - corner_distance, self.y + corner_distance),
-            (self.x + corner_distance, self.y + corner_distance),
-            (self.x + corner_distance, self.y - corner_distance)
-        ]
-        
-        screen_corners = []
-        for corner in corners:
-            x_screen, y_screen = tile_to_screen(
-                corner[0], 
-                corner[1], 
-                HALF_TILE_SIZE, 
-                HALF_TILE_SIZE / 2, 
-                camera, 
-                screen_width, 
-                screen_height
-            )
-            screen_corners.append((x_screen, y_screen))
-        
-        draw_hitbox(screen, screen_corners, camera.zoom, self.hitbox_color)
-        center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        hitbox_iso = self.hitbox / math.cos(math.radians(45))
-        width =  hitbox_iso * camera.zoom * HALF_TILE_SIZE
-        height = hitbox_iso * camera.zoom * HALF_TILE_SIZE / 2
-        x = center[0] - width // 2
-        y = center[1] - height // 2 
-        #pygame.draw.ellipse(screen, (255, 0, 0), (x, y, width, height), 1)
-        #pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
+        if user_choices["bot_level"] == "DEBUG" :
+            corner_distance = self.size / 2.0
+            corners = [
+                (self.x - corner_distance, self.y - corner_distance),
+                (self.x - corner_distance, self.y + corner_distance),
+                (self.x + corner_distance, self.y + corner_distance),
+                (self.x + corner_distance, self.y - corner_distance)
+            ]
+            
+            screen_corners = []
+            for corner in corners:
+                x_screen, y_screen = tile_to_screen(
+                    corner[0], 
+                    corner[1], 
+                    HALF_TILE_SIZE, 
+                    HALF_TILE_SIZE / 2, 
+                    camera, 
+                    screen_width, 
+                    screen_height
+                )
+                screen_corners.append((x_screen, y_screen))
+            
+            draw_hitbox(screen, screen_corners, camera.zoom, self.hitbox_color)
+            center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            hitbox_iso = self.hitbox / math.cos(math.radians(45))
+            width =  hitbox_iso * camera.zoom * HALF_TILE_SIZE
+            height = hitbox_iso * camera.zoom * HALF_TILE_SIZE / 2
+            x = center[0] - width // 2
+            y = center[1] - height // 2 
+            #pygame.draw.ellipse(screen, (255, 0, 0), (x, y, width, height), 1)
+            #pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
 
     def display_range(self, screen, screen_width, screen_height, camera):
         #if self.range_color != (255, 0, 0):
         #return
-        if hasattr(self, 'attack_range') and self.attack_range:
+        if hasattr(self, 'attack_range') and self.attack_range and user_choices["bot_level"] == "DEBUG":
             center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
             range_iso = self.attack_range / math.cos(math.radians(45))
             width =  range_iso * camera.zoom * HALF_TILE_SIZE 

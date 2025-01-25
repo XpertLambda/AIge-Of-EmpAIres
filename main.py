@@ -197,7 +197,7 @@ def ask_terminal_inputs_non_blocking():
                 user_choices["validated"] = True
                 return
 
-        time.sleep(0.01)
+        time.sleep(0.005)
 
 
 def background_load_assets(screen, sw, sh):
@@ -316,6 +316,8 @@ def main():
             from Controller.terminal_display import start_terminal_interface
             t_curses = threading.Thread(target=start_terminal_interface, args=(game_map,), daemon=True)
             t_curses.start()
+        else:
+            t_curses = None
 
         # Boucle de jeu
         from Controller.game_loop import game_loop
