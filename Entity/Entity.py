@@ -120,7 +120,7 @@ class Entity:
 
     def display_range(self, screen, screen_width, screen_height, camera):
         #if self.range_color != (255, 0, 0):
-        return
+        #return
         if hasattr(self, 'attack_range') and self.attack_range:
             center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
             range_iso = self.attack_range / math.cos(math.radians(45))

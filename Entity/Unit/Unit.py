@@ -44,14 +44,15 @@ class Unit(Entity):
 
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
-        self.animator(dt)
         if self.isAlive():
             self.seekAttack(game_map, dt)
             self.seekMove(game_map, dt)
             #self.seekCollision(game_map, dt) Need to be improved
+            self.animator(dt)
             self.seekIdle()
         else:
             self.death(game_map, dt)
+            self.animator(dt)
 
     # ---------------- Controller ----------------
     def seekIdle(self):
@@ -160,11 +161,7 @@ class Unit(Entity):
                     max(top, min(self.y, bottom))
                 )
                 distance = math.dist(closest_point, (self.x, self.y)) - self.attack_range          
-            
             if distance <= 0 :
-                ## DEBUG INSTRUCTIONS
-                self.range_color = (255, 0, 0)
-                ## END HERE
 
                 self.state = 'attack'
                 self.direction = get_direction(get_snapped_angle((self.x, self.y), (self.attack_target.x, self.attack_target.y))) 
@@ -215,14 +212,16 @@ class Unit(Entity):
 
     def animator(self, dt):
         if self.state:
+            if self.cooldown_frame:
+                self.current_frame = self.cooldown_frame
+                return
             self.frame_duration += dt
             frame_time = 1.0 / self.frames
+
             if self.frame_duration >= frame_time:
                 self.frame_duration -= frame_time
                 self.current_frame = (self.current_frame + 1) % self.frames
 
-            if self.cooldown_frame:
-                self.current_frame = self.cooldown_frame
 
     # ---------------- Display Logic ----------------
     def display(self, screen, screen_width, screen_height, camera, dt):

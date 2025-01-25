@@ -25,6 +25,7 @@ class GameMap:
         self.grid = {}
         self.resources = {}
         self.inactive_matrix = {}
+        self.projectiles = {}
         self.game_state = None  
 
         # On conserve ces deux variables pour le scroll curses :
@@ -319,6 +320,13 @@ class GameMap:
         if not self.inactive_matrix[pos]:
             del self.inactive_matrix[pos]
 
+    def add_projectile(self, projectile):
+        self.projectiles[projectile.id] = projectile
+
+    def remove_projectile(self, projectile):
+        self.projectiles[projectile.id] = None
+        del self.projectiles[projectile.id]
+
     def patch(self, dt):
         active_entities = set()
         for entities in self.grid.values():
@@ -337,6 +345,11 @@ class GameMap:
             entity.update(self, dt)
             if not entity.state:
                 self.remove_inactive(entity)
+        projectiles = self.projectiles.copy()
+        for projectile in projectiles.values():
+            projectile.update(self, dt)
+            if projectile.state == '':
+                self.remove_projectile(projectile)
 
     def set_game_state(self, game_state):
         self.game_state = game_state

@@ -77,20 +77,15 @@ class Building(Entity):
     # ---------------- Update Entity --------------
     def update(self, game_map, dt):
         if self.isAlive():
-            self.seekConstruction(dt)              
-            if self.spawnsUnits:
-                self.update_training(dt, game_map, self.team)
+            self.seekConstruction(dt)
+            self.seekTrain(game_map, dt)              
             self.seekIdle()
-            if self.current_training_unit:
-                self.state = 'training'
-            elif self.state == 'training':
-                self.state = 'idle'
         else:
             self.death(game_map)
         self.animator(dt)
 
     def seekIdle(self):
-        if self.processTime >= self.dynamicBuildTime and self.isAlive():
+        if self.processTime >= self.dynamicBuildTime and self.isAlive() and self.state not in ['training']:
             self.dynamicBuildTime = self.buildTime
             self.processTime = self.buildTime
             self.state = 'idle'
@@ -104,13 +99,11 @@ class Building(Entity):
         self.hp = 0
 
     def death(self, game_map):
-        if self.state != 'death' :
+        if self.state != 'death':
             self.kill()
 
-        if self.current_frame == self.frames - 1 and self.state == 'death':
-            self.state = ''
-
-        if self.state == 7 and not self.removed:
+        # Keep state='death' so it properly appears in HTML instead of setting it to ''.
+        if self.current_frame == self.frames - 1 and not self.removed and self.state == 'death':
             self.removed = True
             for player in game_map.game_state['players']:
                 if hasattr(player, 'buildings') and self in player.buildings:
@@ -158,9 +151,12 @@ class Building(Entity):
 
     def add_to_training_queue(self, team):
         """
-        Attempt to enqueue a new unit if enough resources. 
+        Attempt to enqueue a new unit if enough resources and not in constuction. 
         Return True if successful, False otherwise.
         """
+        if self.processTime < self.dynamicBuildTime:
+            return False
+
         if self.acronym not in UNIT_TRAINING_MAP:
             return False
 
@@ -182,6 +178,9 @@ class Building(Entity):
         """
         Updates the building's training queue each frame.
         """
+        if self.processTime < self.dynamicBuildTime:
+            return
+
         if not self.training_queue and not self.current_training_unit:
             return
 
@@ -299,3 +298,32 @@ class Building(Entity):
 
         self.dynamicBuildTime = self.get_buildTime(num_builders)
         self.processTime += dt
+
+    def seekTrain(self, game_map, dt):
+        if not self.spawnsUnits or self.processTime < self.dynamicBuildTime:
+            return
+            
+        if self.current_training_unit:
+            self.state = 'training'
+            self.current_training_time_left -= dt
+            unit_class = UNIT_CLASSES[self.current_training_unit]
+            total_time = unit_class(team=self.team).training_time / GAME_SPEED
+            self.training_progress = max(0.0, min(1.0, 1.0 - (self.current_training_time_left / total_time)))
+
+            if self.current_training_time_left <= 0:
+                self.spawn_trained_unit(self.current_training_unit, game_map, self.team)
+                self.current_training_unit = None
+                self.current_training_time_left = 0
+                self.training_progress = 0.0
+                self.state = 'idle'
+        elif not self.training_queue:
+            if self.state == 'training':
+                self.state = 'idle'
+            return
+        else:
+            next_unit_name = self.training_queue.pop(0)
+            unit_class = UNIT_CLASSES[next_unit_name]
+            unit = unit_class(team=self.team)
+            self.current_training_unit = next_unit_name
+            self.current_training_time_left = unit.training_time / GAME_SPEED
+            self.training_progress = 0.0
