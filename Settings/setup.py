@@ -25,6 +25,7 @@ UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
 FRAMES_PER_BUILDING = 15
+FRAMES_PER_PROJECTILE = 11
 UNIT_HITBOX = 0.3
 UNIT_ATTACKRANGE = 0.6
 ATTACK_RANGE_EPSILON = 0.5
@@ -74,8 +75,8 @@ difficulty_config = {
         'Resources' : Resources(food=99999, gold=99999, wood=99999),
         'Units' : {
             'Villager' : 1,
-            'Archer' : 2,
-            'Horseman' : 0,
+            'Archer' : 5,
+            'Horseman' : 5,
             'Swordsman' : 0
         },
         'Buildings' : {
@@ -85,7 +86,7 @@ difficulty_config = {
             'Stable' : 0, 
             'ArcheryRange' : 0,
             'Farm' : 0,
-            'Keep' : 0,
+            'Keep' : 5,
             'Camp' : 0,
         }
     }
@@ -169,12 +170,13 @@ PROGRESS_BAR_Y_RATIO = 0.9
 
 BUILDING_RATIO = 100
 UNIT_RATIO = 100
+PROJECTILE_RATIO = 75
 
 HEALTH_BAR_WIDTH = 40
 HEALTH_BAR_HEIGHT = 5
 HEALTH_BAR_OFFSET_Y = 30
 
-Entity_Acronym = {
+Acronym = {
     'resources': {
         ' ': 'grass',
         'W': 'tree',
@@ -196,6 +198,10 @@ Entity_Acronym = {
         'h': 'horseman',
         's': 'swordsman',
         'v': 'villager'
+    },
+    
+    'projectiles': {
+        'a': 'arrow'
     }
 }
 
@@ -217,6 +223,17 @@ villager_tasks = {
     }
 
 sprite_config = {
+    'projectiles':{
+        'arrow': {
+            'directory': 'assets/projectiles/arrow/',
+            'states': 1,
+            'adjust_scale': TILE_SIZE / PROJECTILE_RATIO,
+            'sheet_config': {
+                'columns': 11,
+                'rows': 8
+            },
+        }
+    },
     'buildings': {
         'towncenter': {
             'directory': 'assets/buildings/towncenter/',
@@ -343,8 +360,8 @@ sprite_config = {
                 'columns': 30,
                 'rows': 16
             },
-        }
-    }
+        },
+    },
 }
 
 
@@ -380,7 +397,7 @@ ITEM_HEIGHT = 25
 
 
 RESOURCE_THRESHOLDS = {
-    'food': 50,  # Minimum acceptable food level
-    'wood': 50, # Minimum acceptable wood level
-    'gold': 50   # Minimum acceptable gold level
+    'food': 300, 
+    'wood': 350, 
+    'gold': 350   
 }

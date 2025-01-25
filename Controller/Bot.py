@@ -1,7 +1,8 @@
 from Models.Team import *
-from Settings.setup import  RESOURCE_THRESHOLDS
+from Settings.setup import  RESOURCE_THRESHOLDS, UNIT_CLASSES, UNIT_TRAINING_MAP
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
-from Entity.Building import Building
+from Entity.Building import *
+
 
 #Priorité 5
 
@@ -69,7 +70,22 @@ def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
     for resource in ['food', 'wood', 'gold']:
         if getattr(current_resources, resource, 0) < RESOURCE_THRESHOLDS.get(resource, 0):
             return resource
+def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
+    for resource in ['food', 'wood', 'gold']:
+        if getattr(current_resources, resource, 0) < RESOURCE_THRESHOLDS.get(resource, 0):
+            return resource
     return None
+
+
+def find_resources(game_map, resource_type):
+    if not resource_type:
+        return []
+    resource_positions = []
+    for position, entities in game_map.grid.items():
+        for entity in entities:
+            if isinstance(entity, resource_type):
+                resource_positions.append(position)
+    return resource_positions
 
 
 def find_resources(game_map, resource_type):
@@ -99,23 +115,27 @@ def reallocate_villagers(resource_in_shortage, team, game_map):
 def check_and_address_resources(team, game_map, RESOURCE_THRESHOLDS):
     resource_shortage = get_resource_shortage(team.resources, RESOURCE_THRESHOLDS)
     if resource_shortage:
-        reallocate_villagers(resource_shortage, team.units, game_map)
+        reallocate_villagers(resource_shortage, team, game_map)
+
     
-        
-# AI resource management Logic
+ 
 
-# 1. Monitor resource levels for shortages
-# - Use the current resource levels and predefined thresholds.
-# - Identify if any resource is below its threshold.
+def add_to_training_queue(self, team):
+        """
+        Attempt to enqueue a new unit if enough resources. 
+        Return True if successful, False otherwise.
+        """
+        if self.acronym not in UNIT_TRAINING_MAP:
+            return False
 
-# 2. Reallocate villagers to address resource shortages
-# - Find idle villagers or villagers collecting less critical resources.
-# - Assign them to collect the resource in shortage.
-# - Ensure villagers are directed to the closest available resource node.
-
-# 3. Integrate into the game loop
-# - Periodically check resource levels and act accordingly.
-# - Address shortages by reallocating villagers.
+        unit_name = UNIT_TRAINING_MAP[self.acronym]
+        unit_class = UNIT_CLASSES[unit_name]
+        unit = unit_class(team=self.team)
+        if (team.resources.has_enough(unit.cost.get()) and team.population < team.maximum_population ):
+                    team.resources.decrease_resources(unit.cost.get())
+                    self.training_queue.append(unit_name)
+                    return True
+        return False
 
 
 
@@ -237,3 +257,4 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
         modify_target(selected_player,None,players_target)
 
 
+        

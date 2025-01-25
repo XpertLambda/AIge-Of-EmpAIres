@@ -24,9 +24,11 @@ def screen_to_tile(sx, sy, screen_width, screen_height, camera, a, b):
     y = ((iso_y / b) - (iso_x / a)) / 2
     return round(x), round(y)
 
-def tile_to_screen(x, y, width, height, camera, screen_width, screen_height):
-    iso_x = (x - y) * (width / 2)
-    iso_y = (x + y) * (height / 2)
+def tile_to_screen(x, y, tile_width, tile_height, camera, screen_width, screen_height, z=0):
+    iso_x = (x - y) * (tile_width / 2)
+    iso_y = (x + y) * (tile_height / 2)
+
+    iso_y -= z * tile_height/2
     screen_x = (iso_x + camera.offset_x) * camera.zoom + screen_width / 2
     screen_y = (iso_y + camera.offset_y) * camera.zoom + screen_height / 2
     return screen_x, screen_y

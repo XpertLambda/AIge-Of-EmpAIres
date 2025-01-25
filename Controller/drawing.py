@@ -42,6 +42,7 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     max_tile_y = min(game_map.num_tiles_y - 1, max(y_candidates) + margin)
 
     visible_entities = set()
+    visible_projectiles = set()
     for tile_y in range(min_tile_y, max_tile_y):
         for tile_x in range(min_tile_x, max_tile_x):
             # Fill grass
@@ -67,8 +68,13 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                 for ent_inactive in entity_set_inactive:
                     visible_entities.add(ent_inactive)
 
+    for projectile in game_map.projectiles.values():
+        projx, projy = round(projectile.x), round(projectile.y)
+        if min_tile_x < projx < max_tile_x and min_tile_y < projy < max_tile_y :
+            visible_projectiles.add(projectile)
+
     visible_list = list(visible_entities)
-    visible_list.sort(key=lambda e: (e.y, e.x))
+    visible_list.sort(key=lambda e: (e.x + e.y))
 
     game_state['train_button_rects'] = {}
     current_time = time.time()
@@ -78,7 +84,6 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
         entity.display_hitbox(screen, screen_width, screen_height, camera)
         entity.display(screen, screen_width, screen_height, camera, delta_time)
         entity.display_range(screen, screen_width, screen_height, camera)
-
         if hasattr(entity, 'spawnsUnits') and entity.spawnsUnits:
             ent_screen_x, ent_screen_y = tile_to_screen(
                 entity.x, 
@@ -156,6 +161,10 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                             screen.blit(warn_surf, (button_x, button_y - 22))
                         else:
                             game_state['insufficient_resources_feedback'].pop(entity.entity_id, None)
+
+    for projectile in visible_projectiles:
+        projectile.display(screen, screen_width, screen_height, camera, delta_time)
+    
 
     # Draw selection rectangle if needed
     if game_state.get('selecting_entities', False):
@@ -259,7 +268,7 @@ def draw_path(screen, unit_center, screenPath, zoom, color):
     pygame.draw.circle(screen, color, unit_center, int(5 * zoom))
 
 def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
-    name = Entity_Acronym[category][acronym]
+    name = Acronym[category][acronym]
     scaled_sprite = get_scaled_sprite(name, category, zoom, state, direction, frame, variant)
     if scaled_sprite is None:
         return
