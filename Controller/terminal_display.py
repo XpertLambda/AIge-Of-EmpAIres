@@ -125,7 +125,7 @@ def _curses_main(stdscr, game_map):
                 elif c in [ord('q'), ord('Q')]:
                     user_choices["menu_result"] = "quit"
                     chosen = 'q'
-                time.sleep(0.01)
+                time.sleep(0.005)
             # On referme curses
             running = False
             break
