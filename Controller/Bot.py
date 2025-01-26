@@ -245,12 +245,13 @@ def repair_critical_buildings(player_team):
 #Priority_1
 
 #Priority_1
-ATTACK_RADIUS = TILE_SIZE * 5
+ATTACK_RADIUS = 5
+
 def is_under_attack(player_team, enemy_team):
-    for tile, building in player_team.zone.items():
+    for tile in player_team.zone.items():
         for enemy in enemy_team.units:
             if not isinstance(enemy, Villager):
-                if math.dist(tile, (enemy.x, enemy.y)) < ATTACK_RADIUS:
+                if math.dist(tile, (enemy.x, enemy.y)) <= ATTACK_RADIUS:
                     return True
     return False
  
