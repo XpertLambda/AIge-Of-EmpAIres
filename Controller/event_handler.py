@@ -101,11 +101,11 @@ def handle_events(event, game_state):
             debug_print(f"[GUI] F1 => Show/Hide GUI elements={game_state['show_gui_elements']}")
             
         #
-        # (2) - Touche F2 => bascule health bars
+        # (2) - Touche F3 => bascule health bars
         #
-        if event.key == pygame.K_F2:
+        if event.key == pygame.K_F3:
             game_state['show_all_health_bars'] = not game_state['show_all_health_bars']
-            debug_print(f"[GUI] F2 => show_all_health_bars={game_state['show_all_health_bars']}")
+            debug_print(f"[GUI] F3 => show_all_health_bars={game_state['show_all_health_bars']}")
 
         #
         # (2) - Touche L => Sauvegarde
@@ -185,12 +185,18 @@ def handle_events(event, game_state):
             game_state['paused'] = game_state['pause_menu_active']
             debug_print("[GUI] ESC => Pause menu toggled.")
 
+
+        elif event.key == pygame.K_F2:
+            game_state['show_player_info'] = not game_state['show_player_info']
+
+        if event.key == pygame.K_F4:
+            game_state['show_unit_and_building_health_bars'] = not game_state.get('show_unit_and_building_health_bars', False)
+            debug_print(f"[GUI] F4 => show_unit_and_building_health_bars={game_state['show_unit_and_building_health_bars']}")
+
         #
         # (7) - Mouvements Terminal si on est en mode terminal/both
         #       => on modifie terminal_view_x / y
         #
-        elif event.key == pygame.K_F3:
-            game_state['show_player_info'] = not game_state['show_player_info']
         else:
             from Settings.setup import user_choices
             # Vérifie si c'est le mode Terminal or Both

@@ -184,10 +184,19 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
 
     # Health bars
     show_all_bars = game_state.get('show_all_health_bars', False)
+    show_unit_and_building = game_state.get('show_unit_and_building_health_bars', False)
+
     if show_all_bars:
         for entity in visible_list:
             color_val = get_entity_bar_color(entity, game_state, team_colors)
             entity.display_healthbar(screen, screen_width, screen_height, camera, color_val)
+    elif show_unit_and_building:
+        from Entity.Unit.Unit import Unit
+        from Entity.Building import Building
+        for entity in visible_list:
+            if isinstance(entity, Unit) or isinstance(entity, Building):
+                color_val = get_entity_bar_color(entity, game_state, team_colors)
+                entity.display_healthbar(screen, screen_width, screen_height, camera, color_val)
     else:
         selected_entities = game_state.get('selected_entities', [])
         for entity in visible_list:
