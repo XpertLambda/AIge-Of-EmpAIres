@@ -100,7 +100,7 @@ class Building(Entity):
             self.hp = 0
 
         # Keep state='death' so it properly appears in HTML instead of setting it to ''.
-        if self.current_frame == self.frames - 1  and self.state == 'death':
+        if self.current_frame == self.frames - 1 :
             self.state = ''
             game_map.game_state['player_info_updated'] = True
 
