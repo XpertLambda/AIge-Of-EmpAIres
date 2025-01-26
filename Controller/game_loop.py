@@ -164,7 +164,14 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         old_resources[p.teamID] = p.resources.copy()
 
     draw_timer = 0
+    bots = []
+    for player in players:
+        bot = Bot(player, game_map)  # Crée un bot pour chaque joueur
+        bots.append(bot)
+
+    frame_count = 0
     while running:
+        frame_count+=1
         raw_dt = clock.tick(160) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
@@ -233,7 +240,22 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = False
 
         update_game_state(game_state, dt)
+        # ============================================================
+        # MODIFICATION : Faire agir les bots
+        # ============================================================
+        if frame_count % 10 == 0:  # Agir tous les 10 frames pour optimiser les performances
+            for bot in bots:
+                if not game_state.get('paused', False):  # Ne pas agir si le jeu est en pause
+                    bot.balance_units()  # Gérer l'entraînement des unités
+                    bot.maintain_army()  # Gérer l'armée et les attaques
+                    bot.check_and_address_resources()  # Gérer les ressources
+                    bot.build_structure(clock)  # Construire des bâtiments si nécessaire
 
+                    # Ajuster les priorités en fonction des unités ennemies (tous les 5 secondes)
+                    if frame_count % (5 * 60) == 0:  # 5 secondes (60 FPS)
+                        for enemy_player in players:
+                            if enemy_player.teamID != bot.player_team.teamID:
+                                bot.adjust_priorities(enemy_player)
         # Remove players who are dead
         for p in players[:]:
             if is_player_dead(p):

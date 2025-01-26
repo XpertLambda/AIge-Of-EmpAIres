@@ -1,7 +1,7 @@
 from Models.Team import *
 from Settings.setup import RESOURCE_THRESHOLDS
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
-from Entity.Building import Building, add_to_training_queue, UNIT_TRAINING_MAP
+from Entity.Building import Building
 from Settings.setup import *
 from Settings.entity_mapping import *
 from Entity.Entity import *

@@ -265,6 +265,7 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     if key in gui_cache:
         return gui_cache[key]
 
+
     original = gui_elements[ui_name][variant]
     ow, oh = original.get_width(), original.get_height()
 
