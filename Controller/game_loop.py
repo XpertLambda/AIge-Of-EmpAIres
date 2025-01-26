@@ -44,7 +44,7 @@ from Settings.setup import (
     FPS_DRAW_LIMITER
 )
 
-from Controller.Bot import manage_battle
+from Controller.Bot import Bot
 
 def is_player_dead(player):
     # Simple check: no units, no buildings, and zero resources to rebuild
@@ -234,7 +234,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 update_minimap_elements(game_state)
             update_counter += dt
 
-        manage_battle(selected_player,players_target,players,game_map,dt)
+        Bot.manage_battle(selected_player,players_target,players,game_map,dt)
         # Surfaces
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):
@@ -295,7 +295,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         if decision_timer >= 1/DPS :
             decision_timer = 0
             for player in players:
-                manage_battle(player,players_target,players,game_map,dt)
+                Bot.manage_battle(player,players_target,players,game_map,dt)
 
         if screen is not None and draw_timer >= 1/FPS_DRAW_LIMITER:
             draw_timer = 0

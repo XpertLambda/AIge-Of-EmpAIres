@@ -6,7 +6,7 @@ from Controller.drawing import draw_sprite, draw_healthBar, draw_hitbox
 import pygame
 from pygame.locals import *
 from collections import deque
-import numpy as np
+#import numpy as np
 
 class Arrow:
     id = 0

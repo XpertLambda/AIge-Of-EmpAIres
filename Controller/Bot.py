@@ -1,7 +1,8 @@
+import math
 from Models.Team import *
-from Settings.setup import RESOURCE_THRESHOLDS
+from Settings.setup import RESOURCE_THRESHOLDS, TILE_SIZE
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
-from Entity.Building import Building
+from Entity.Building import Building, Keep
 from Settings.setup import *
 from Settings.entity_mapping import *
 from Entity.Entity import *
@@ -14,22 +15,157 @@ class Bot:
     def __init__(self, player_team, game_map):
         self.player_team = player_team
         self.game_map = game_map
-
+        self.PRIORITY_UNITS = {
+            'a': 3,  # Archers
+            's': 2,  # Swordsmen
+            'h': 1   # Horsemen
+        }
+        self.ATTACK_RADIUS = TILE_SIZE * 5  # Rayon d'attaque pour détecter les ennemis
+    
     def get_military_units(self):
         """
         Retourne une liste des unités militaires (non villageois) de l'équipe.
         """
         return [unit for unit in self.player_team.units if not isinstance(unit, Villager)]
 
-    def train_units(self, building, unit_type):
+    def train_units(self, unit_type):
         """
-        Entraîne une unité dans un bâtiment spécifique.
-        :param building: Le bâtiment qui entraîne l'unité.
-        :param unit_type: Le type d'unité à entraîner.
+        Entraîne une unité en sélectionnant automatiquement le bon bâtiment.
+        :param unit_type: Le type d'unité à entraîner (par exemple, Villager, Archer, etc.).
         """
-        if hasattr(building, 'add_to_training_queue'):
-            building.add_to_training_queue(unit_type)
+        # Dictionnaire qui associe chaque type d'unité à son bâtiment correspondant
+        UNIT_TO_BUILDING_MAP = {
+            'v': 'TownCentre',  # Villageois
+            'a': 'ArcheryRange',  # Archer
+            's': 'Barracks',  # Swordsman
+            'h': 'Stable'  # Horseman
+        }
 
+        # Récupérer l'acronyme de l'unité (par exemple, 'v' pour Villager)
+        unit_acronym = unit_type.acronym if hasattr(unit_type, 'acronym') else None
+
+        if unit_acronym and unit_acronym in UNIT_TO_BUILDING_MAP:
+            # Récupérer le type de bâtiment correspondant
+            building_type = UNIT_TO_BUILDING_MAP[unit_acronym]
+
+            # Trouver le premier bâtiment correspondant dans l'équipe du joueur
+            for building in self.player_team.buildings:
+                if building.acronym == building_type[0]:  # On compare avec le premier caractère de l'acronyme
+                    if hasattr(building, 'add_to_training_queue'):
+                        # Entraîner l'unité dans ce bâtiment
+                        success = building.add_to_training_queue(self.player_team)
+                        if success:
+                            debug_print(f"Added {unit_type.__name__} to training queue in {building.acronym}.")
+                        else:
+                            debug_print(f"Failed to add {unit_type.__name__} to training queue in {building.acronym}.")
+                        return
+            debug_print(f"No available {building_type} found to train {unit_type.__name__}.")
+        else:
+            debug_print(f"No building mapping found for unit type: {unit_type.__name__}.")
+
+    def is_under_attack(self, enemy_team):
+        """
+        Vérifie si l'équipe du joueur est sous attaque.
+        :param enemy_team: L'équipe ennemie.
+        :return: True si sous attaque, False sinon.
+        """
+        for building in self.player_team.buildings:
+            if building.hp < building.max_hp:  # Bâtiment endommagé
+                return True
+            for enemy in enemy_team.units:
+                if not isinstance(enemy, Villager):
+                    if math.dist((building.x, building.y), (enemy.x, enemy.y)) < self.ATTACK_RADIUS:
+                        return True
+        return False
+    
+    def get_critical_points(self):
+        """
+        Retourne une liste des points critiques (bâtiments gravement endommagés).
+        :return: Liste des bâtiments critiques triés par gravité des dégâts.
+        """
+        if not self.player_team.buildings:
+            return []
+        critical_points = [building for building in self.player_team.buildings if building.hp / building.max_hp < 0.3]
+        critical_points.sort(key=lambda b: b.hp / b.max_hp)
+        return critical_points
+    
+    def gather_units_for_defense(self, critical_points, enemy_team, game_map, dt):
+        """
+        Rassemble les unités pour défendre les points critiques.
+        :param critical_points: Liste des bâtiments critiques.
+        :param enemy_team: L'équipe ennemie.
+        :param game_map: La carte du jeu.
+        :param dt: Le temps écoulé depuis la dernière frame.
+        """
+        for point in critical_points:
+            for unit in self.player_team.units:
+                if not hasattr(unit, 'carry'):  # Ignorer les villageois transportant des ressources
+                    if not self.search_for_target(unit, enemy_team, attack_mode=True):
+                        unit.set_destination((point.x, point.y), game_map)
+                    elif unit.attack_target and unit.attack_target.isAlive():
+                        unit.seekAttack(game_map, dt)
+
+    def can_build_building(self, building):
+        """
+        Vérifie si l'équipe a suffisamment de ressources pour construire un bâtiment.
+        :param building: Le type de bâtiment à construire.
+        :return: True si les ressources sont suffisantes, False sinon.
+        """
+        return self.player_team.resources.has_enough(building.cost)
+    
+    def build_defensive_structure(self, building_type, location, num_builders, game_map):
+        """
+        Construit une structure défensive à un emplacement donné.
+        :param building_type: Le type de bâtiment à construire.
+        :param location: Les coordonnées (x, y) de l'emplacement.
+        :param num_builders: Le nombre de villageois à affecter à la construction.
+        :param game_map: La carte du jeu.
+        """
+        x, y = location
+        if self.can_build_building(building_type):
+            self.player_team.build(building_type.__name__, x, y, num_builders, game_map)
+    
+    def defend_under_attack(self, enemy_team, game_map, dt):
+        """
+        Déclenche la défense si l'équipe est sous attaque.
+        :param enemy_team: L'équipe ennemie.
+        :param game_map: La carte du jeu.
+        :param dt: Le temps écoulé depuis la dernière frame.
+        """
+        if self.is_under_attack(enemy_team):
+            critical_points = self.get_critical_points()
+            self.gather_units_for_defense(critical_points, enemy_team, game_map, dt)
+            if self.can_train_units(Archer):
+                self.train_units(Archer)
+            if critical_points and self.can_build_building(Keep):
+                critical_location = (critical_points[0].x, critical_points[0].y)
+                self.build_defensive_structure(Keep, critical_location, 3, game_map)
+    
+    def manage_battle(self, enemy_team, game_map, dt):
+        """
+        Gère les batailles en fonction de la situation actuelle.
+        :param enemy_team: L'équipe ennemie.
+        :param game_map: La carte du jeu.
+        :param dt: Le temps écoulé depuis la dernière frame.
+        """
+        if self.is_under_attack(enemy_team):
+            self.defend_under_attack(enemy_team, game_map, dt)
+    
+    def search_for_target(self, unit, enemy_team, attack_mode=True):
+        """
+        Recherche une cible pour une unité donnée.
+        :param unit: L'unité qui cherche une cible.
+        :param enemy_team: L'équipe ennemie.
+        :param attack_mode: True pour attaquer, False pour défendre.
+        :return: True si une cible est trouvée, False sinon.
+        """
+        for enemy in enemy_team.units:
+            if not isinstance(enemy, Villager):
+                if math.dist((unit.x, unit.y), (enemy.x, enemy.y)) < self.ATTACK_RADIUS:
+                    unit.set_target(enemy)
+                    return True
+        return False
+    
     def balance_units(self):
         """
         Équilibre les unités en entraînant des villageois ou des unités militaires selon les besoins.
