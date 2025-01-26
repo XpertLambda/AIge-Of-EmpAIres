@@ -48,7 +48,7 @@ class Bot:
         }
 
         # Priorité 1 : Entraîner des villageois si nécessaire
-        if self.player_team.resources.food < 100 and villager_count < 10:
+        if self.player_team.resources["food"] < 100 and villager_count < 10:
             for building in self.player_team.buildings:
                 if building.acronym == 'T':  # TownCentre entraîne des villageois
                     if len(building.training_queue) < MAX_QUEUE_SIZE:
