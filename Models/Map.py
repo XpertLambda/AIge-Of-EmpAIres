@@ -28,7 +28,6 @@ class GameMap:
         self.projectiles = {}
         self.game_state = None  
 
-        # On conserve ces deux variables pour le scroll curses :
         self.terminal_view_x = 0
         self.terminal_view_y = 0
 
@@ -65,6 +64,7 @@ class GameMap:
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
         if entity.team != None:
+            self.players[entity.team].zone.add_zone((x - 2 , y - 2), (x + entity.size + 2, y + entity.size + 2 ))
             self.players[entity.team].add_member(entity)
         return True
 
@@ -95,36 +95,42 @@ class GameMap:
                     return False
         return True
 
-    def generate_zones(self, num_players):
-        cols = int(math.ceil(math.sqrt(num_players)))
-        rows = int(math.ceil(num_players / cols))
+    def generate_zones(self):
+        cols = int(math.ceil(math.sqrt(len(self.players))))
+        rows = int(math.ceil(len(self.players) / cols))
         zone_width = self.num_tiles_x // cols
         zone_height = self.num_tiles_y // rows
-        zones = []
-        for i in range(num_players):
+
+        for i, player in enumerate(self.players):
             row = i // cols
             col = i % cols
             x_start = col * zone_width
             y_start = row * zone_height
-            x_end = x_start + zone_width
-            y_end = y_start + zone_height
-            zones.append((x_start, x_end, y_start, y_end))
-        return zones
+            x_end = min(x_start + zone_width, self.num_tiles_x)
+            y_end = min(y_start + zone_height, self.num_tiles_y)
+            player.zone.reset()
+            player.zone.set_zone((x_start, y_start), (x_end - 1, y_end - 1))
 
-    def generate_buildings(self, grid, players):
-        num_players = len(players)
-        zones = self.generate_zones(num_players)
-        for index, player in enumerate(players):
-            x_start, x_end, y_start, y_end = zones[player.teamID]
+    def generate_buildings(self):
+        for player in self.players:
+            zone_coords = list(player.zone.get_zone())
+            if not zone_coords:
+                continue
+            x_vals = [x for x, _ in zone_coords]
+            y_vals = [y for _, y in zone_coords]
+            x_min, x_max = min(x_vals), max(x_vals)
+            y_min, y_max = min(y_vals), max(y_vals)
             for building in player.buildings:
-                max_attempts = (x_end - x_start) * (y_end - y_start)
+                max_attempts = (x_max - x_min + 1) * (y_max - y_min + 1)
                 attempts = 0
                 placed = False
                 while attempts < max_attempts:
-                    x = random.randint(x_start, max(x_start, x_end - building.size))
-                    y = random.randint(y_start, max(y_start, y_end - building.size))
+                    x = random.randint(x_min, max(x_min, x_max - building.size + 1))
+                    y = random.randint(y_min, max(y_min, y_max - building.size + 1))
                     placed = self.add_entity(building, x, y)
                     if placed:
+                        if isinstance(building, (TownCentre, House)):
+                            player.maximum_population += building.population
                         break
                     attempts += 1
                 if not placed:
@@ -141,20 +147,25 @@ class GameMap:
                     if not placed:
                         raise ValueError("Unable to deploy building (map too crowded?)")
 
-    def generate_units(self, grid, players):
-        num_players = len(players)
-        zones = self.generate_zones(num_players)
-        for index, player in enumerate(players):
-            x_start, x_end, y_start, y_end = zones[index]
+    def generate_units(self):
+        for player in self.players:
+            zone_coords = list(player.zone.get_zone())
+            if not zone_coords:
+                continue
+            x_vals = [x for x, _ in zone_coords]
+            y_vals = [y for _, y in zone_coords]
+            x_min, x_max = min(x_vals), max(x_vals)
+            y_min, y_max = min(y_vals), max(y_vals)
             for unit in player.units:
                 placed = False
                 attempts = 0
                 while not placed and attempts < 1000:
-                    x_unit = random.randint(x_start, x_end - 1)
-                    y_unit = random.randint(y_start, y_end - 1)
+                    x_unit = random.randint(x_min, x_max)
+                    y_unit = random.randint(y_min, y_max)
                     placed = self.add_entity(unit, x_unit, y_unit)
                     attempts += 1
                 if not placed:
+                    # fallback
                     attempts = 0
                     while not placed and attempts < 1000:
                         x_unit = random.randint(0, self.num_tiles_x - 1)
@@ -164,8 +175,8 @@ class GameMap:
                     if not placed:
                         debug_print(f"Warning: Failed to deploy unit for player {player.teamID} after multiple attempts.")
 
-    def place_gold_near_town_centers(self, grid):
-        town_centers = [pos for pos, entities in grid.items() if any(isinstance(e, TownCentre) for e in entities)]
+    def place_gold_near_town_centers(self):
+        town_centers = [pos for pos, entities in self.grid.items() if any(isinstance(e, TownCentre) for e in entities)]
         for center in town_centers:
             x, y = center
             placed = False
@@ -173,7 +184,7 @@ class GameMap:
             while not placed and attempts < 100:
                 dx = random.choice([-2, -1, 0, 1])
                 dy = random.choice([-2, -1, 0, 1])
-                if self.can_place_group(grid, x + dx, y + dy):
+                if self.can_place_group(self.grid, x + dx, y + dy):
                     for i in range(2):
                         for j in range(2):
                             gold = Gold(x + dx + i, y + dy + j)
@@ -188,9 +199,11 @@ class GameMap:
     
     def generate_map(self):
         self.generate_resources()
-        self.place_gold_near_town_centers(self.grid)
-        self.generate_buildings(self.grid, self.players)
-        self.generate_units(self.grid, self.players)
+        self.place_gold_near_town_centers()
+        
+        self.generate_zones()
+        self.generate_buildings()
+        self.generate_units()
         return self.grid
 
     def generate_resources(self):

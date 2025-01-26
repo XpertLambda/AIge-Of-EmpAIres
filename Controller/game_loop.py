@@ -174,7 +174,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     players_target=[None for _ in range(0,len(players))]
     while running:
-        raw_dt = clock.tick(FPS_DRAW_LIMITER) / ONE_SECOND
+        raw_dt = clock.tick(400) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
 

@@ -6,11 +6,14 @@ from Entity.Building import *
 from Entity.Unit import *
 from Entity.Resource import Resource
 from Models.Map import GameMap
+from Models.Zone import Zone
 from Controller.terminal_display_debug import debug_print
 
 class Team:
     def __init__(self, difficulty, teamID):
         self.resources = difficulty_config[difficulty]['Resources'].copy()
+
+        self.zone = Zone()
 
         self.units = set()
         self.buildings = set()
@@ -45,7 +48,6 @@ class Team:
 
                 self.buildings.add(entity)
                 self.maximum_population += entity.population
-                debug_print(f'addded {entity} : {entity.entity_id} to team #{entity.team}')
                 return True
 
             elif isinstance(entity, Unit):
@@ -55,6 +57,7 @@ class Team:
 
                 self.units.add(entity)
                 self.population += 1
+                self.zone.add_entity_zone(entity)
                 return True
         return False
 
