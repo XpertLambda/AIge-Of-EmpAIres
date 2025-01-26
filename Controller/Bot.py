@@ -237,8 +237,6 @@ def choose_target(players,selected_player,players_target):
         modify_target(selected_player,target,players_target)
     return target!=None
 
-def is_under_attack():
-    return True
 
 def manage_battle(selected_player,players_target,players,game_map,dt):
     #réassigne une target a chaque unit d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense
@@ -300,38 +298,34 @@ def repair_critical_buildings(player_team):
 
 #Priority_1
 ATTACK_RADIUS = TILE_SIZE * 5
-def is_under_attack(player_team, enemy_team): 
-    for building in player_team.buildings:
-        if building.hp < building.max_hp: #Building is damaged
-            return True
+def is_under_attack(player_team, enemy_team):
+    for tile, building in player_team.zone.items():
         for enemy in enemy_team.units:
-             if not isinstance(enemy,Villager):
-                if math.dist((building.x, building.y), (enemy.x, enemy.y)) < ATTACK_RADIUS:
-                     return True
-    return False   
+            if not isinstance(enemy, Villager):
+                if math.dist(tile, (enemy.x, enemy.y)) < ATTACK_RADIUS:
+                    return True
+    return False
+ 
 
 
-def get_critical_points(player_team):
-    if not player_team.buildings:
-        return []  
+def get_critical_points(player_team, enemy_team):
     critical_points = []
     for building in player_team.buildings:
-        if building.hp / building.max_hp < 0.3: 
+        is_under_attack = any(
+            math.dist((building.x, building.y), (enemy.x, enemy.y)) < ATTACK_RADIUS
+            for enemy in enemy_team.units
+            if not isinstance(enemy, Villager)
+        )
+        if is_under_attack or building.hp / building.max_hp < 0.3:
             critical_points.append(building)
-   
-    critical_points.sort(key=lambda b: b.hp / b.max_hp)
-    return critical_points
+    return sorted(critical_points, key=lambda b: b.hp / b.max_hp)
 
 
-def can_train_units(player_team, unit_cost, population_limit):
-    return_reason = False 
-    if player_team.resources["gold"] < unit_cost["gold"]:
-        return (False, "Not enough gold") if return_reason else False
-    if player_team.resources["food"] < unit_cost["food"]:
-        return (False, "Not enough food") if return_reason else False
-    if len(player_team.units) >= population_limit:
-        return (False, "Population limit reached") if return_reason else False
-    return (True, None) if return_reason else True
+def can_train_units(player_team, unit):
+    if not player_team.resources.has_enough(unit.cost):
+        return False
+    return len(player_team.units) < player_team.maximum_population
+
 
 
 
@@ -344,22 +338,27 @@ def train_units(player_team, unit, building):
             print(f"Unité {unit.acronym} formée.")
             print(len(player_team.units))
 
-def gather_units_for_defense(player_team, critical_points, enemy_team, players_target, game_map, dt):
+def gather_units_for_defense(player_team, critical_points, enemy_team):
     for point in critical_points:
-        for unit in player_team.members if hasattr(player_team, 'members') else []:
-            if not hasattr(unit, 'carry'):
-                if not search_for_target(unit, enemy_team, attack_mode=True):
-                    unit.set_destination((point.x, point.y), game_map)
-                elif unit.attack_target and unit.attack_target.isAlive():
-                    unit.seekAttack(game_map, dt)
+        for unit in player_team.units:
+            if not hasattr(unit, 'carry') and not unit.target:
+                target = search_for_target(unit, enemy_team, attack_mode=False)
+                if target:
+                    unit.set_target(target)
+                else:
+                    unit.set_destination((point.x, point.y))
 
 def can_build_building(player_team, building):
-    return player_team.resources.has_enough(building.cost)
+    return player_team.resources.has_enough(building.cost.get())
+
 
 def build_defensive_structure(player_team, building_type, location, num_builders, game_map):
     x, y = location
     if can_build_building(player_team, building_type):
-        player_team.build(building_type.__name__, x, y, num_builders, game_map)
+        if player_team.build(building_type.__name__, x, y, num_builders, game_map):
+            debug_print(f"{building_type.__name__} built at ({x}, {y}).")
+        else:
+            debug_print(f"Failed to place {building_type.__name__} at ({x}, {y}).")
 
 def defend_under_attack(player_team, enemy_team, players_target, game_map, dt):
     if is_under_attack():
