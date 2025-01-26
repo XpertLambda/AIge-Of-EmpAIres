@@ -66,50 +66,32 @@ def priorite_5(player_team,unit,building):
 
 #Priorty seven avoid ressources shortage 
 
-def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
-    for resource in ['food', 'wood', 'gold']:
-        if getattr(current_resources, resource, 0) < RESOURCE_THRESHOLDS.get(resource, 0):
-            return resource
-def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
-    for resource in ['food', 'wood', 'gold']:
-        if getattr(current_resources, resource, 0) < RESOURCE_THRESHOLDS.get(resource, 0):
-            return resource
-    return None
 
+def get_resource_shortage(current_resources, thresholds):
+    shortages = {key: thresholds[key] - current_resources.get(key, 0) for key in thresholds}
+    critical_shortage = min(shortages, key=shortages.get)
+    return critical_shortage if shortages[critical_shortage] > 0 else None
 
 def find_resources(game_map, resource_type):
-    if not resource_type:
-        return []
-    resource_positions = []
-    for position, entities in game_map.grid.items():
-        for entity in entities:
-            if isinstance(entity, resource_type):
-                resource_positions.append(position)
-    return resource_positions
-
-
-def find_resources(game_map, resource_type):
-    if not resource_type:
-        return []
-    resource_positions = []
-    for position, entities in game_map.grid.items():
-        for entity in entities:
-            if isinstance(entity, resource_type):
-                resource_positions.append(position)
-    return resource_positions
-
+    return [pos for pos, res in game_map.resources.items() if isinstance(res, resource_type)]
 
 def reallocate_villagers(resource_in_shortage, team, game_map):
-    for unit in team.units:  # Assuming `team.units` provides access to all units in the team
-        if hasattr(unit, "carry") and unit.isAvailable() and not unit.task:
+    for unit in team.units:
+        if isinstance(unit, Villager) and unit.isAvailable() :
+            drop_points = [building for building in team.buildings if hasattr(building, "drop_point")]
+            if not drop_points:
+                continue
+            nearest_drop_point = min(drop_points, key=lambda dp: math.dist((unit.x, unit.y), (dp.x, dp.y)))
             resource_positions = find_resources(game_map, resource_in_shortage)
             if resource_positions:
                 nearest_resource = min(
                     resource_positions,
-                    key=lambda pos: math.sqrt((unit.x - pos[0]) ** 2 + (unit.y - pos[1]) ** 2)
+                    key=lambda pos: math.dist((nearest_drop_point.x, nearest_drop_point.y), pos)
                 )
                 unit.set_target(nearest_resource)
+                unit.task = f"Collecting {resource_in_shortage}"
                 return
+
 
 
 def check_and_address_resources(team, game_map, RESOURCE_THRESHOLDS):
@@ -204,8 +186,6 @@ def choose_target(players,selected_player,players_target):
         modify_target(selected_player,target,players_target)
     return target!=None
 
-def is_under_attack():
-    return True
 
 def manage_battle(selected_player,players_target,players,game_map,dt):
     #réassigne une target a chaque unit d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense
@@ -260,3 +240,85 @@ def repair_critical_buildings(player_team):
         if can_repair_building(player_team, repair_cost):
             if not assign_villager_to_repair(player_team, building):
                 print("Réparation différée faute de ressources ou de main-d'œuvre.")
+
+#Priority_1
+
+#Priority_1
+ATTACK_RADIUS = TILE_SIZE * 5
+def is_under_attack(player_team, enemy_team):
+    for tile, building in player_team.zone.items():
+        for enemy in enemy_team.units:
+            if not isinstance(enemy, Villager):
+                if math.dist(tile, (enemy.x, enemy.y)) < ATTACK_RADIUS:
+                    return True
+    return False
+ 
+
+
+def get_critical_points(player_team, enemy_team):
+    critical_points = []
+    for building in player_team.buildings:
+        is_under_attack = any(
+            math.dist((building.x, building.y), (enemy.x, enemy.y)) < ATTACK_RADIUS
+            for enemy in enemy_team.units
+            if not isinstance(enemy, Villager)
+        )
+        if is_under_attack or building.hp / building.max_hp < 0.3:
+            critical_points.append(building)
+    return sorted(critical_points, key=lambda b: b.hp / b.max_hp)
+
+
+def can_train_units(player_team, unit):
+    if not player_team.resources.has_enough(unit.cost):
+        return False
+    return len(player_team.units) < player_team.maximum_population
+
+
+
+
+def train_units(player_team, unit, building):
+    for building in player_team.buildings:
+        if building.add_to_training_queue(player_team):
+            player_team.resources.gold -= unit.cost.gold
+            player_team.resources.food -= unit.cost.food
+            player_team.units.add(unit)
+            print(f"Unité {unit.acronym} formée.")
+            print(len(player_team.units))
+
+def gather_units_for_defense(player_team, critical_points, enemy_team):
+    for point in critical_points:
+        for unit in player_team.units:
+            if not hasattr(unit, 'carry') and not unit.target:
+                target = search_for_target(unit, enemy_team, attack_mode=False)
+                if target:
+                    unit.set_target(target)
+                else:
+                    unit.set_destination((point.x, point.y))
+
+def can_build_building(player_team, building):
+    return player_team.resources.has_enough(building.cost.get())
+
+
+def build_defensive_structure(player_team, building_type, location, num_builders, game_map):
+    x, y = location
+    if can_build_building(player_team, building_type):
+        if player_team.build(building_type.__name__, x, y, num_builders, game_map):
+            debug_print(f"{building_type.__name__} built at ({x}, {y}).")
+        else:
+            debug_print(f"Failed to place {building_type.__name__} at ({x}, {y}).")
+
+def defend_under_attack(player_team, enemy_team, players_target, game_map, dt):
+    if is_under_attack():
+        critical_points = get_critical_points(player_team)
+        modify_target(player_team, None, players_target)
+        gather_units_for_defense(player_team, critical_points, enemy_team, players_target, game_map, dt)
+        if can_train_units(player_team, Archer, player_team.maximum_population):
+            train_units(player_team, Archer, None)
+        if critical_points and can_build_building(player_team, Keep):
+            critical_location = (critical_points[0].x, critical_points[0].y)
+            build_defensive_structure(player_team, Keep, critical_location, 3, game_map)
+
+def manage_battle(selected_player, enemy_team, players_target, game_map, dt):
+    if is_under_attack():
+        defend_under_attack(selected_player, enemy_team, players_target, game_map, dt)
+    
