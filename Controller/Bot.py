@@ -247,15 +247,26 @@ def repair_critical_buildings(player_team):
 #Priority_1
 ATTACK_RADIUS = 5
 
-def is_under_attack(player_team, enemy_team):
-    for tile in player_team.zone.items():
+def assign_zones_to_teams(game_map, teams):
+    zones = game_map.generate_zones(len(game_map.players))
+    for team, zone in zip(teams, zones):
+        x_start, x_end, y_start, y_end = zone
+        team.zone = set()
+        for x in range(x_start, x_end):
+            for y in range(y_start, y_end):
+                team.zone.add((x, y))
+
+def is_under_attack(player_team, enemy_team, game_map):
+    # Ensure zones are assigned dynamically
+    if not hasattr(player_team, 'zone') or not player_team.zone:
+        assign_zones_to_teams(game_map, [player_team])
+
+    for tile in player_team.zone:
         for enemy in enemy_team.units:
             if not isinstance(enemy, Villager):
                 if math.dist(tile, (enemy.x, enemy.y)) <= ATTACK_RADIUS:
                     return True
     return False
- 
-
 
 def get_critical_points(player_team, enemy_team):
     critical_points = []
@@ -270,23 +281,6 @@ def get_critical_points(player_team, enemy_team):
     return sorted(critical_points, key=lambda b: b.hp / b.max_hp)
 
 
-def can_train_units(player_team, unit):
-    if not player_team.resources.has_enough(unit.cost):
-        return False
-    return len(player_team.units) < player_team.maximum_population
-
-
-
-
-def train_units(player_team, unit, building):
-    for building in player_team.buildings:
-        if building.add_to_training_queue(player_team):
-            player_team.resources.gold -= unit.cost.gold
-            player_team.resources.food -= unit.cost.food
-            player_team.units.add(unit)
-            print(f"Unité {unit.acronym} formée.")
-            print(len(player_team.units))
-
 def gather_units_for_defense(player_team, critical_points, enemy_team):
     for point in critical_points:
         for unit in player_team.units:
@@ -298,8 +292,7 @@ def gather_units_for_defense(player_team, critical_points, enemy_team):
                     unit.set_destination((point.x, point.y))
 
 def can_build_building(player_team, building):
-    return player_team.resources.has_enough(building.cost.get())
-
+    return player_team.resources.has_enough(building.cost)
 
 def build_defensive_structure(player_team, building_type, location, num_builders, game_map):
     x, y = location
@@ -310,17 +303,16 @@ def build_defensive_structure(player_team, building_type, location, num_builders
             debug_print(f"Failed to place {building_type.__name__} at ({x}, {y}).")
 
 def defend_under_attack(player_team, enemy_team, players_target, game_map, dt):
-    if is_under_attack():
-        critical_points = get_critical_points(player_team)
+    if is_under_attack(player_team, enemy_team):
+        critical_points = get_critical_points(player_team, enemy_team)
         modify_target(player_team, None, players_target)
-        gather_units_for_defense(player_team, critical_points, enemy_team, players_target, game_map, dt)
-        if can_train_units(player_team, Archer, player_team.maximum_population):
-            train_units(player_team, Archer, None)
+        gather_units_for_defense(player_team, critical_points, enemy_team)
+        
+        train_units(player_team,ArcheryRange)
         if critical_points and can_build_building(player_team, Keep):
             critical_location = (critical_points[0].x, critical_points[0].y)
             build_defensive_structure(player_team, Keep, critical_location, 3, game_map)
 
 def manage_battle_defense(selected_player, enemy_team, players_target, game_map, dt):
-    if is_under_attack():
+    if is_under_attack(selected_player, enemy_team):
         defend_under_attack(selected_player, enemy_team, players_target, game_map, dt)
-    
