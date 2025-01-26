@@ -193,7 +193,8 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
     enemy=players_target[selected_player.teamID]
     attack_mode=True
     #defense
-    if is_under_attack():
+    #if any([is_under_attack(selected_player,enemy_team) for enemy_team in players]):
+    if True:
     #on cherche la team qui est entrain de nous attaquer si les frontieres on été violer:
         for i in range(0,len(players_target)):
             if players_target[i]==selected_player:
@@ -318,7 +319,7 @@ def defend_under_attack(player_team, enemy_team, players_target, game_map, dt):
             critical_location = (critical_points[0].x, critical_points[0].y)
             build_defensive_structure(player_team, Keep, critical_location, 3, game_map)
 
-def manage_battle(selected_player, enemy_team, players_target, game_map, dt):
+def manage_battle_defense(selected_player, enemy_team, players_target, game_map, dt):
     if is_under_attack():
         defend_under_attack(selected_player, enemy_team, players_target, game_map, dt)
     
