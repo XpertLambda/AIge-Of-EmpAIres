@@ -15,40 +15,46 @@ class Bot:
         self.player_team = player_team
         self.game_map = game_map
 
-    def get_military_unit_count(self):
-        return sum(1 for unit in self.player_team.units if not isinstance(unit, Villager))
+    def get_military_units(self):
+        """
+        Retourne une liste des unités militaires (non villageois) de l'équipe.
+        """
+        return [unit for unit in self.player_team.units if not isinstance(unit, Villager)]
 
-    def train_units(self, unit_type):
-        for building in self.player_team.buildings:
-            if hasattr(building, 'add_to_training_queue'):
-                building.add_to_training_queue(unit_type)
+    def train_units(self, building, unit_type):
+        """
+        Entraîne une unité dans un bâtiment spécifique.
+        :param building: Le bâtiment qui entraîne l'unité.
+        :param unit_type: Le type d'unité à entraîner.
+        """
+        if hasattr(building, 'add_to_training_queue'):
+            building.add_to_training_queue(unit_type)
 
     def balance_units(self):
         """
-        Vérifie pour chaque bâtiment si une unité peut être entraînée.
-        Si c'est le cas, entraîne une unité de ce bâtiment.
-        Gère les files d'attente pleines, priorise les unités et vérifie les ressources.
+        Équilibre les unités en entraînant des villageois ou des unités militaires selon les besoins.
         """
         # Nombre de villageois et d'unités militaires
         villager_count = sum(1 for unit in self.player_team.units if isinstance(unit, Villager))
-        military_count = self.get_military_unit_count()
+        military_units = self.get_military_units()
+        military_count = len(military_units)
 
         # Constantes pour la gestion des files d'attente et des priorités
         MAX_QUEUE_SIZE = 5  # Taille maximale de la file d'attente pour un bâtiment
         PRIORITY_UNITS = {
-            'archer': 3,    # Priorité élevée pour les archers
-            'swordsman': 2, # Priorité moyenne pour les épéistes
-            'horseman': 1   # Priorité faible pour les cavaliers
+            'a': 3,  # Priorité élevée pour les archers
+            's': 2,  # Priorité moyenne pour les épéistes
+            'h': 1   # Priorité faible pour les cavaliers
         }
 
         # Priorité 1 : Entraîner des villageois si nécessaire
         if self.player_team.resources.food < 100 and villager_count < 10:
             for building in self.player_team.buildings:
                 if building.acronym == 'T':  # TownCentre entraîne des villageois
-                    if len(building.training_queue) < MAX_QUEUE_SIZE:  # Vérifie si la file d'attente n'est pas pleine
-                        if building.add_to_training_queue(self.player_team):
-                            debug_print(f"Added Villager to training queue in {building.acronym}.")
-                            break  # On entraîne un seul villageois à la fois
+                    if len(building.training_queue) < MAX_QUEUE_SIZE:
+                        self.train_units(building, Villager)
+                        debug_print(f"Added Villager to training queue in {building.acronym}.")
+                        break  # On entraîne un seul villageois à la fois
 
         # Priorité 2 : Entraîner des unités militaires si nécessaire
         elif military_count < 20:
@@ -58,15 +64,18 @@ class Bot:
             for building in self.player_team.buildings:
                 if building.spawnsUnits and len(building.training_queue) < MAX_QUEUE_SIZE:
                     # Déterminer la priorité de ce bâtiment
-                    unit_name = UNIT_TRAINING_MAP.get(building.acronym, None)
-                    if unit_name and unit_name in PRIORITY_UNITS:
-                        priority = PRIORITY_UNITS[unit_name]
+                    unit_acronym = building.acronym
+                    if unit_acronym in PRIORITY_UNITS:
+                        priority = PRIORITY_UNITS[unit_acronym]
                         if priority > best_priority:
                             best_building = building
                             best_priority = priority
+
             if best_building:
-                if best_building.add_to_training_queue(self.player_team):
-                    debug_print(f"Added {UNIT_TRAINING_MAP[best_building.acronym]} to training queue in {best_building.acronym}.")
+                unit_type = Building.UNIT_TRAINING_MAP.get(best_building.acronym)
+                if unit_type:
+                    self.train_units(best_building, unit_type)
+                    debug_print(f"Added {unit_type} to training queue in {best_building.acronym}.")
 
     def adjust_priorities(self, enemy_team):
         """
@@ -95,65 +104,63 @@ class Bot:
             self.PRIORITY_UNITS['horseman'] = 2  # Augmenter la priorité des cavaliers
             debug_print(f"Enemy has many swordsmen ({enemy_swordsmen}). Increasing horseman priority.")
 
+    
     def choose_attack_composition(self):
-        archers = [unit for unit in self.player_team.units if isinstance(unit, Archer)]
-        swordsmen = [unit for unit in self.player_team.units if isinstance(unit, Swordsman)]
-        horsemen = [unit for unit in self.player_team.units if isinstance(unit, Horseman)]
+        """
+        Choisit une composition d'attaque optimale en fonction des unités disponibles.
+        :return: Une liste d'unités sélectionnées pour l'attaque.
+        """
+        # Définir la composition souhaitée (type d'unité : nombre souhaité)
+        units_by_type = {
+            Archer: 3,    # 3 archers
+            Swordsman: 1, # 1 épéiste
+            Horseman: 1   # 1 cavalier
+        }
 
-        if len(archers) >= 3 and len(swordsmen) >= 1 and len(horsemen) >= 1:
-            return archers[:3] + swordsmen[:1] + horsemen[:1]
-        elif len(archers) >= 3 and len(swordsmen) >= 1:
-            return archers[:3] + swordsmen[:1]
-        elif len(archers) >= 3:
-            return archers[:3]
-        elif len(swordsmen) >= 1:
-            return swordsmen[:1]
-        elif len(horsemen) >= 1:
-            return horsemen[:1]
-        else:
-            return []
+        selected_units = []  # Liste pour stocker les unités sélectionnées
 
+        # Parcourir chaque type d'unité et sélectionner les unités disponibles
+        for unit_type, limit in units_by_type.items():
+            # Filtrer les unités disponibles du type actuel
+            available_units = [unit for unit in self.player_team.units if isinstance(unit, unit_type)]
+            
+            # Ajouter jusqu'à `limit` unités à la liste sélectionnée
+            selected_units.extend(available_units[:limit])
+
+            # Si on a atteint le nombre total d'unités souhaité, on arrête
+            if len(selected_units) >= sum(units_by_type.values()):
+                break
+
+        return selected_units
+    
     def maintain_army(self):
-        military_count = self.get_military_unit_count()
+        """
+        Gère l'armée en équilibrant les unités et en lançant des attaques.
+        """
+        military_count = len(self.get_military_units())
+
+        # Si l'armée est trop petite, on équilibre les unités
         if military_count < 20:
             self.balance_units()
         else:
+            # Sinon, on choisit une composition d'attaque
             attack_composition = self.choose_attack_composition()
+
+            # Pour chaque unité dans la composition d'attaque
             for unit in attack_composition:
-                if not isinstance(unit, Villager):
+                if not isinstance(unit, Villager):  # On ignore les villageois
                     if unit.idle:
-                        unit.seek_attack()
+                        # Trouver une cible pour l'unité (supposons que cette logique est déjà implémentée ailleurs)
+                        target = self.find_target_for_unit(unit)
+                        if target:
+                            unit.set_target(target)  # Définir la cible de l'unité
+                            debug_print(f"Unit {unit.__class__.__name__} targeting {target.__class__.__name__}.")
                     elif unit.target:
-                        unit.kill()
+                        # Si l'unité a déjà une cible, on lui ordonne d'attaquer
+                        unit.attack()
                     else:
+                        # Si aucune cible n'est trouvée, on met l'unité en état idle
                         unit.setIdle()
-
-    def get_resource_shortage(self, thresholds=RESOURCE_THRESHOLDS):
-        if self.player_team.resources["food"] < thresholds['food']:
-            return 'food'
-        if self.player_team.resources["wood"] < thresholds['wood']:
-            return 'wood'
-        if self.player_team.resources["gold"] < thresholds['gold']:
-            return 'gold'
-        return None
-
-    def find_resource_location(self, resource_acronym):
-        for (x, y), cell_content in self.game_map.grid.items():
-            if resource_acronym in cell_content:
-                return (x, y)
-
-    def reallocate_villagers(self, resource_in_shortage):
-        for villager in self.player_team.units:
-            if isinstance(villager, Villager) and villager.isAvailable() and not villager.task:
-                resource_location = self.find_resource_location(resource_in_shortage)
-                if resource_location:
-                    villager.set_target(resource_location)
-                    return
-
-    def check_and_address_resources(self, thresholds=RESOURCE_THRESHOLDS):
-        resource_shortage = self.get_resource_shortage(thresholds)
-        if resource_shortage:
-            self.reallocate_villagers(resource_shortage)
 
     def check_building_needs(self):
         needed_buildings = []
