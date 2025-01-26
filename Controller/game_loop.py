@@ -240,7 +240,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
             if game_state.get('player_info_updated', False):
                 player_info_surface = create_player_info_surface(
-                    selected_player, screen_width, team_colors
+                    selected_player, 
+                    screen_width, 
+                    screen_height,
+                    team_colors
                 )
                 game_state['player_info_updated'] = False
 
@@ -307,8 +310,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     screen.blit(player_selection_surface, (bg_rect.x, bg_rect.y - sel_h - 20))
 
                 if player_info_surface and game_state['show_player_info']:
-                    inf_h = player_info_surface.get_height()
-                    screen.blit(player_info_surface, (0, screen_height - inf_h))
+                    x_offset = int(screen_width * 0.03)  # 3% du screen width comme décalage
+                    screen.blit(player_info_surface, (x_offset, 0))
             #archer = Archer(selected_player,0,0)
             #train_units(selected_player,archer)
 
