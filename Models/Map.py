@@ -23,7 +23,9 @@ class GameMap:
         self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
+        self.resources = {}
         self.inactive_matrix = {}
+        self.projectiles = {}
         self.game_state = None  
 
         # On conserve ces deux variables pour le scroll curses :
@@ -39,6 +41,7 @@ class GameMap:
             or rounded_x + entity.size - 1 >= self.num_tiles_x
             or rounded_y + entity.size - 1 >= self.num_tiles_y):
             return False
+            
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
@@ -53,6 +56,11 @@ class GameMap:
                 if pos not in self.grid:
                     self.grid[pos] = set()
                 self.grid[pos].add(entity)
+                if entity.hasResources:
+                    if pos not in self.resources:
+                        self.resources[pos] = set()
+                    self.resources[pos].add(entity)
+
 
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
@@ -299,8 +307,6 @@ class GameMap:
         except Exception as e:
             debug_print(f"Error loading game map: {e}")
 
-
-
     def move_to_inactive(self, entity):
         self.remove_entity(entity)
         pos = (round(entity.x), round(entity.y))
@@ -314,20 +320,36 @@ class GameMap:
         if not self.inactive_matrix[pos]:
             del self.inactive_matrix[pos]
 
-    def patch(self, dt):
-        for entities in list(self.grid.values()):
-            if entities:
-                for entity in list(entities):
-                    entity.update(self, dt)
-                    if not entity.isAlive():
-                        self.move_to_inactive(entity)
+    def add_projectile(self, projectile):
+        self.projectiles[projectile.id] = projectile
 
-        for inactive_entities in list(self.inactive_matrix.values()):
-            if inactive_entities:
-                for entity in list(inactive_entities):
-                    entity.update(self, dt)
-                    if not entity.state:
-                        self.remove_inactive(entity)
+    def remove_projectile(self, projectile):
+        self.projectiles[projectile.id] = None
+        del self.projectiles[projectile.id]
+
+    def patch(self, dt):
+        active_entities = set()
+        for entities in self.grid.values():
+            active_entities.update(entities)
+
+        for entity in active_entities:
+            entity.update(self, dt)
+            if not entity.isAlive():
+                self.move_to_inactive(entity)
+        
+        inactive_entities = set()
+        for entities in self.inactive_matrix.values():
+            inactive_entities.update(entities)
+
+        for entity in inactive_entities:
+            entity.update(self, dt)
+            if not entity.state:
+                self.remove_inactive(entity)
+        projectiles = self.projectiles.copy()
+        for projectile in projectiles.values():
+            projectile.update(self, dt)
+            if projectile.state == '':
+                self.remove_projectile(projectile)
 
     def set_game_state(self, game_state):
         self.game_state = game_state

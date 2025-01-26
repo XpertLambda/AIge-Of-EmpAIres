@@ -1,7 +1,7 @@
 import time
 import math
 from Models.Resources import Resources
-from Settings.setup import HALF_TILE_SIZE
+from Settings.setup import HALF_TILE_SIZE, user_choices
 from Controller.utils import tile_to_screen
 from Controller.drawing import draw_healthBar, draw_hitbox
 import pygame
@@ -30,7 +30,7 @@ class Entity:
         self.cost = cost
         self.walkable = walkable
         self.hasResources = hasResources
-        
+  
         self.hp = max_hp
         self.hitbox = hitbox if hitbox > 0 else size/2
         self.last_damage_time = 0
@@ -47,8 +47,21 @@ class Entity:
         self.entity_id = Entity.id
         Entity.id += 1
 
+        ## DEBUG INSTRUCTIONS
+        self.hitbox_color = (255, 255 ,255)
+        self.range_color = (255, 255 ,255)
+        ## END HERE
+
+    def get_state(self):
+        return self.state
+
     def isAlive(self):
         if self.hp > 0:
+            return True
+        return False
+
+    def isIdle(self):
+        if self.state == 'idle':
             return True
         return False
 
@@ -72,31 +85,44 @@ class Entity:
         return max(0.0, self.hp / self.max_hp)
 
     def display_hitbox(self, screen, screen_width, screen_height, camera):
-        corner_distance = self.size / 2.0
-        corners = [
-            (self.x - corner_distance, self.y - corner_distance),
-            (self.x - corner_distance, self.y + corner_distance),
-            (self.x + corner_distance, self.y + corner_distance),
-            (self.x + corner_distance, self.y - corner_distance)
-        ]
-        
-        screen_corners = []
-        for corner in corners:
-            x_screen, y_screen = tile_to_screen(
-                corner[0], 
-                corner[1], 
-                HALF_TILE_SIZE, 
-                HALF_TILE_SIZE / 2, 
-                camera, 
-                screen_width, 
-                screen_height
-            )
-            screen_corners.append((x_screen, y_screen))
-        
-        draw_hitbox(screen, screen_corners, camera.zoom)
+        #if self.hitbox_color != (255, 0, 0):
+        #return
+        if user_choices["bot_level"] == "DEBUG" :
+            corner_distance = self.size / 2.0
+            corners = [
+                (self.x - corner_distance, self.y - corner_distance),
+                (self.x - corner_distance, self.y + corner_distance),
+                (self.x + corner_distance, self.y + corner_distance),
+                (self.x + corner_distance, self.y - corner_distance)
+            ]
+            
+            screen_corners = []
+            for corner in corners:
+                x_screen, y_screen = tile_to_screen(
+                    corner[0], 
+                    corner[1], 
+                    HALF_TILE_SIZE, 
+                    HALF_TILE_SIZE / 2, 
+                    camera, 
+                    screen_width, 
+                    screen_height
+                )
+                screen_corners.append((x_screen, y_screen))
+            
+            draw_hitbox(screen, screen_corners, camera.zoom, self.hitbox_color)
+            center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            hitbox_iso = self.hitbox / math.cos(math.radians(45))
+            width =  hitbox_iso * camera.zoom * HALF_TILE_SIZE
+            height = hitbox_iso * camera.zoom * HALF_TILE_SIZE / 2
+            x = center[0] - width // 2
+            y = center[1] - height // 2 
+            #pygame.draw.ellipse(screen, (255, 0, 0), (x, y, width, height), 1)
+            #pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
 
     def display_range(self, screen, screen_width, screen_height, camera):
-        if hasattr(self, 'attack_range') and self.attack_range:
+        #if self.range_color != (255, 0, 0):
+        #return
+        if hasattr(self, 'attack_range') and self.attack_range and user_choices["bot_level"] == "DEBUG":
             center = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
             range_iso = self.attack_range / math.cos(math.radians(45))
             width =  range_iso * camera.zoom * HALF_TILE_SIZE 
@@ -104,7 +130,7 @@ class Entity:
             x = center[0] - width // 2
             y = center[1] - height // 2 
             pygame.draw.ellipse(screen, (255, 0, 0), (x, y, width, height), 1)
-            #pygame.draw.rect(screen, (0, 255, 0), (x, y, width, height), 1)
+            pygame.draw.rect(screen, (255, 255, 0), (x, y, width, height), 1)
 
     def display_healthbar(self, screen, screen_width, screen_height, camera, color=(0,200,0)):
         """Displays the entity's health bar above its position."""

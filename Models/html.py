@@ -33,11 +33,12 @@ def write_full_html(players, game_map):
             template += f"""
             <li>
                 <details>
-                    <summary>Unité ID: {unit.id} ({unit.acronym})</summary>
+                    <summary>Unité ID: {unit.entity_id} ({unit.acronym})</summary>
                     <p>
                         <b>HP</b>: {unit.hp}/{unit.max_hp}<br>
                         <b>Position</b>: ({unit.x}, {unit.y})<br>
-                        <!-- Add any other relevant unit information -->
+                        <!-- Show current task/state -->
+                        <b>Tache</b>: {getattr(unit, 'task', unit.state) or unit.state}
                     </p>
                 </details>
             </li>
@@ -58,7 +59,8 @@ def write_full_html(players, game_map):
                     <p>
                         <b>HP</b>: {building.hp}/{building.max_hp}<br>
                         <b>Position</b>: ({building.x}, {building.y})<br>
-                        <!-- Add any other relevant building information -->
+                        <!-- Show current building state -->
+                        <b>Tache</b>: {building.state}
                     </p>
                 </details>
             </li>
@@ -71,23 +73,21 @@ def write_full_html(players, game_map):
             <summary>Tâches en cours</summary>
             <ul>
         """
-        # Display buildings/units under construction
-        for entity, start_time in team.en_cours.items():
-            template += f"""
-            <li>{type(entity).__name__} en cours de construction/formation</li>
+        for entity_list in [team.units, team.buildings]:
+            for entity in entity_list:
+                if getattr(entity, 'task', None) or entity.state != 'idle':
+                    template += f"""
+            <li>
+                [ID {entity.id}] {type(entity).__name__} - État: {entity.state}
             """
-        # Display busy units (e.g. collecting, fighting)
-        for unit in team.units:
-            if getattr(unit, 'task', False):
-                template += f"""
-            <li>Unit ID {unit.id} occupée: {unit.state}</li>
-                """
-        # Display buildings training units
-        for building in team.buildings:
-            if hasattr(building, 'current_training_unit') and building.current_training_unit:
-                template += f"""
-            <li>Bâtiment ID {building.entity_id} forme: {building.current_training_unit}</li>
-                """
+                    # Optionally show training progress if relevant
+                    if getattr(entity, 'training_progress', 0) > 0:
+                        template += f" (progression: {entity.training_progress*100:.0f}%)"
+                    if getattr(entity, 'task', None):
+                        template += f" (Tache: {entity.task})"
+                    template += """
+            </li>
+            """
         template += """
             </ul>
         </details>

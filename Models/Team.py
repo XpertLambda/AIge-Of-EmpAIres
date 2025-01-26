@@ -23,12 +23,15 @@ class Team:
         for building, amount in difficulty_config[difficulty]['Buildings'].items():
             for _ in range(amount):
                 if building in building_class_map:
-                    self.add_member(building_class_map[building](team=teamID))
+                    building_instance = building_class_map[building](team=teamID)
+                    building_instance.processTime = building_instance.buildTime
+                    self.add_member(building_instance)
 
         for unit, amount in difficulty_config[difficulty]['Units'].items():
             for _ in range(amount):
                 if unit in unit_class_map:
-                    self.add_member(unit_class_map[unit](team=teamID))
+                    unit_instance = unit_class_map[unit](team=teamID)
+                    self.add_member(unit_instance)
 
     def add_member(self, entity):
         if entity.team == self.teamID :
@@ -69,137 +72,45 @@ class Team:
                     return True
         return False
 
-    def modify_resources(self, Resources):
-        """
-        Modifie directement les ressources de l'équipe (ex: +100 gold, -50 wood, etc.).
-        Note : appelle un refresh GUI.
-        """
-        self.resources['food'] += Resources.food 
-        self.resources['wood'] += Resources.wood 
-        self.resources['gold'] += Resources.gold
-    
-    def manage_creation(self, clock):
-        """
-        Gère la création de bâtiments/unités (self.en_cours).
-        Une fois le temps écoulé => on les place dans .units ou .buildings.
-        """
-        to_remove = []
-        for entity, start_time in self.en_cours.items():
-            if isinstance(entity, Building):
-                if start_time - clock <= 0:
-                    self.buildings.append(entity)
-                    for villager in entity.constructors:
-                        villager.task=False
-                    if isinstance(entity,House) or isinstance(entity,TownCentre):
-                        self.maximum_population+=5
-                    to_remove.append(entity)
-                    for villager in entity.constructors:
-                        villager.task = False
-            else:
-                if entity.training_time + start_time - clock <= 0:
-                    to_remove.append(entity)
-                    self.units.append(entity)
-
-        for entity in to_remove:
-            del self.en_cours[entity]
-
-    def buildBuilding(self, building, clock, nb, game_map):
-        if all([v.task for v in self.units if isinstance(v, Villager)]):
-            debug_print("All villagers are busy.")
+    def build(self, building, x, y, num_builders, game_map):
+        building = building_class_map[building](team=self.teamID)
+        x, y = round(x), round(y)
+        if not self.resources.has_enough(building.cost.get()):
+            del building
             return False
 
-        if self.resources["wood"] >= building.cost.wood:
-            self.resources["wood"] -= building.cost.wood
-        else:
-            debug_print(f"Team {self.teamID}: Not enough wood.")
-            return False
-        if not game_map.place_building(building,self):
-            debug_print("cannot place")
-            return False
-       
-        i=0
-        num_constructors=0
-        while(i<len(self.units) and num_constructors<nb):
-            unit=self.units[i]
-            if isinstance(unit,Villager) and not(unit.task):
-                unit.build(map,building)
-                num_constructors +=1
-                v1=v
-            i+=1
-         
-        self.en_cours[building]=clock+v1.buildTime(building,num_constructors) 
+        selected_villagers = []
+        for unit in self.units:
+            if unit.acronym == "v" and unit.isAvailable():
+                selected_villagers.append(unit)
+                if len(selected_villagers) == num_builders:
+                    break
 
-        i = 0
-        j = 0
-        chosen_villager = None
-        while i < len(self.units) and j < nb:
-            v = self.units[i]
-            if isinstance(v, Villager) and not v.task:
-                v.build(game_map, building)
-                j += 1
-                chosen_villager = v
-            i += 1
-
-        if chosen_villager:
-            total_build_time = chosen_villager.buildTime(building, j)
-            self.en_cours[building] = clock + total_build_time
-        else:
-            debug_print("No free villager found to build.")
+        if not selected_villagers:
+            print("No available villagers")
+            del building
             return False
 
-        self.buildings.append(building)
-        if hasattr(building, 'population'): #rajouter condition pour pas depasser MAXIMUM_POPULATION a 200
-            self.maximum_population += building.population
-        game_map.game_state['player_info_updated'] = True
+        for i in range(building.size):
+            for j in range(building.size):
+                pos = (x + i, y + j)
+                if pos in game_map.grid:
+                    del building
+                    return False
+
+        if not game_map.add_entity(building, x, y):
+            del building
+            return False
+
+        self.resources.decrease_resources(building.cost.get())
+
+        for villager in selected_villagers:
+            villager.set_task('build', building)
+
+        building.set_builders(selected_villagers)
 
         return True
-
-    def battle(self,t,map,nb):
-        """
-        Attaque t, et l'adversaire défend.
-        """
-        for i in range(0,len(t.units)):
-            soldier=t.units[i]
-            if not(soldier.task) and not(isinstance(soldier,Villager)):
-                debug_print("ok")
-                soldier.task=True
-                soldier.attack(self,map)
-    
-        for i in range(0,min(nb,len(self.units))):
-            soldier=self.units[i]
-            if not(soldier.task) and not(isinstance(soldier,Villager)):
-               
-                soldier.task=True
-                soldier.attack(t,map)
-
-    def battle_v2(self,t,map,nb):
-        """
-        Attaque t, et l'adversaire ne défend pas.
-        """
-        i=0
-        nb_soldier=0
-        while(i<len(self.units) and nb_soldier< nb):
-            soldier=self.units[i]
-            if not(soldier.task) and not(isinstance(soldier,Villager)):
-                nb_soldier+=1
-                soldier.task=True
-                if soldier.target:
-                    soldier.attack(t,map)
-            i+=1
-
-    def modify_target(self,target,players_target):
-        """
-        Met à jour la cible de l'équipe (arrête toutes les attaques de la team)
-        pour la remplacer par la nouvelle 'target'.
-        """
-        players_target[self.teamID]=target
-        for unit in self.units:
-            if not isinstance(unit,Villager):
-                unit.target=None
-                unit.task=True
-                if unit.target:
-                    unit.attack(target,map)
-
+    '''   
     def collectResource(self, villager, resource_tile, duration, game_map):
         """
         Méthode de récolte de ressources : villager se déplace et récolte sur 'resource_tile'.
@@ -257,3 +168,100 @@ class Team:
         villager.task = False
         # On refresh l'UI
         game_map.game_state['player_info_updated'] = True
+
+    def manage_creation(self, clock):
+        """
+        Gère la création de bâtiments/unités (self.en_cours).
+        Une fois le temps écoulé => on les place dans .units ou .buildings.
+        """
+        to_remove = []
+        for entity, start_time in self.en_cours.items():
+            if isinstance(entity, Building):
+                if start_time - clock <= 0:
+                    self.buildings.append(entity)
+                    for villager in entity.constructors:
+                        villager.task=False
+                    if isinstance(entity,House) or isinstance(entity,TownCentre):
+                        self.maximum_population+=5
+                    to_remove.append(entity)
+                    for villager in entity.constructors:
+                        villager.task = False
+            else:
+                if entity.training_time + start_time - clock <= 0:
+                    to_remove.append(entity)
+                    self.units.append(entity)
+
+        for entity in to_remove:
+            del self.en_cours[entity]
+   
+        i=0
+        num_constructors=0
+        while(i<len(self.units) and num_constructors<nb):
+            unit=self.units[i]
+            if isinstance(unit,Villager) and not(unit.task):
+                unit.build(map,building)
+                num_constructors +=1
+                v1=v
+            i+=1
+         
+        self.en_cours[building]=clock+v1.buildTime(building,num_constructors) 
+
+        i = 0
+        j = 0
+        chosen_villager = None
+        while i < len(self.units) and j < nb:
+            v = self.units[i]
+            if isinstance(v, Villager) and not v.task:
+                v.build(game_map, building)
+                j += 1
+                chosen_villager = v
+            i += 1
+
+        if chosen_villager:
+            total_build_time = chosen_villager.buildTime(building, j)
+            self.en_cours[building] = clock + total_build_time
+        else:
+            debug_print("No free villager found to build.")
+            return False
+
+        self.buildings.append(building)
+        if hasattr(building, 'population'): #rajouter condition pour pas depasser MAXIMUM_POPULATION a 200
+            self.maximum_population += building.population
+        game_map.game_state['player_info_updated'] = True
+        return True
+
+    def battle(self,t,map,nb):
+        """
+        Attaque t, et l'adversaire défend.
+        """
+        for i in range(0,len(t.units)):
+            soldier=t.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
+                debug_print("ok")
+                soldier.task=True
+                soldier.attack(self,map)
+    
+        for i in range(0,min(nb,len(self.units))):
+            soldier=self.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
+               
+                soldier.task=True
+                soldier.attack(t,map)
+
+    def battle_v2(self,t,map,nb):
+        """
+        Attaque t, et l'adversaire ne défend pas.
+        """
+        i=0
+        nb_soldier=0
+        while(i<len(self.units) and nb_soldier< nb):
+            soldier=self.units[i]
+            if not(soldier.task) and not(isinstance(soldier,Villager)):
+                nb_soldier+=1
+                soldier.task=True
+                if soldier.target:
+                    soldier.attack(t,map)
+            i+=1
+
+        
+    '''

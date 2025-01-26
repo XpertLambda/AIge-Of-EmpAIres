@@ -125,7 +125,7 @@ def _curses_main(stdscr, game_map):
                 elif c in [ord('q'), ord('Q')]:
                     user_choices["menu_result"] = "quit"
                     chosen = 'q'
-                time.sleep(0.05)
+                time.sleep(0.005)
             # On referme curses
             running = False
             break
@@ -216,10 +216,10 @@ def _curses_main(stdscr, game_map):
 
         if game_map.game_state is not None:
             if not game_map.game_state.get('paused', False):
-                game_map.patch(0.01)
+                game_map.patch(0.005)
         else:
-            game_map.patch(0.01)
+            game_map.patch(0.005)
 
-        time.sleep(0.01)
+        time.sleep(0.005)
 
     debug_print("=== Fin mode curses ===")

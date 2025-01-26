@@ -23,12 +23,12 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     ]
     tile_indices = [
         screen_to_tile(
-            sx, sy, 
-            screen_width, screen_height, 
+            sx, sy,
+            screen_width, screen_height,
             camera,
-            HALF_TILE_SIZE / 2, 
+            HALF_TILE_SIZE / 2,
             HALF_TILE_SIZE / 4
-        ) 
+        )
         for sx, sy in corners_screen
     ]
 
@@ -42,14 +42,34 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
     max_tile_y = min(game_map.num_tiles_y - 1, max(y_candidates) + margin)
 
     visible_entities = set()
+    visible_projectiles = set()
+
+    # Entities: Iterate through visible tiles and add entities from those tiles
+    for tile_y in range(min_tile_y, max_tile_y + 1):  # +1 to include max range
+        for tile_x in range(min_tile_x, max_tile_x + 1):  # +1 to include max range
+            entity_set_active = game_map.grid.get((tile_x, tile_y), None)
+            entity_set_inactive = game_map.inactive_matrix.get((tile_x, tile_y), None)
+
+            if entity_set_active:
+                visible_entities.update(entity_set_active)  # Use update for efficiency
+            if entity_set_inactive:
+                visible_entities.update(entity_set_inactive)  # Use update for efficiency
+
+    # Projectiles: Filter projectiles based on their tile position
+    for projectile in game_map.projectiles.values():
+        projx, projy = round(projectile.x), round(projectile.y)
+        if min_tile_x <= projx <= max_tile_x and min_tile_y <= projy <= max_tile_y:  # Check if projectile tile is visible
+            visible_projectiles.add(projectile)
+
+
     for tile_y in range(min_tile_y, max_tile_y):
         for tile_x in range(min_tile_x, max_tile_x):
             # Fill grass
             if tile_x % 10 == 0 and tile_y % 10 == 0:
                 grass_sx, grass_sy = tile_to_screen(
-                    tile_x + 4.5, 
-                    tile_y + 4.5, 
-                    HALF_TILE_SIZE, 
+                    tile_x + 4.5,
+                    tile_y + 4.5,
+                    HALF_TILE_SIZE,
                     HALF_TILE_SIZE / 2,
                     camera,
                     screen_width,
@@ -57,18 +77,9 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                 )
                 fill_grass(screen, grass_sx, grass_sy, camera)
 
-            entity_set_active = game_map.grid.get((tile_x, tile_y), None)
-            entity_set_inactive = game_map.inactive_matrix.get((tile_x, tile_y), None)
-
-            if entity_set_active:
-                for ent in entity_set_active:
-                    visible_entities.add(ent)
-            if entity_set_inactive:
-                for ent_inactive in entity_set_inactive:
-                    visible_entities.add(ent_inactive)
 
     visible_list = list(visible_entities)
-    visible_list.sort(key=lambda e: (e.y, e.x))
+    visible_list.sort(key=lambda e: (e.x + e.y))
 
     game_state['train_button_rects'] = {}
     current_time = time.time()
@@ -78,18 +89,17 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
         entity.display_hitbox(screen, screen_width, screen_height, camera)
         entity.display(screen, screen_width, screen_height, camera, delta_time)
         entity.display_range(screen, screen_width, screen_height, camera)
-
         if hasattr(entity, 'spawnsUnits') and entity.spawnsUnits:
             ent_screen_x, ent_screen_y = tile_to_screen(
-                entity.x, 
-                entity.y, 
-                HALF_TILE_SIZE, 
+                entity.x,
+                entity.y,
+                HALF_TILE_SIZE,
                 HALF_TILE_SIZE / 2,
                 camera,
                 screen_width,
                 screen_height
             )
-            
+
             # Always show training progress if there's an active training
             if entity.current_training_unit:
                 bar_width = 80
@@ -118,9 +128,9 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                 button_width = 120
                 button_height = 25
                 ent_screen_x, ent_screen_y = tile_to_screen(
-                    entity.x, 
-                    entity.y, 
-                    HALF_TILE_SIZE, 
+                    entity.x,
+                    entity.y,
+                    HALF_TILE_SIZE,
                     HALF_TILE_SIZE / 2,
                     camera,
                     screen_width,
@@ -157,6 +167,10 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                         else:
                             game_state['insufficient_resources_feedback'].pop(entity.entity_id, None)
 
+    for projectile in visible_projectiles:
+        projectile.display(screen, screen_width, screen_height, camera, delta_time)
+
+
     # Draw selection rectangle if needed
     if game_state.get('selecting_entities', False):
         start_pos = game_state.get('selection_start')
@@ -170,10 +184,19 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
 
     # Health bars
     show_all_bars = game_state.get('show_all_health_bars', False)
+    show_unit_and_building = game_state.get('show_unit_and_building_health_bars', False)
+
     if show_all_bars:
         for entity in visible_list:
             color_val = get_entity_bar_color(entity, game_state, team_colors)
             entity.display_healthbar(screen, screen_width, screen_height, camera, color_val)
+    elif show_unit_and_building:
+        from Entity.Unit.Unit import Unit
+        from Entity.Building import Building
+        for entity in visible_list:
+            if isinstance(entity, Unit) or isinstance(entity, Building):
+                color_val = get_entity_bar_color(entity, game_state, team_colors)
+                entity.display_healthbar(screen, screen_width, screen_height, camera, color_val)
     else:
         selected_entities = game_state.get('selected_entities', [])
         for entity in visible_list:
@@ -213,10 +236,10 @@ def create_minimap_background(game_map, minimap_width, minimap_height):
 
     return surface_map, scale_factor, offset_x, offset_y, min_iso_x, min_iso_y
 
-def display_fps(screen, clock, font):
-    fps_value = f"{clock.get_fps():.2f}"  # Format to 2 decimal places
+def display_fps(screen, screen_width, clock, font):
+    fps_value = f"FPS {int(clock.get_fps())}"
     fps_surface = font.render(fps_value, True, (255, 255, 255))  # White text
-    screen.blit(fps_surface, (10, 10))  # (x, y) coordinates for top-left
+    screen.blit(fps_surface, (screen_width - 70, 10))  # (x, y) coordinates for top-left
 
 def draw_pointer(screen):
     from Controller.gui import get_scaled_gui  # Déplacé ici pour éviter l'import circulaire
@@ -237,11 +260,21 @@ def draw_healthBar(screen, screen_x, screen_y, ratio, color_val):
     fill_rect = pygame.Rect(bg_rect.x, bg_rect.y, fill_width, HEALTH_BAR_HEIGHT)
     pygame.draw.rect(screen, color_val, fill_rect)
 
-def draw_hitbox(screen, corners, zoom):
+def draw_buildProcess(screen, screen_x, screen_y, time, zoom, color=(255,255,255)):
+    minutes = time // 60
+    seconds = time % 60
+    time_text = f"{int(minutes)}:{int(seconds)}"
+    base_font_size = 36
+    font_size = int(base_font_size * zoom) 
+    font = pygame.font.Font(None, font_size)
+    time_surface = font.render(time_text, True, color)
+    screen.blit(time_surface, (screen_x - time_surface.get_width()//2, screen_y - time_surface.get_height()//2))
+
+def draw_hitbox(screen, corners, zoom, color):
     if len(corners) != 4:
         raise ValueError("Hitbox must have exactly 4 corners.")
     scaled_corners = [(x * zoom, y * zoom) for x, y in corners]
-    pygame.draw.polygon(screen, (255, 255, 255), corners, width=1)
+    pygame.draw.polygon(screen, color, corners, width=1)
 
 def draw_path(screen, unit_center, screenPath, zoom, color):
     if len(screenPath) >= 2:
@@ -249,7 +282,7 @@ def draw_path(screen, unit_center, screenPath, zoom, color):
     pygame.draw.circle(screen, color, unit_center, int(5 * zoom))
 
 def draw_sprite(screen, acronym, category, screen_x, screen_y, zoom, state=None, frame=0, variant=0, direction=0):
-    name = Entity_Acronym[category][acronym]
+    name = Acronym[category][acronym]
     scaled_sprite = get_scaled_sprite(name, category, zoom, state, direction, frame, variant)
     if scaled_sprite is None:
         return
@@ -343,3 +376,6 @@ def draw_minimap_viewport(screen, camera, minimap_rect, scale, offset_x, offset_
         (rect_left, rect_top, rect_width, rect_height), 
         2
     )
+
+def fill_grass(screen, screen_x, screen_y, camera):
+    draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)
