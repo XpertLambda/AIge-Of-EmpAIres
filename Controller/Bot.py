@@ -7,7 +7,7 @@ from Entity.Building import *
 #Priorité 5
 
 def get_military_unit_count(player_team):
-    print(f"MUC : {sum(1 for unit in player_team.units if not isinstance(unit, Villager))}")
+    #print(f"MUC : {sum(1 for unit in player_team.units if not isinstance(unit, Villager))}")
 
     return sum(1 for unit in player_team.units if not isinstance(unit, Villager))
     
@@ -122,36 +122,24 @@ def check_and_address_resources(team, game_map, RESOURCE_THRESHOLDS):
 #Priorité 2
 
 def search_for_target(unit, enemy_team, attack_mode=True):
+
     """
     Searches for the closest enemy unit or building depending on the mode.
     vise en premier les keeps puis les units puis les villagers et buildings
     """
+    if enemy_team==None:
+        return
     closest_distance = float("inf")
     closest_entity = None
-
-    targets=[keep for keep in enemy_team.buildings if isinstance(keep,Keep)]
-    if targets!=[] and attack_mode:
-        for enemy in targets:
-            dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-            if attack_mode or not isinstance(enemy,Villager): 
-                if dist < closest_distance:
-                    closest_distance = dist
-                    closest_entity = enemy
-    if closest_entity!=None:
-        unit.set_target(closest_entity)
-        return unit.attack_target is not None
-
+    keeps=[keep for keep in enemy_team.buildings if isinstance(keep,Keep)]  
     targets=[unit for unit in enemy_team.units if not isinstance(unit,Villager)]
+
     for enemy in targets:
         dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
         if dist < closest_distance:
             closest_distance = dist
             closest_entity = enemy
-    if closest_entity!=None:
-        unit.set_target(closest_entity)
-        return unit.attack_target is not None
-
-    if attack_mode:
+    if attack_mode and closest_entity==None:
         targets=[unit for unit in enemy_team.units if isinstance(unit,Villager)]
         for enemy in targets:
             dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
@@ -159,64 +147,29 @@ def search_for_target(unit, enemy_team, attack_mode=True):
                 if dist < closest_distance:
                     closest_distance = dist
                     closest_entity = enemy
-    
-        for enemy_building in enemy_team.buildings:
-            dist = math.dist((unit.x, unit.y), (enemy_building.x, enemy_building.y))
-            if dist < closest_distance:
-              closest_distance = dist
-              closest_entity = enemy_buildin
-
-
-
-#Priorité 2
-
-def search_for_target(unit, enemy_team, attack_mode=True):
-    """
-    Searches for the closest enemy unit or building depending on the mode.
-    vise en premier les keeps puis les units puis les villagers et buildings
-    """
-    closest_distance = float("inf")
-    closest_entity = None
-
-    targets=[keep for keep in enemy_team.buildings if isinstance(keep,Keep)]
-    if targets!=[] and attack_mode:
-        for enemy in targets:
-            dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-            if attack_mode or not isinstance(enemy,Villager): 
-                if dist < closest_distance:
-                    closest_distance = dist
-                    closest_entity = enemy
-    if closest_entity!=None:
-        unit.set_target(closest_entity)
-        return unit.attack_target is not None
-
-    targets=[unit for unit in enemy_team.units if not isinstance(unit,Villager)]
-    for enemy in targets:
-        dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-        if dist < closest_distance:
-            closest_distance = dist
-            closest_entity = enemy
-    if closest_entity!=None:
-        unit.set_target(closest_entity)
-        return unit.attack_target is not None
-
-    if attack_mode:
-        targets=[unit for unit in enemy_team.units if isinstance(unit,Villager)]
-        for enemy in targets:
-            dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-            if attack_mode or not isinstance(enemy,Villager): 
-                if dist < closest_distance:
-                    closest_distance = dist
-                    closest_entity = enemy
-    
         for enemy_building in enemy_team.buildings:
             dist = math.dist((unit.x, unit.y), (enemy_building.x, enemy_building.y))
             if dist < closest_distance:
               closest_distance = dist
               closest_entity = enemy_building
 
+    if attack_mode:
+        for enemy in keeps:
+            dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
+            if attack_mode or not isinstance(enemy,Villager): 
+                if dist < closest_distance:
+                    closest_distance = dist
+                    closest_entity = enemy 
+    if closest_entity!=None:
+        if keeps!=[] and attack_mode:
+            for keep in keeps:
+                dist=math.dist((keep.x,keep.y),(closest_entity.x,closest_entity.y))
+                if dist<keep.attack_range:
+                    closest_entity=keep
+    
     unit.set_target(closest_entity)
     return unit.attack_target is not None
+
 
 
 def priority_2(players,selected_player,players_target):
@@ -235,19 +188,15 @@ def modify_target(player,target,players_target):
     """
     players_target[player.teamID]=target
     for unit in player.units:
-        if not isinstance(unit,Villager):
-            unit.target=None
-            unit.task=True
-            if unit.target:
-                unit.attack(target,map)
+        unit.set_target(None)
         
 def choose_target(players,selected_player,players_target):
-    #testé
-    count_max=201
+    count_max=300
     target=None
     for enemy_team in players:
         if enemy_team!=selected_player:
             count = sum(1 for unit in enemy_team.units if not isinstance(unit, Villager))
+            count+=sum(1 for building in enemy_team.buildings if not isinstance(building, Keep ))
             if count<count_max:
                 target=enemy_team
                 count_max=count
@@ -276,9 +225,7 @@ def manage_battle(selected_player,players_target,players,game_map,dt):
     if enemy!=None and (len(enemy.units)!=0 or len(enemy.buildings)!=0):
         for unit in selected_player.units:
             if not isinstance(unit,Villager) or (len(selected_player.units)==0 and not attack_mode):
-                if unit.attack_target!=None and unit.attack_target.state!='death':
-                    unit.seekAttack(game_map,dt)
-                else:
+                if unit.attack_target==None or not unit.attack_target.isAlive():
                     search_for_target(unit,enemy,attack_mode)
     else:
         modify_target(selected_player,None,players_target)
