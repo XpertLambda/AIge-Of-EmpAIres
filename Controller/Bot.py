@@ -66,50 +66,32 @@ def priorite_5(player_team,unit,building):
 
 #Priorty seven avoid ressources shortage 
 
-def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
-    for resource in ['food', 'wood', 'gold']:
-        if getattr(current_resources, resource, 0) < RESOURCE_THRESHOLDS.get(resource, 0):
-            return resource
-def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
-    for resource in ['food', 'wood', 'gold']:
-        if getattr(current_resources, resource, 0) < RESOURCE_THRESHOLDS.get(resource, 0):
-            return resource
-    return None
 
+def get_resource_shortage(current_resources, thresholds):
+    shortages = {key: thresholds[key] - current_resources.get(key, 0) for key in thresholds}
+    critical_shortage = min(shortages, key=shortages.get)
+    return critical_shortage if shortages[critical_shortage] > 0 else None
 
 def find_resources(game_map, resource_type):
-    if not resource_type:
-        return []
-    resource_positions = []
-    for position, entities in game_map.grid.items():
-        for entity in entities:
-            if isinstance(entity, resource_type):
-                resource_positions.append(position)
-    return resource_positions
-
-
-def find_resources(game_map, resource_type):
-    if not resource_type:
-        return []
-    resource_positions = []
-    for position, entities in game_map.grid.items():
-        for entity in entities:
-            if isinstance(entity, resource_type):
-                resource_positions.append(position)
-    return resource_positions
-
+    return [pos for pos, res in game_map.resources.items() if isinstance(res, resource_type)]
 
 def reallocate_villagers(resource_in_shortage, team, game_map):
-    for unit in team.units:  # Assuming `team.units` provides access to all units in the team
-        if hasattr(unit, "carry") and unit.isAvailable() and not unit.task:
+    for unit in team.units:
+        if isinstance(unit, Villager) and unit.isAvailable() :
+            drop_points = [building for building in team.buildings if hasattr(building, "drop_point")]
+            if not drop_points:
+                continue
+            nearest_drop_point = min(drop_points, key=lambda dp: math.dist((unit.x, unit.y), (dp.x, dp.y)))
             resource_positions = find_resources(game_map, resource_in_shortage)
             if resource_positions:
                 nearest_resource = min(
                     resource_positions,
-                    key=lambda pos: math.sqrt((unit.x - pos[0]) ** 2 + (unit.y - pos[1]) ** 2)
+                    key=lambda pos: math.dist((nearest_drop_point.x, nearest_drop_point.y), pos)
                 )
                 unit.set_target(nearest_resource)
+                unit.task = f"Collecting {resource_in_shortage}"
                 return
+
 
 
 def check_and_address_resources(team, game_map, RESOURCE_THRESHOLDS):
