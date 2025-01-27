@@ -146,7 +146,7 @@ class Villager(Unit):
         if self.task != 'stock':
             return
         if self.stock_target and self.stock_target.isAlive():
-            distance = math.dist((self.x, self.y), (self.stock_target.x, self.stock_target.y)) - self.stock_target.hitbox - self.attack_range
+            distance = math.dist((self.x, self.y), (self.stock_target.x, self.stock_target.y)) - self.stock_target.hitbox - 1
             if self.carry.total() == 0:
                     self.task = 'collect'
                     return
