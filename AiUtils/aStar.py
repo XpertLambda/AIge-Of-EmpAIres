@@ -1,5 +1,6 @@
 import heapq
 import math
+from collections import deque
 from Controller.utils import get_snapped_angle, get_angle
 
 def heuristic(a, b):
@@ -7,8 +8,8 @@ def heuristic(a, b):
 
 def get_neighbors(game_map, position):
     directions = [
-        (1, 0), (0, 1), (-1, 0), (0, -1),
-        (1, 1), (1, -1), (-1, 1), (-1, -1)
+        (1, 0), (0, 1), (-1, 0), (0, -1)
+        # Removed diagonals
     ]
     neighbors = []
     for dx, dy in directions:
@@ -18,20 +19,18 @@ def get_neighbors(game_map, position):
     return neighbors
 
 def find_nearest_walkable_tile(rounded_goal, game_map):
-    open_set = [(0, rounded_goal)]
-    visited = set()
+    queue = deque([rounded_goal])
+    visited = {rounded_goal}
 
-    while open_set:
-        _, current = heapq.heappop(open_set)
-
+    while queue:
+        current = queue.popleft()
         if game_map.walkable_position(current):
             return current
 
-        visited.add(current)
         for neighbor in get_neighbors(game_map, current):
             if neighbor not in visited:
-                distance = heuristic(neighbor, rounded_goal)
-                heapq.heappush(open_set, (distance, neighbor))
+                visited.add(neighbor)
+                queue.append(neighbor)
 
     return None
 
@@ -92,5 +91,4 @@ def a_star(start, float_goal, game_map):
                 f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, rounded_goal)
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
-    return []
-
+    return

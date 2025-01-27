@@ -87,6 +87,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
+    # Dynamically compute camera.min_zoom to see entire map:
+    map_width = max_iso_x - min_iso_x
+    map_height = max_iso_y - min_iso_y
+    camera.min_zoom = min(
+        screen_width / float(map_width),
+        screen_height / float(map_height)
+    )
+
+    # Initial camera position - same as pressing 'M'
+    camera.zoom_out_to_global()
+
     panel_width  = int(screen_width * PANEL_RATIO)
     panel_height = int(screen_height * PANEL_RATIO)
     minimap_panel_sprite = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
@@ -137,7 +148,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'screen_width': screen_width,
         'screen_height': screen_height,
         'screen': screen,
-        'fullscreen': fullscreen,
+        'fullscreen': pygame.display.get_surface().get_flags() & pygame.FULLSCREEN,
         'minimap_dragging': False,
         'player_selection_updated': True,
         'player_info_updated': True,
@@ -328,12 +339,16 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                         )
             display_fps(screen,screen_width, clock, font)
 
-            # Affichage de la notification
+            # Affichage de la notification - Nouvelle position
             if game_state['notification_message']:
                 if time.time() - game_state['notification_start_time'] < 3:
                     notif_font = pygame.font.SysFont(None, 28)
                     notif_surf = notif_font.render(game_state['notification_message'], True, (255,255,0))
-                    screen.blit(notif_surf, (20, 100))
+                    fps_height = 30  
+                    margin = 10  # Marge à droite et en dessous des FPS
+                    notif_x = screen_width - notif_surf.get_width() - margin
+                    notif_y = fps_height + margin
+                    screen.blit(notif_surf, (notif_x, notif_y))
                 else:
                     game_state['notification_message'] = ""
 

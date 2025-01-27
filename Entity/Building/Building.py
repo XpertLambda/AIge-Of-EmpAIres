@@ -93,6 +93,9 @@ class Building(Entity):
 
     # ---------------- Controller ----------------
 
+    def isBuilt(self):
+        return self.state != 'construction'
+
     def death(self, game_map):
         if self.state != 'death':
             self.state = 'death'
@@ -259,6 +262,7 @@ class Building(Entity):
     # ---------------- Build Logic ----------------
     def set_builders(self, builders):
         self.builders = builders
+        self.state = 'construction'
 
     def get_buildTime(self, num_builders):
         return (3 * self.buildTime) / (num_builders + 2) if num_builders > 0 else self.buildTime
@@ -267,8 +271,7 @@ class Building(Entity):
         if self.processTime >= self.dynamicBuildTime or not self.builders:
             return
 
-        self.state = 'construction'
-        
+        self.state = 'construction' 
         for builder in self.builders.copy():
             if not builder.isAlive() or builder.state != 'task':
                 if builder.task != 'build' and builder.task != 'repair':
