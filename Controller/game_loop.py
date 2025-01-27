@@ -21,13 +21,14 @@ from Controller.drawing import (
 )
 import copy
 from Controller.event_handler import handle_events
-from Controller.update import update_game_state
+from Controller.update import update_game_state, handle_camera
 from Controller.gui import (
     create_player_selection_surface,
     create_player_info_surface,
     get_scaled_gui,
     get_centered_rect_in_bottom_right,
     update_minimap_elements,
+    draw_pause_menu  
 )
 from Controller.utils import tile_to_screen
 from Controller.Bot import *
@@ -42,6 +43,8 @@ from Settings.setup import (
     ONE_SECOND,
     FPS_DRAW_LIMITER
 )
+
+from Controller.Bot import manage_battle
 
 def is_player_dead(player):
     # Simple check: no units, no buildings, and zero resources to rebuild
@@ -83,6 +86,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
+
+    # Dynamically compute camera.min_zoom to see entire map:
+    map_width = max_iso_x - min_iso_x
+    map_height = max_iso_y - min_iso_y
+    camera.min_zoom = min(
+        screen_width / float(map_width),
+        screen_height / float(map_height)
+    )
+
+    # Initial camera position - same as pressing 'M'
+    camera.zoom_out_to_global()
 
     panel_width  = int(screen_width * PANEL_RATIO)
     panel_height = int(screen_height * PANEL_RATIO)
@@ -134,7 +148,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'screen_width': screen_width,
         'screen_height': screen_height,
         'screen': screen,
-        'fullscreen': fullscreen,
+        'fullscreen': pygame.display.get_surface().get_flags() & pygame.FULLSCREEN,
         'minimap_dragging': False,
         'player_selection_updated': True,
         'player_info_updated': True,
@@ -149,6 +163,9 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'show_player_info': True,
         'show_gui_elements': True,
         'return_to_menu': False,  # Nouveau flag
+        'pause_menu_active': False,  # Nouveau flag
+        'notification_message': "",
+        'notification_start_time': 0.0,
     }
     
     game_map.set_game_state(game_state)
@@ -164,10 +181,15 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         old_resources[p.teamID] = p.resources.copy()
 
     draw_timer = 0
+    decision_timer = 0
+
+    players_target=[None for _ in range(0,len(players))]
     while running:
-        raw_dt = clock.tick(160) / ONE_SECOND
+        raw_dt = clock.tick(FPS_DRAW_LIMITER) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
+
+        handle_camera(camera, raw_dt * GAME_SPEED)
 
         events = pygame.event.get()
         for event in events:
@@ -215,6 +237,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 update_minimap_elements(game_state)
             update_counter += dt
 
+        manage_battle(selected_player,players_target,players,game_map,dt)
         # Surfaces
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):
@@ -228,7 +251,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
             if game_state.get('player_info_updated', False):
                 player_info_surface = create_player_info_surface(
-                    selected_player, screen_width, team_colors
+                    selected_player, 
+                    screen_width, 
+                    screen_height,
+                    team_colors
                 )
                 game_state['player_info_updated'] = False
 
@@ -253,8 +279,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = True
                 old_resources[selected_player.teamID] = current_res.copy()
 
-        # Rendu Pygame (GUI)
-        draw_timer += raw_dt
+        # BOT IMPLEMENTATION 
+        if decision_timer >= 1/DPS :
+            decision_timer = 0
+            for player in players:
+                manage_battle(player,players_target,players,game_map,dt)
 
         if screen is not None and draw_timer >= 1/FPS_DRAW_LIMITER:
             draw_timer = 0
@@ -292,15 +321,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     screen.blit(player_selection_surface, (bg_rect.x, bg_rect.y - sel_h - 20))
 
                 if player_info_surface and game_state['show_player_info']:
-                    inf_h = player_info_surface.get_height()
-                    screen.blit(player_info_surface, (0, screen_height - inf_h))
-            
-            archer = Archer(selected_player,0,0)
-            barrack = Barracks(selected_player,0,0)
-            print("priorite_5")
-            priorite_5(selected_player,archer,barrack)
-            
-            
+                    x_offset = int(screen_width * 0.03)  # 3% du screen width comme décalage
+                    screen.blit(player_info_surface, (x_offset, 0))
+            #archer = Archer(selected_player,0,0)
+            #train_units(selected_player,archer)
 
             draw_pointer(screen)
 
@@ -313,13 +337,35 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                             game_state['screen_height'],
                             game_state['camera']
                         )
-            display_fps(screen, clock, font)
+            display_fps(screen,screen_width, clock, font)
+
+            # Affichage de la notification - Nouvelle position
+            if game_state['notification_message']:
+                if time.time() - game_state['notification_start_time'] < 3:
+                    notif_font = pygame.font.SysFont(None, 28)
+                    notif_surf = notif_font.render(game_state['notification_message'], True, (255,255,0))
+                    fps_height = 30  
+                    margin = 10  # Marge à droite et en dessous des FPS
+                    notif_x = screen_width - notif_surf.get_width() - margin
+                    notif_y = fps_height + margin
+                    screen.blit(notif_surf, (notif_x, notif_y))
+                else:
+                    game_state['notification_message'] = ""
+
             if game_state.get('game_over', False):
                 draw_game_over_overlay(screen, game_state)
+            if game_state.get('pause_menu_active'):
+                draw_pause_menu(screen, game_state)
+                draw_pointer(screen)  # draw pointer on top
+                pygame.display.flip()
+                continue
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False
             else:
                 pygame.display.flip()
+                    # Rendu Pygame (GUI)
+        draw_timer += raw_dt
+        decision_timer += raw_dt
     
     # fin de game_loop

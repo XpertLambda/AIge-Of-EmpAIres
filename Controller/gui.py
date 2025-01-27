@@ -416,7 +416,7 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
     while columns <= 4:
         rows = (len(players) + columns - 1) // columns
         total_height = selection_height * rows + padding * (rows - 1)
-        if total_height <= max_height or columns == 4:
+        if (total_height <= max_height or columns == 4):
             break
         columns += 1
 
@@ -446,35 +446,56 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
 
     return surface
 
-def create_player_info_surface(selected_player, screen_width, team_colors):
+def create_player_info_surface(selected_player, screen_width, screen_height, team_colors):
     font_info = pygame.font.Font(None, 24)
-    padding = 5
-    info_height = 200
-    surface = pygame.Surface((screen_width, info_height), pygame.SRCALPHA)
+    padding_x = int(screen_width * 0.0)  # 0.7% du screen width comme padding horizontal
+    padding_y = int(screen_height * 0.028)  # 2% du screen height comme padding vertical
+    surface = pygame.Surface((screen_width, 300), pygame.SRCALPHA)
 
+    spacing_x = int(screen_width * 0.057)  # 3% du screen width entre les éléments
+    spacing_y = int(screen_height * 0.022)  # 2% de la hauteur de l'écran entre les éléments
+
+    gold_str = f"{selected_player.resources.gold}"
+    wood_str = f"{selected_player.resources.wood}"
+    food_str = f"{selected_player.resources.food}"
+
+    gold_surf = font_info.render(gold_str, True, (255, 255, 255))
+    wood_surf = font_info.render(wood_str, True, (255, 255, 255))
+    food_surf = font_info.render(food_str, True, (255, 255, 255))
+
+    x_offset = padding_x
+    surface.blit(gold_surf, (x_offset, padding_y))  # Utilise padding_y au lieu de padding
+    x_offset += gold_surf.get_width() + spacing_x
+    surface.blit(wood_surf, (x_offset, padding_y))  # Utilise padding_y au lieu de padding
+    x_offset += wood_surf.get_width() + spacing_x
+    surface.blit(food_surf, (x_offset, padding_y))  # Utilise padding_y au lieu de padding
+
+    y_after_resources = padding_y + gold_surf.get_height() + spacing_y
+
+    # Player name
     team_color = team_colors[selected_player.teamID % len(team_colors)]
     player_name_surface = font_info.render(f"Player {selected_player.teamID}", True, team_color)
-    surface.blit(player_name_surface, (padding, 0))
+    surface.blit(player_name_surface, (padding_x, y_after_resources))
+    y_after_resources += player_name_surface.get_height() + spacing_y
 
-    resources_text = (f"Resources - Food: {selected_player.resources.food}, "
-                      f"Wood: {selected_player.resources.wood}, "
-                      f"Gold: {selected_player.resources.gold}")
-    resources_surface = font.render(resources_text, True, (255, 255, 255))
-    surface.blit(resources_surface, (padding, 30))
-
+    # Units
     unit_counts = Counter(unit.acronym for unit in selected_player.units)
     units_text = "Units - " + ", ".join([f"{acronym}: {count}" for acronym, count in unit_counts.items()])
     units_surface = font_info.render(units_text, True, (255, 255, 255))
-    surface.blit(units_surface, (padding, 60))
+    surface.blit(units_surface, (padding_x, y_after_resources))
+    y_after_resources += units_surface.get_height() + spacing_y
 
+    # Buildings
     building_counts = Counter(building.acronym for building in selected_player.buildings)
     buildings_text = "Buildings - " + ", ".join([f"{acronym}: {count}" for acronym, count in building_counts.items()])
     buildings_surface = font_info.render(buildings_text, True, (255, 255, 255))
-    surface.blit(buildings_surface, (padding, 90))
+    surface.blit(buildings_surface, (padding_x, y_after_resources))
+    y_after_resources += buildings_surface.get_height() + spacing_y
 
-    population_text = (f"population : {selected_player.population} / {selected_player.maximum_population}")
-    population = font.render(population_text, True, (255, 255, 255))
-    surface.blit(population, (padding, 150))
+    # Population
+    population_text = f"Population: {selected_player.population} / {selected_player.maximum_population}"
+    population_surface = font.render(population_text, True, (255, 255, 255))
+    surface.blit(population_surface, (padding_x, y_after_resources))
 
     return surface
 
@@ -501,3 +522,27 @@ def draw_game_over_overlay(screen, game_state):
 
     game_state['game_over_button_rect'] = button_rect
     screen.blit(overlay, (0, 0))
+
+def draw_pause_menu(screen, game_state):
+    font = pygame.font.SysFont(None, 50)
+    screen_width = game_state['screen_width']
+    screen_height = game_state['screen_height']
+
+    pause_text = font.render("Pause Menu", True, (255, 255, 255))
+    text_rect = pause_text.get_rect(center=(screen_width // 2, screen_height // 4))
+    screen.blit(pause_text, text_rect)
+
+    button_font = pygame.font.SysFont(None, 36)
+    labels = ["Resume", "Load Game", "Save Game", "Exit"]
+    y_start = text_rect.bottom + 40
+    button_rects = {}
+
+    for label in labels:
+        text_surf = button_font.render(label, True, (255, 255, 255))
+        rect = text_surf.get_rect(center=(screen_width // 2, y_start))
+        pygame.draw.rect(screen, (50, 50, 50), rect.inflate(100, 20))
+        screen.blit(text_surf, rect)
+        button_rects[label] = rect
+        y_start += 60
+
+    game_state['pause_menu_button_rects'] = button_rects

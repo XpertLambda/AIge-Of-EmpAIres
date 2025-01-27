@@ -19,6 +19,7 @@ from Controller.init_assets import load_sprites, ASSETS_LOADED, get_assets_progr
 
 from Settings.setup import SAVE_DIRECTORY
 from Controller.gui import run_gui_menu, user_choices, VALID_GRID_SIZES, VALID_BOTS_COUNT, VALID_LEVELS
+from Controller.Bot import *
 
 # Import du curses terminal display
 from Controller.terminal_display import start_terminal_interface
@@ -196,7 +197,7 @@ def ask_terminal_inputs_non_blocking():
                 user_choices["validated"] = True
                 return
 
-        time.sleep(0.01)
+        time.sleep(0.005)
 
 
 def background_load_assets(screen, sw, sh):
@@ -308,17 +309,19 @@ def main():
         else:
             players = init_players(nb_bots, bot_level)
             game_map = GameMap(grid_size, gold_c, players)
+  
 
         # Si Terminal ou Both => on lance curses
         if mode_index in [1, 2]:
             from Controller.terminal_display import start_terminal_interface
             t_curses = threading.Thread(target=start_terminal_interface, args=(game_map,), daemon=True)
             t_curses.start()
+        else:
+            t_curses = None
 
         # Boucle de jeu
         from Controller.game_loop import game_loop
         game_loop(screen, game_map, sw, sh, players)
-
         menu_result = user_choices.get("menu_result")
         if menu_result == "main_menu":
             from Controller.terminal_display import stop_curses

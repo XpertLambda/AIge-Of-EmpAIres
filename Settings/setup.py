@@ -6,11 +6,16 @@ import os
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 10
-FPS_DRAW_LIMITER = 50
+GAME_SPEED = 5
+FPS_DRAW_LIMITER = 200
 BUILDING_TIME_REDUCTION = 0.75
 RESOURCE_RATE_PER_SEC = 25 / 60
 MAXIMUM_CARRY = 20
+
+# -------------------
+# BOT constants
+# -------------------
+DPS = 2 # 2 decisions per second
 
 # -------------------
 # Unit constants
@@ -20,7 +25,9 @@ UPDATE_EVERY_N_MILLISECOND = 20
 ONE_SECOND = 1000
 FRAMES_PER_UNIT = 10
 FRAMES_PER_BUILDING = 15
+FRAMES_PER_PROJECTILE = 11
 UNIT_HITBOX = 0.3
+UNIT_ATTACKRANGE = 0.6
 ATTACK_RANGE_EPSILON = 0.5
 
 # -------------------
@@ -67,20 +74,20 @@ difficulty_config = {
     'DEBUG' : {
         'Resources' : Resources(food=99999, gold=99999, wood=99999),
         'Units' : {
-            'Villager' : 10,
-            'Archer' : 10,
-            'Horseman' : 10,
-            'Swordsman' : 10
+            'Villager' : 5,
+            'Archer' : 5,
+            'Horseman' : 5,
+            'Swordsman' : 3
         },
         'Buildings' : {
             'TownCenter' : 5,
+            'House' : 1,
             'Barracks' : 1,
-            'Stable' : 1, 
+            'Stable' : 0, 
             'ArcheryRange' : 1,
-            'Farm' : 1,
-            'Keep' : 1,
-            'House' : 5,
-            'Camp' : 2,
+            'Farm' : 0,
+            'Keep' : 5,
+            'Camp' : 0,
         }
     }
 }
@@ -92,7 +99,7 @@ TILE_SIZE = 200
 HALF_TILE_SIZE = TILE_SIZE / 2
 MAP_WIDTH = 120 * TILE_SIZE
 MAP_HEIGHT = 120 * TILE_SIZE
-MIN_ZOOM = 0.15
+# MIN_ZOOM = 0.15  # Removed for dynamic calculation
 MAX_ZOOM = 3.0
 WINDOW_WIDTH = 1200
 WINDOW_HEIGHT = 1200
@@ -163,12 +170,13 @@ PROGRESS_BAR_Y_RATIO = 0.9
 
 BUILDING_RATIO = 100
 UNIT_RATIO = 100
+PROJECTILE_RATIO = 75
 
 HEALTH_BAR_WIDTH = 40
 HEALTH_BAR_HEIGHT = 5
 HEALTH_BAR_OFFSET_Y = 30
 
-Entity_Acronym = {
+Acronym = {
     'resources': {
         ' ': 'grass',
         'W': 'tree',
@@ -190,6 +198,10 @@ Entity_Acronym = {
         'h': 'horseman',
         's': 'swordsman',
         'v': 'villager'
+    },
+    
+    'projectiles': {
+        'a': 'arrow'
     }
 }
 
@@ -211,6 +223,17 @@ villager_tasks = {
     }
 
 sprite_config = {
+    'projectiles':{
+        'arrow': {
+            'directory': 'assets/projectiles/arrow/',
+            'states': 1,
+            'adjust_scale': TILE_SIZE / PROJECTILE_RATIO,
+            'sheet_config': {
+                'columns': 11,
+                'rows': 8
+            },
+        }
+    },
     'buildings': {
         'towncenter': {
             'directory': 'assets/buildings/towncenter/',
@@ -337,9 +360,11 @@ sprite_config = {
                 'columns': 30,
                 'rows': 16
             },
-        }
-    }
+        },
+    },
 }
+
+
 
 # ----
 # Menu
@@ -372,7 +397,7 @@ ITEM_HEIGHT = 25
 
 
 RESOURCE_THRESHOLDS = {
-    'food': 50,  # Minimum acceptable food level
-    'wood': 50, # Minimum acceptable wood level
-    'gold': 50   # Minimum acceptable gold level
+    'food': 300, 
+    'wood': 350, 
+    'gold': 350   
 }

@@ -2,7 +2,7 @@ from Entity.Entity import Entity
 from Controller.utils import tile_to_screen
 from Settings.setup import HALF_TILE_SIZE, FRAMES_PER_BUILDING, GAME_SPEED
 from Settings.setup import HALF_TILE_SIZE, GAME_SPEED
-from Controller.drawing import draw_sprite
+from Controller.drawing import draw_sprite, draw_buildProcess
 from random import randint
 from AiUtils.aStar import a_star
 from Entity.Unit.Archer import Archer
@@ -54,7 +54,11 @@ class Building(Entity):
             walkable=walkable,
             hasResources=hasResources
         )
+        self.processTime = 0
         self.buildTime = buildTime
+        self.dynamicBuildTime = buildTime
+        self.builders = set()
+
         self.population = population
         self.resourceDropPoint = resourceDropPoint
         self.spawnsUnits = spawnsUnits
@@ -68,69 +72,82 @@ class Building(Entity):
         self.current_training_unit = None
         self.current_training_time_left = 0
         self.training_progress = 0.0
-        self.removed = False
 
-    # ---------------- Update Unit ---------------
+    # ---------------- Update Entity --------------
     def update(self, game_map, dt):
-        self.animator(dt)
         if self.isAlive():
-            if self.spawnsUnits:
-                self.update_training(dt, game_map, self.team)
-            # New code to switch building state to 'training'
-            if self.current_training_unit:
-                self.state = 'training'
-            elif self.state == 'training':
-                self.state = 'idle'
+            self.seekConstruction(dt)
+            self.seekTrain(game_map, dt)              
+            self.seekIdle()
         else:
             self.death(game_map)
+        self.animator(dt)
+
+    def seekIdle(self):
+        if self.processTime >= self.dynamicBuildTime and self.isAlive() and self.state not in ['training']:
+            self.dynamicBuildTime = self.buildTime
+            self.processTime = self.buildTime
+            self.state = 'idle'
+            self.builders = set()
+        self.cooldown_frame = None
 
     # ---------------- Controller ----------------
-    def kill(self):
-        self.state = 'death'
-        self.current_frame = 0
-        self.hp = 0
+
+    def isBuilt(self):
+        return self.state != 'construction'
 
     def death(self, game_map):
-        if self.state != 'death' :
-            self.kill()
+        if self.state != 'death':
+            self.state = 'death'
+            self.current_frame = 0
+            self.hp = 0
 
-        if self.current_frame == self.frames - 1 and self.state == 'death':
-            self.state = ''
-
-        if self.state == 7 and not self.removed:
-            self.removed = True
-            for player in game_map.game_state['players']:
-                if hasattr(player, 'buildings') and self in player.buildings:
-                    player.buildings.remove(self)
-                    break
-            game_map.remove_entity(self)
+        if self.current_frame == self.frames - 1:
+            self.state = '' 
             game_map.game_state['player_info_updated'] = True
-    
+
     # ---------------- Display Logic ----------------
     def animator(self, dt):
-        if self.state:
-            if self.state != 'idle':
-                self.frame_duration += dt
-                frame_time = 1.0 / self.frames
-                if self.frame_duration >= frame_time:
-                    self.frame_duration -= frame_time
-                    self.current_frame = (self.current_frame + 1) % self.frames
+        if self.state != '':
+            self.frame_duration += dt
+            frame_time = 1.0 / self.frames
+            if self.frame_duration >= frame_time:
+                self.frame_duration -= frame_time
+                self.current_frame = (self.current_frame + 1) % self.frames
 
-            if self.cooldown_frame:
-                self.current_frame = self.cooldown_frame
+        if self.cooldown_frame:
+            self.current_frame = self.cooldown_frame
 
     def display(self, screen, screen_width, screen_height, camera, dt):
-        sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
-        draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
+        if self.state != '':  # Remove death_animation_complete check since state will be empty
+            sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
+            draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
+            self.display_buildProcess(screen, screen_width, screen_height, camera)
+    
+    def display_buildProcess(self, screen, screen_width, screen_height, camera):
+        if self.processTime >= self.dynamicBuildTime:
+            return
+        # Screen coordinates
+        sx, sy = tile_to_screen(
+            self.x, 
+            self.y, 
+            HALF_TILE_SIZE, 
+            HALF_TILE_SIZE / 2, 
+            camera, 
+            screen_width, 
+            screen_height
+        )
 
-    def is_walkable(self):
-        return self.walkable
+        draw_buildProcess(screen, sx, sy, self.dynamicBuildTime - self.processTime, camera.zoom)
 
     def add_to_training_queue(self, team):
         """
-        Attempt to enqueue a new unit if enough resources. 
+        Attempt to enqueue a new unit if enough resources and not in constuction. 
         Return True if successful, False otherwise.
         """
+        if self.processTime < self.dynamicBuildTime:
+            return False
+
         if self.acronym not in UNIT_TRAINING_MAP:
             return False
 
@@ -146,10 +163,15 @@ class Building(Entity):
 
         return False
 
+    # ---------------- Train Logic ----------------
+
     def update_training(self, delta_time, game_map, team):
         """
         Updates the building's training queue each frame.
         """
+        if self.processTime < self.dynamicBuildTime:
+            return
+
         if not self.training_queue and not self.current_training_unit:
             return
 
@@ -228,9 +250,71 @@ class Building(Entity):
                 new_unit.destination = (target_x, target_y)
                 return
 
+    # ---------------- Stock Logic ----------------
+    
     def stock(self, game_map, resources):
         if self.resourceDropPoint:
             team_resources = game_map.players[self.team].resources
             if team_resources.increase_resources(resources):
                 return resources
         return None
+
+    # ---------------- Build Logic ----------------
+    def set_builders(self, builders):
+        self.builders = builders
+        self.state = 'construction'
+
+    def get_buildTime(self, num_builders):
+        return (3 * self.buildTime) / (num_builders + 2) if num_builders > 0 else self.buildTime
+
+    def seekConstruction(self, dt):
+        if self.processTime >= self.dynamicBuildTime or not self.builders:
+            return
+
+        self.state = 'construction' 
+        for builder in self.builders.copy():
+            if not builder.isAlive() or builder.state != 'task':
+                if builder.task != 'build' and builder.task != 'repair':
+                    self.builders.remove(builder)
+        
+        num_builders = sum(1 for builder in self.builders if builder.state == 'task')
+        if num_builders == 0:
+            return
+
+        if self.hp < self.max_hp:
+            for builder in self.builders:
+                if builder.task != 'repair':  
+                    builder.set_task('repair', builder)
+            return 
+
+        self.dynamicBuildTime = self.get_buildTime(num_builders)
+        self.processTime += dt
+
+    def seekTrain(self, game_map, dt):
+        if not self.spawnsUnits or self.processTime < self.dynamicBuildTime:
+            return
+            
+        if self.current_training_unit:
+            self.state = 'training'
+            self.current_training_time_left -= dt
+            unit_class = UNIT_CLASSES[self.current_training_unit]
+            total_time = unit_class(team=self.team).training_time / GAME_SPEED
+            self.training_progress = max(0.0, min(1.0, 1.0 - (self.current_training_time_left / total_time)))
+
+            if self.current_training_time_left <= 0:
+                self.spawn_trained_unit(self.current_training_unit, game_map, self.team)
+                self.current_training_unit = None
+                self.current_training_time_left = 0
+                self.training_progress = 0.0
+                self.state = 'idle'
+        elif not self.training_queue:
+            if self.state == 'training':
+                self.state = 'idle'
+            return
+        else:
+            next_unit_name = self.training_queue.pop(0)
+            unit_class = UNIT_CLASSES[next_unit_name]
+            unit = unit_class(team=self.team)
+            self.current_training_unit = next_unit_name
+            self.current_training_time_left = unit.training_time / GAME_SPEED
+            self.training_progress = 0.0

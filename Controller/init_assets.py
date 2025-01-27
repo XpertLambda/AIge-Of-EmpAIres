@@ -17,7 +17,6 @@ ASSETS_LOADED = False  # Indique si tout est chargé
 ASSETS_TOTAL = 1
 ASSETS_LOADED_COUNT = 0
 
-
 def get_assets_progress():
     """
     Renvoie un float [0..1] indiquant l'avancement du chargement.
@@ -25,10 +24,8 @@ def get_assets_progress():
     global ASSETS_LOADED_COUNT, ASSETS_TOTAL
     return min(1.0, ASSETS_LOADED_COUNT / float(ASSETS_TOTAL))
 
-
 def is_assets_loaded():
     return ASSETS_LOADED
-
 
 def load_sprite(filepath=None, scale=None, adjust=None):
     if filepath:
@@ -42,7 +39,6 @@ def load_sprite(filepath=None, scale=None, adjust=None):
         ))
     sprite = sprite.convert_alpha()
     return sprite
-
 
 def extract_Unitframes(sheet, rows, columns, frames_entity, scale=TILE_SIZE / 400):
     frames = []
@@ -65,6 +61,24 @@ def extract_Unitframes(sheet, rows, columns, frames_entity, scale=TILE_SIZE / 40
                 frames.append(frame)
     return frames
 
+def extract_Projectileframes(sheet, rows, columns, frames_entity, scale=TILE_SIZE / 400):
+    frames = []
+    sheet_width, sheet_height = sheet.get_size()
+    frame_width = sheet_width // columns
+    frame_height = sheet_height // rows
+    target_width = int(frame_width * scale)
+    target_height = int(frame_height * scale)
+
+    frame_step = columns // frames_entity
+    for row in range(rows):
+        for col in range(columns):
+            if col % frame_step == 0:
+                x = col * frame_width
+                y = row * frame_height
+                frame = sheet.subsurface(pygame.Rect(x, y, frame_width, frame_height))
+                frame = pygame.transform.smoothscale(frame, (target_width, target_height))
+                frames.append(frame)
+    return frames
 
 def extract_Buildingframes(sheet, rows, columns, frames_entity, scale=TILE_SIZE / 400):
     frames = []
@@ -108,9 +122,7 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     font = pygame.font.Font(None, 36)
     percentage_text = font.render(f"{int(progress * 100)}%", True, text_color)
-    # petit sleep éventuel (historique dans le code)
-    if int(progress * 100) == 96:
-        time.sleep(2)
+
     percentage_text_rect = percentage_text.get_rect(center=(bar_x + bar_width / 2, bar_y + BAR_HEIGHT / 2))
     screen.blit(percentage_text, percentage_text_rect)
 
@@ -281,43 +293,73 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
                                     from Controller.init_assets import get_scaled_gui
                                     loading_screen = get_scaled_gui('loading_screen', variant=0, target_height=screen_height)
                                     draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
+            elif category == 'projectiles':
+                sprites[category][sprite_name] = {}
+                sprite_path = directory
+                if os.path.isdir(sprite_path):
+                    state_dirs = os.listdir(sprite_path)
+                    for state_dir in state_dirs:
+                        state_path = os.path.join(sprite_path, state_dir)
+                        if not os.path.isdir(state_path):
+                            continue
+                        sprites[category][sprite_name].setdefault(state_dir, {})
+                        sheets = os.listdir(state_path)
+                        for sheetname in sheets:
+                            if sheetname.lower().endswith("webp"):
+                                filepath = os.path.join(state_path, sheetname)
+                                try:
+                                    sprite_sheet = load_sprite(filepath, scale, adjust)
+                                    frames = extract_Projectileframes(sprite_sheet, sheet_rows, sheet_cols, FRAMES_PER_PROJECTILE)
+                                    for direction_index in range(len(frames) // FRAMES_PER_PROJECTILE):
+                                        direction_frames = frames[
+                                            direction_index * FRAMES_PER_PROJECTILE:
+                                            (direction_index + 1) * FRAMES_PER_PROJECTILE
+                                        ]
+                                        sprites[category][sprite_name][state_dir][direction_index] = direction_frames
+                                except Exception as e:
+                                    print(f"Error loading sprite sheet {filepath}: {e}")
+
+                                ASSETS_LOADED_COUNT += 1
+                                if show_progress:
+                                    from Controller.init_assets import draw_progress_bar
+                                    progress = get_assets_progress()
+                                    from Controller.init_assets import get_scaled_gui
+                                    loading_screen = get_scaled_gui('loading_screen', variant=0, target_height=screen_height)
+                                    draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
 
     ASSETS_LOADED = True
     print("Sprites loaded successfully.")
-
-
-def get_scaled_sprite(name, category, zoom=1.0, state='idle', direction=0, frame=0, variant=0):
+    
+def get_scaled_sprite(name, category, zoom, state, direction, frame_id, variant):
     if name not in zoom_cache:
         zoom_cache[name] = OrderedDict()
-    cache_key = (zoom, state, frame, variant, direction)
+    
+    cache_key = (zoom, state, frame_id, variant, direction)
     if cache_key in zoom_cache[name]:
         zoom_cache[name].move_to_end(cache_key)
         return zoom_cache[name][cache_key]
 
-    if not state or state not in sprites[category][name]:
+    if state not in sprites[category][name]:
         state = 'idle'
-
-    frame_id = frame  # Define frame_id here
-
-    if category == 'buildings':
-        frame_id = frame_id % len(sprites[category][name][state])
-        original_image = sprites[category][name][state][frame_id]
-    elif category == 'units':
-        frame_id = frame_id % len(sprites[category][name][state][direction])
-        original_image = sprites[category][name][state][direction][frame_id]
-    else:
-        original_image = sprites[category][name][variant]
-
-    scaled_width = int(original_image.get_width() * zoom)
-    scaled_height = int(original_image.get_height() * zoom)
-
-    if scaled_width < 1: scaled_width = 1
-    if scaled_height < 1: scaled_height = 1
+    try:
+        if category == 'buildings':
+            frame_id = frame_id % len(sprites[category][name][state])
+            original_image = sprites[category][name][state][frame_id]
+        elif category == 'units' or category == 'projectiles':
+            frame_id = frame_id % len(sprites[category][name][state][direction])
+            original_image = sprites[category][name][state][direction][frame_id]
+        else:
+            original_image = sprites[category][name][variant]
+    except IndexError as e:
+        raise ValueError(f"Error accessing sprite: {e}")
+    
+    scaled_width = max(1, int(original_image.get_width() * zoom))
+    scaled_height = max(1, int(original_image.get_height() * zoom))
 
     scaled_image = pygame.transform.smoothscale(original_image, (scaled_width, scaled_height))
-
     zoom_cache[name][cache_key] = scaled_image
     zoom_cache[name].move_to_end(cache_key)
+
     if len(zoom_cache[name]) > MAX_ZOOM_CACHE_PER_SPRITE:
         zoom_cache[name].popitem(last=False)
     return scaled_image
@@ -345,8 +387,3 @@ def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     scaled = pygame.transform.smoothscale(original, (target_width, target_height))
     gui_cache[key] = scaled
     return scaled
-
-
-def fill_grass(screen, screen_x, screen_y, camera):
-    from Controller.drawing import draw_sprite
-    draw_sprite(screen, ' ', 'resources', screen_x, screen_y, camera.zoom)
