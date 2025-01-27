@@ -201,8 +201,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     players_target=[None for _ in range(0,len(players))]
 
+    last_time = time.time()  # Ajout pour le mode terminal
+
     while running:
-        raw_dt = clock.tick(400) / ONE_SECOND
+        current_time = time.time()
+        if not is_terminal_only:
+            raw_dt = clock.tick(400) / ONE_SECOND
+        else:
+            raw_dt = current_time - last_time
+            last_time = current_time
+            time.sleep(0.01)  # Petit délai pour ne pas surcharger le CPU
+
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
 
