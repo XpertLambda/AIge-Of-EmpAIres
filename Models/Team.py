@@ -23,7 +23,6 @@ class Team:
         self.maximum_population = 0
         self.en_cours = {}
 
-        debug_print(f"DEBUG Team.__init__: Initial maximum_population = {self.maximum_population}") # DEBUG PRINT
 
 
         for building, amount in difficulty_config[difficulty]['Buildings'].items():

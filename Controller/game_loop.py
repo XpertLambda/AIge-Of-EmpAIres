@@ -28,7 +28,7 @@ from Controller.gui import (
     get_scaled_gui,
     get_centered_rect_in_bottom_right,
     update_minimap_elements,
-    draw_pause_menu  
+    draw_pause_menu
 )
 from Controller.utils import tile_to_screen
 from Controller.Bot import *
@@ -181,7 +181,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # Nouveau bool pour déclencher un switch F9
         'switch_display': False,
     }
-    
+
     game_map.set_game_state(game_state)
 
     player_selection_surface = None
@@ -201,6 +201,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     players_target=[None for _ in range(0,len(players))]
 
     last_time = time.time()  # Ajout pour le mode terminal
+
+    print("DEBUG game_loop: Starting game loop. Initial max_population for players:") # DEBUG PRINT 3 (NOUVEAU)
+    for player in players:
+        print(f"  Player {player.teamID}: {player.maximum_population}") # DEBUG PRINT 4 (NOUVEAU)
 
     while running:
         current_time = time.time()
@@ -279,8 +283,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
             if game_state.get('player_info_updated', False):
                 player_info_surface = create_player_info_surface(
-                    selected_player, 
-                    screen_width, 
+                    selected_player,
+                    screen_width,
                     screen_height,
                     team_colors
                 )
@@ -321,7 +325,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state,
                 dt
             )
-            
+
             if game_state['show_gui_elements']:
                 draw_gui_elements(screen, screen_width, screen_height)
                 screen.blit(game_state['minimap_background'], game_state['minimap_background_rect'].topleft)
@@ -363,7 +367,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 if time.time() - game_state['notification_start_time'] < 3:
                     notif_font = pygame.font.SysFont(None, 28)
                     notif_surf = notif_font.render(game_state['notification_message'], True, (255,255,0))
-                    fps_height = 30  
+                    fps_height = 30
                     margin = 10
                     notif_x = screen_width - notif_surf.get_width() - margin
                     notif_y = fps_height + margin
@@ -387,5 +391,5 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         draw_timer += raw_dt
         decision_timer += raw_dt
-    
+
     return "done"

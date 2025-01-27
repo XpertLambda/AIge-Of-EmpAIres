@@ -26,7 +26,7 @@ class GameMap:
         self.resources = {}
         self.inactive_matrix = {}
         self.projectiles = {}
-        self.game_state = None  
+        self.game_state = None
 
         self.terminal_view_x = 0
         self.terminal_view_y = 0
@@ -40,7 +40,7 @@ class GameMap:
             or rounded_x + entity.size - 1 >= self.num_tiles_x
             or rounded_y + entity.size - 1 >= self.num_tiles_y):
             return False
-            
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
@@ -93,7 +93,7 @@ class GameMap:
         x, y = round(position[0]), round(position[1])
         if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
             return False
-        
+
         entities = self.grid.get((x, y), None)
         if entities:
             for entity in entities:
@@ -135,8 +135,6 @@ class GameMap:
                     y = random.randint(y_min, max(y_min, y_max - building.size + 1))
                     placed = self.add_entity(building, x, y)
                     if placed:
-                        if isinstance(building, (TownCentre, House)):
-                            player.maximum_population += building.population
                         break
                     attempts += 1
                 if not placed:
@@ -145,8 +143,6 @@ class GameMap:
                         for tile_x in range(self.num_tiles_x - building.size):
                             placed = self.add_entity(building, tile_x, tile_y)
                             if placed:
-                                if isinstance(building, (TownCentre, House)):
-                                    player.maximum_population += building.population
                                 break
                         if placed:
                             break
@@ -202,11 +198,11 @@ class GameMap:
         if x + 1 < self.num_tiles_x and y + 1 < self.num_tiles_y:
             return all((x + dx, y + dy) not in grid for dx in range(2) for dy in range(2))
         return False
-    
+
     def generate_map(self):
         self.generate_resources()
         self.place_gold_near_town_centers()
-        
+
         self.generate_zones()
         self.generate_buildings()
         self.generate_units()
@@ -294,7 +290,7 @@ class GameMap:
                 else:
                     row_display.append(' ')
             debug_print(''.join(row_display))
-    
+
     def save_map(self, filename=None):
         if filename is None:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -355,7 +351,7 @@ class GameMap:
             entity.update(self, dt)
             if not entity.isAlive():
                 self.move_to_inactive(entity)
-        
+
         inactive_entities = set()
         for entities in self.inactive_matrix.values():
             inactive_entities.update(entities)
