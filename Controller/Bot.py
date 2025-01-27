@@ -102,8 +102,8 @@ def reallocate_villagers(self, resource_type):
                 )
                 if nearest_drop_point:
                     resource_positions = [
-                        pos for pos, res in self.game_map.resources.items()
-                        if isinstance(res, resource_type)
+                        pos for pos, set in self.game_map.resources.items()
+                        if isinstance(set, resource_type)
                     ]
                     if resource_positions:
                         nearest_resource = min(
@@ -303,13 +303,13 @@ def build_defensive_structure(self, building_type,  num_builders):
     critical_points= sorted(self.get_damaged_buildings(critical_threshold=0.7))
     if critical_points:
         for point in critical_points:
-             self.team.build(building_type.__name__, point.x, point.y, num_builders)
+             self.team.build(building_type, point.x, point.y ,num_builders,self.game_map)
                 
 
    
         
 
-def defend_under_attack(player_team, enemy_team, players_target, game_map, dt):
+def defend_under_attack(self, enemy_team, players_target,  dt):
     if is_under_attack(self, enemy_team):
         critical_points = sorted(self.get_damaged_buildings(critical_threshold=0.7))
         modify_target(self, None, players_target)
@@ -317,7 +317,7 @@ def defend_under_attack(player_team, enemy_team, players_target, game_map, dt):
         
         balance_units(self)
         
-        build_defensive_structure(player_team, Keep, 3)
+        build_defensive_structure(self, "Keep", 3)
         manage_battle(selected_player,None,players,game_map,dt)
 
 def priorty1(self, enemy_team, players_target, game_map, dt):
