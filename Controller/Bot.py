@@ -67,37 +67,62 @@ def priorite_5(player_team,unit,building):
 #Priorty seven avoid ressources shortage 
 
 
-def get_resource_shortage(current_resources, thresholds):
-    shortages = {key: thresholds[key] - current_resources.get(key, 0) for key in thresholds}
-    critical_shortage = min(shortages, key=shortages.get)
-    return critical_shortage if shortages[critical_shortage] > 0 else None
+def get_resource_shortage(self):
+        RESOURCE_MAPPING ={
+        "food": Farm,
+        "wood": Tree,
+        "gold": Gold,
+        }
+        # Assume `self.player_team.resources.get()` returns a tuple of resource quantities
+        resource_quantities = self.player_team.resources.get()  # Fetch the tuple
+        resource_keys = list(RESOURCE_THRESHOLDS.keys())  # Get the order of resources
+        
+        shortages = {}
+        for i, key in enumerate(resource_keys):
+            # Ensure the index does not exceed the length of resource_quantities
+            resource_amount = resource_quantities[i] if i < len(resource_quantities) else 0
+            shortages[key] = RESOURCE_THRESHOLDS[key] - resource_amount
 
-def find_resources(game_map, resource_type):
-    return [pos for pos, res in game_map.resources.items() if isinstance(res, resource_type)]
+        critical_shortage = RESOURCE_MAPPING.key(min(shortages, key=shortages.get))
+        return critical_shortage if shortages[critical_shortage] > 0 else None
 
-def reallocate_villagers(resource_in_shortage, team, game_map):
-    for unit in team.units:
-        if isinstance(unit, Villager) and unit.isAvailable() :
-            drop_points = [building for building in team.buildings if hasattr(building, "drop_point")]
-            if not drop_points:
-                continue
-            nearest_drop_point = min(drop_points, key=lambda dp: math.dist((unit.x, unit.y), (dp.x, dp.y)))
-            resource_positions = find_resources(game_map, resource_in_shortage)
-            if resource_positions:
-                nearest_resource = min(
-                    resource_positions,
-                    key=lambda pos: math.dist((nearest_drop_point.x, nearest_drop_point.y), pos)
+
+
+
+def reallocate_villagers(self, resource_type):
+        """
+        Reallocates Villagers to address resource shortages.
+        """
+        for villager in self.player_team.units:
+            if isinstance(villager, Villager) and villager.isAvailable():
+                nearest_drop_point = min(
+                    (b for b in self.player_team.buildings if hasattr(b, " resourceDropPoint=True")),
+                    key=lambda dp: math.dist((villager.x, villager.y), (dp.x, dp.y)),
+                    default=None
                 )
-                unit.set_target(nearest_resource)
-                unit.task = f"Collecting {resource_in_shortage}"
-                return
+                if nearest_drop_point:
+                    resource_positions = [
+                        pos for pos, res in self.game_map.resources.items()
+                        if isinstance(res, resource_type)
+                    ]
+                    if resource_positions:
+                        nearest_resource = min(
+                            resource_positions,
+                            key=lambda pos: math.dist(
+                                (nearest_drop_point.x, nearest_drop_point.y), pos
+                            )
+                        )
+                        l=self.game_map.get(nearest_resource)
+                        resource_target = next((entity for entity in l if isinstance(entity, resource_type)), None)
+                        villager.set_target(resource_target)
+                        return
 
 
 
-def check_and_address_resources(team, game_map, RESOURCE_THRESHOLDS):
-    resource_shortage = get_resource_shortage(team.resources, RESOURCE_THRESHOLDS)
+def priorty7(self, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
+    resource_shortage = get_resource_shortage(self, RESOURCE_THRESHOLDS)
     if resource_shortage:
-        reallocate_villagers(resource_shortage, team, game_map)
+        reallocate_villagers(resource_shortage,self)
 
 
 
@@ -247,14 +272,6 @@ def repair_critical_buildings(player_team):
 #Priority_1
 ATTACK_RADIUS = 5
 
-def assign_zones_to_teams(game_map, teams):
-    zones = game_map.generate_zones(len(game_map.players))
-    for team, zone in zip(teams, zones):
-        x_start, x_end, y_start, y_end = zone
-        team.zone = set()
-        for x in range(x_start, x_end):
-            for y in range(y_start, y_end):
-                team.zone.add((x, y))
 
 def is_under_attack(player_team, enemy_team, game_map):
     # Ensure zones are assigned dynamically
