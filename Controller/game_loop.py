@@ -202,10 +202,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     last_time = time.time()  # Ajout pour le mode terminal
 
-    print("DEBUG game_loop: Starting game loop. Initial max_population for players:") # DEBUG PRINT 3 (NOUVEAU)
-    for player in players:
-        print(f"  Player {player.teamID}: {player.maximum_population}") # DEBUG PRINT 4 (NOUVEAU)
-
     while running:
         current_time = time.time()
         if not is_terminal_only:

@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\Controller\terminal_display.py
 import curses
 import time
 import os
@@ -6,6 +7,7 @@ from Controller.terminal_display_debug import debug_print_set_window, debug_prin
 from Models.Map import GameMap  # si besoin
 from Settings.setup import user_choices
 from Models.html import write_full_html
+from Controller.drawing import generate_team_colors # Importez generate_team_colors depuis drawing.py
 
 
 def stop_curses():
@@ -46,6 +48,27 @@ def _curses_main(stdscr, game_map):
     win_debug = curses.newwin(debug_h, total_w, map_h, 0)
     win_debug.scrollok(True)
 
+    # Initialize color pairs for teams dynamically from game colors
+    curses.start_color()
+    team_colors_rgb = generate_team_colors(len(game_map.players)) # Get RGB team colors from your drawing.py
+    team_colors_curses_indices = {}
+    start_color_index = 10  # Start allocating color pairs from index 10 to avoid overwriting defaults
+    for i, rgb_color in enumerate(team_colors_rgb):
+        r, g, b = rgb_color
+        curses_r = int(r / 255 * 1000)
+        curses_g = int(g / 255 * 1000)
+        curses_b = int(b / 255 * 1000)
+        curses_color_num = start_color_index + i
+        try:
+            curses.init_color(curses_color_num, curses_r, curses_g, curses_b)
+            curses.init_pair(curses_color_num - start_color_index + 1, curses_color_num, curses.COLOR_BLACK) # Pair index starts from 1
+            team_colors_curses_indices[i] = curses_color_num - start_color_index + 1
+        except curses.error as e:
+            debug_print(f"Error initializing color for team {i}: {e}")
+            team_colors_curses_indices[i] = 0 # Fallback to default color pair
+
+
+
     # "Injection" de la fenêtre de debug dans terminal_display_debug.py
     debug_print_set_window(win_debug)
 
@@ -85,24 +108,34 @@ def _curses_main(stdscr, game_map):
             for col in range(width):
                 map_x = tvx + col
                 if map_x < 0 or map_x >= game_map.num_tiles_x:
-                    line_chars.append(' ')
+                    line_chars.append((' ', 0))
                 else:
                     entities = game_map.grid.get((map_x, map_y), None)
                     if entities:
                         # On prend la première entité pour l'affichage ASCII
-                        e = next(iter(entities))
-                        line_chars.append(e.acronym)
+                        entity = next(iter(entities))
+                        acronym = entity.acronym
+                        team_id = entity.team
+                        if team_id is not None and team_id in team_colors_curses_indices:
+                            color_pair_index = team_colors_curses_indices[team_id]
+                            line_chars.append((acronym, color_pair_index))
+                        else:
+                            line_chars.append((acronym, 0)) # Default color if no team or team color not mapped
                     else:
-                        line_chars.append(' ')
+                        line_chars.append((' ', 0))
 
-            line_str = "".join(line_chars)
+            line_str = "".join(c[0] for c in line_chars)
             if len(line_str) > width:
                 line_str = line_str[:width]
 
             try:
                 win_map.addstr(row, 0, line_str)
+                for col_idx, char_data in enumerate(line_chars):
+                    char, color_index = char_data
+                    if color_index > 0 and char != ' ': # Apply color only for entities and not for space
+                        win_map.chgat(row, col_idx, 1, curses.color_pair(color_index))
             except curses.error:
-                pass
+                 pass
 
         win_map.refresh()
 
@@ -155,7 +188,7 @@ def _curses_main(stdscr, game_map):
                         game_map.game_state['switch_display'] = True
                     user_choices["menu_result"] = "switch_display"
                     running = False
-                    
+
                     # Nettoyer l'écran avant de sortir
                     stdscr.clear()
                     win_map.clear()
@@ -163,7 +196,7 @@ def _curses_main(stdscr, game_map):
                     stdscr.refresh()
                     win_map.refresh()
                     win_debug.refresh()
-                    
+
                     break
 
             move_amount = 1
