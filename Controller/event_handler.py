@@ -354,10 +354,13 @@ def handle_events(event, game_state):
                         if building_clicked.team == selected_player.teamID:
                             success = building_clicked.add_to_training_queue(selected_player)
                             game_state['player_info_updated'] = True
-                            if not success:
+                            if success in {-1, 0}:
                                 if 'insufficient_resources_feedback' not in game_state:
                                     game_state['insufficient_resources_feedback'] = {}
-                                game_state['insufficient_resources_feedback'][building_clicked.entity_id] = time.time()
+                                if success == -1:
+                                    game_state['insufficient_resources_feedback'][building_clicked.entity_id] = (time.time(), "Not enought resources")
+                                elif success == 0:
+                                    game_state['insufficient_resources_feedback'][building_clicked.entity_id] = (time.time(), "Maximum population reached")
                 else:
                     # Clique "normal" => sélectionner un entity ou drag box
                     entity = closest_entity(game_state, mouse_x, mouse_y)
