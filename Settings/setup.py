@@ -403,3 +403,10 @@ RESOURCE_THRESHOLDS = {
     'wood': 350, 
     'gold': 350   
 }
+
+resouce_type_map = {
+        'food' : Farm,
+        'gold': Gold,
+        'wood': Tree
+    }
+
