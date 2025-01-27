@@ -2,7 +2,7 @@ import pygame
 import sys
 import os
 import time
-import tkinter as tk
+from tkinter import Tk, filedialog
 from Entity.Building import Building, TownCentre
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY, MINIMAP_MARGIN, PANEL_RATIO, BG_RATIO
 from Controller.utils import *
@@ -120,7 +120,7 @@ def handle_events(event, game_state):
         # (3) - Touche l => Chargement
         #
         elif event.key in [pygame.K_l, pygame.K_F12]:
-            from tkinter import Tk, filedialog
+            
             try:
                 root = Tk()
                 root.withdraw()
@@ -281,9 +281,9 @@ def handle_events(event, game_state):
                         game_state['paused'] = False
                     elif label == "Load Game":
                         try:
-                            root = tk.Tk()
+                            root = Tk()
                             root.withdraw()
-                            chosen_path = tk.filedialog.askopenfilename(
+                            chosen_path = filedialog.askopenfilename(
                                 initialdir=SAVE_DIRECTORY,
                                 filetypes=[("Pickle","*.pkl")]
                             )
