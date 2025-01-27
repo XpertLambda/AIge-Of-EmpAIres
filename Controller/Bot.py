@@ -259,7 +259,7 @@ def assign_villager_to_repair(player_team, building):
     print("Aucun villageois disponible pour réparer.")
     return False
 
-def repair_critical_buildings(player_team):
+def priorty_6(player_team):
     damaged_buildings = get_damaged_buildings(player_team)
     for building in damaged_buildings:
         repair_cost = {"wood": 50} 
@@ -273,34 +273,23 @@ def repair_critical_buildings(player_team):
 ATTACK_RADIUS = 5
 
 
-def is_under_attack(player_team, enemy_team, game_map):
-    # Ensure zones are assigned dynamically
-    if not hasattr(player_team, 'zone') or not player_team.zone:
-        assign_zones_to_teams(game_map, [player_team])
+def is_under_attack(self, enemy_team, ):
+    zone=self.team.zone.get_zone()
 
-    for tile in player_team.zone:
-        for enemy in enemy_team.units:
-            if not isinstance(enemy, Villager):
-                if math.dist(tile, (enemy.x, enemy.y)) <= ATTACK_RADIUS:
-                    return True
+    for z in zone:
+     entities = game_map.get(z)  # Get the list of entities in the zone
+    for entity in entities:
+        if entity in enemy_team.units:
+            return True
     return False
 
-def get_critical_points(player_team, enemy_team):
-    critical_points = []
-    for building in player_team.buildings:
-        is_under_attack = any(
-            math.dist((building.x, building.y), (enemy.x, enemy.y)) < ATTACK_RADIUS
-            for enemy in enemy_team.units
-            if not isinstance(enemy, Villager)
-        )
-        if is_under_attack or building.hp / building.max_hp < 0.3:
-            critical_points.append(building)
-    return sorted(critical_points, key=lambda b: b.hp / b.max_hp)
 
 
-def gather_units_for_defense(player_team, critical_points, enemy_team):
+
+def gather_units_for_defense(self,  enemy_team):
+    critical_points = sorted(self.get_damaged_buildings(critical_threshold=0.7))
     for point in critical_points:
-        for unit in player_team.units:
+        for unit in self.units:
             if not hasattr(unit, 'carry') and not unit.target:
                 target = search_for_target(unit, enemy_team, attack_mode=False)
                 if target:
@@ -308,28 +297,29 @@ def gather_units_for_defense(player_team, critical_points, enemy_team):
                 else:
                     unit.set_destination((point.x, point.y))
 
-def can_build_building(player_team, building):
-    return player_team.resources.has_enough(building.cost)
 
-def build_defensive_structure(player_team, building_type, location, num_builders, game_map):
-    x, y = location
-    if can_build_building(player_team, building_type):
-        if player_team.build(building_type.__name__, x, y, num_builders, game_map):
-            debug_print(f"{building_type.__name__} built at ({x}, {y}).")
-        else:
-            debug_print(f"Failed to place {building_type.__name__} at ({x}, {y}).")
+
+def build_defensive_structure(self, building_type,  num_builders):
+    critical_points= sorted(self.get_damaged_buildings(critical_threshold=0.7))
+    if critical_points:
+        for point in critical_points:
+             self.team.build(building_type.__name__, point.x, point.y, num_builders)
+                
+
+   
+        
 
 def defend_under_attack(player_team, enemy_team, players_target, game_map, dt):
-    if is_under_attack(player_team, enemy_team):
-        critical_points = get_critical_points(player_team, enemy_team)
-        modify_target(player_team, None, players_target)
-        gather_units_for_defense(player_team, critical_points, enemy_team)
+    if is_under_attack(self, enemy_team):
+        critical_points = sorted(self.get_damaged_buildings(critical_threshold=0.7))
+        modify_target(self, None, players_target)
+        gather_units_for_defense(self,  enemy_team)
         
-        train_units(player_team,ArcheryRange)
-        if critical_points and can_build_building(player_team, Keep):
-            critical_location = (critical_points[0].x, critical_points[0].y)
-            build_defensive_structure(player_team, Keep, critical_location, 3, game_map)
+        balance_units(self)
+        
+        build_defensive_structure(player_team, Keep, 3)
+        manage_battle(selected_player,None,players,game_map,dt)
 
-def manage_battle_defense(selected_player, enemy_team, players_target, game_map, dt):
-    if is_under_attack(selected_player, enemy_team):
-        defend_under_attack(selected_player, enemy_team, players_target, game_map, dt)
+def priorty1(self, enemy_team, players_target, game_map, dt):
+    if is_under_attack(self, enemy_team):
+        defend_under_attack(self, enemy_team, players_target, game_map, dt)
