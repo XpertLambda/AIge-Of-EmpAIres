@@ -275,7 +275,6 @@ class Building(Entity):
         for builder in self.builders.copy():
             if not builder.isAlive() or builder.state != 'task':
                 if builder.task != 'build' and builder.task != 'repair':
-                    print(f"removed because task : {builder.task} ")
                     self.builders.remove(builder)
         
         num_builders = sum(1 for builder in self.builders if builder.state == 'task')

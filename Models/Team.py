@@ -85,9 +85,7 @@ class Team:
                 builders.add(unit)
                 if len(builders) == num_builders:
                     break
-        print(f'builders : {len(builders)}')
         if not builders:
-            print("No available villagers")
             del building
             return False
 

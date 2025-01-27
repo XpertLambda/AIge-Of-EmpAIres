@@ -82,7 +82,6 @@ class Villager(Unit):
     def set_task(self, task, target = None):
         if task in villager_tasks:
             self.task = task
-            print(f'setted task : {task}')
             setattr(self, villager_tasks[task], target)
 
     def isAvailable(self):
