@@ -79,15 +79,13 @@ class Team:
             del building
             return False
 
-        selected_villagers = []
+        builders = set()
         for unit in self.units:
             if unit.acronym == "v" and unit.isAvailable():
-                selected_villagers.append(unit)
-                if len(selected_villagers) == num_builders:
+                builders.add(unit)
+                if len(builders) == num_builders:
                     break
-
-        if not selected_villagers:
-            print("No available villagers")
+        if not builders:
             del building
             return False
 
@@ -104,10 +102,10 @@ class Team:
 
         self.resources.decrease_resources(building.cost.get())
 
-        for villager in selected_villagers:
+        for villager in builders:
             villager.set_task('build', building)
 
-        building.set_builders(selected_villagers)
+        building.set_builders(builders)
 
         return True
     '''   
