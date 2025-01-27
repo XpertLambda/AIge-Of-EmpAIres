@@ -149,6 +149,15 @@ def _curses_main(stdscr, game_map):
                         game_map.game_state['switch_display'] = True
                     user_choices["menu_result"] = "switch_display"
                     running = False
+                    
+                    # Nettoyer l'écran avant de sortir
+                    stdscr.clear()
+                    win_map.clear()
+                    win_debug.clear()
+                    stdscr.refresh()
+                    win_map.refresh()
+                    win_debug.refresh()
+                    
                     break
 
             move_amount = 1
