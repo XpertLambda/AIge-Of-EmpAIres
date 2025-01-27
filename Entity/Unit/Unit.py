@@ -47,7 +47,7 @@ class Unit(Entity):
         if self.isAlive():
             self.seekAttack(game_map, dt)
             self.seekMove(game_map, dt)
-            self.seekCollision(game_map, dt) 
+            #self.seekCollision(game_map, dt) 
             self.animator(dt)
             self.seekIdle()
         else:

@@ -39,7 +39,7 @@ class Villager(Unit):
         self.animator(dt)
         if self.isAlive():
             self.seekAttack(game_map, dt)
-            self.seekCollision(game_map, dt)
+            #self.seekCollision(game_map, dt)
             self.seekCollect(game_map, dt)
             self.seekStock(game_map)
             self.seekMove(game_map, dt)
