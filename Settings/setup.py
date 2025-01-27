@@ -2,6 +2,17 @@ from collections import namedtuple
 from Models.Resources import Resources
 import os
 
+# Get the base directory of the project
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Define paths relative to the base directory
+SAVE_DIRECTORY = os.path.join(BASE_DIR, 'saves')
+ASSETS_DIRECTORY = os.path.join(BASE_DIR, 'assets')
+
+# Create necessary directories
+os.makedirs(SAVE_DIRECTORY, exist_ok=True)
+os.makedirs(ASSETS_DIRECTORY, exist_ok=True)
+
 # -------------------
 # Global Constants
 # Classe Villager
@@ -121,9 +132,9 @@ BG_RATIO    = 0.20
 # -------------------
 # Save Directory
 # -------------------
-SAVE_DIRECTORY = 'saves'
-if not os.path.exists(SAVE_DIRECTORY):
-    os.makedirs(SAVE_DIRECTORY)
+# SAVE_DIRECTORY = 'saves'
+# if not os.path.exists(SAVE_DIRECTORY):
+#     os.makedirs(SAVE_DIRECTORY)
 
 # -------------------
 # Sprites Configuration

@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\main.py
 import pygame
 import os
 import sys
@@ -22,7 +23,7 @@ from Controller.gui import run_gui_menu, user_choices, VALID_GRID_SIZES, VALID_B
 from Controller.Bot import *
 
 # Import du curses terminal display
-from Controller.terminal_display import start_terminal_interface
+from Controller.terminal_display import start_terminal_interface, stop_curses
 
 
 def get_input_non_blocking():
@@ -227,10 +228,6 @@ def show_loading_screen_until_done(screen, sw, sh):
 
         progress = get_assets_progress()
 
-        # draw_progress_bar(progress, screen, sw, sh, "Loading", loading_screen_image)
-        # On utilise la version existante qui attend un param `progress_text`
-        # + l'image de fond (loading_screen)
-        # => Comme dans init_assets, on peut récupérer "loading_screen" via get_scaled_gui
         from Controller.init_assets import get_scaled_gui
         loading_screen = get_scaled_gui('loading_screen', variant=0, target_height=sh)
 
@@ -251,27 +248,38 @@ def main():
     4) Lorsque le joueur valide le lancement de la partie, si le
        chargement n'est pas fini, on affiche l'écran de chargement
        jusqu'à la fin du thread. Sinon on lance directement la partie.
+    5) Selon le mode choisi (GUI only / Terminal only / Both), on démarre
+       curses et/ou on garde l'affichage Pygame
+    6) On entre dans la game_loop. Si on en sort, on regarde la raison :
+         - Retour au menu ?
+         - Quitter complètement ?
+         - Ou Switch display ?
+    7) On relance éventuellement la boucle ou on arrête.
     """
     while True:
-        screen, sw, sh = init_pygame()
+        # Initialise Pygame only if mode_index in [0, 2].
+        if user_choices["index_terminal_display"] in [0, 2]:
+            screen, sw, sh = init_pygame()
+            # Lancement du chargement asynchrone des assets
+            t_assets = threading.Thread(target=background_load_assets, args=(screen, sw, sh))
+            t_assets.start()
+            t_menu = threading.Thread(target=ask_terminal_inputs_non_blocking)
+            t_menu.start()
+            # Lance le menu GUI
+            run_gui_menu(screen, sw, sh)
+            # Attendre la fin du thread menu
+            if t_menu.is_alive():
+                t_menu.join()
+            # Fin du chargement
+            if not is_assets_loaded():
+                show_loading_screen_until_done(screen, sw, sh)
+            if t_assets.is_alive():
+                t_assets.join()
+        else:
+            # Terminal only => pas de GUI mais on garde des dimensions raisonnables
+            screen = None
+            sw, sh = (800, 600)  # Valeurs arbitraires mais non nulles
 
-        # Lancement du chargement asynchrone des assets
-        t_assets = threading.Thread(target=background_load_assets, args=(screen, sw, sh))
-        t_assets.start()
-
-        # On lance le menu terminal en thread (non-bloquant)
-        t_menu = threading.Thread(target=ask_terminal_inputs_non_blocking)
-        t_menu.start()
-
-        # On lance le menu GUI
-        from Controller.gui import run_gui_menu
-        run_gui_menu(screen, sw, sh)
-
-        # On attend la fin du thread menu (pour être sûr que user_choices est bien figé)
-        if t_menu.is_alive():
-            t_menu.join()
-
-        # => user_choices est fixé : on lit ce qu'il faut
         mode_index  = user_choices["index_terminal_display"]
         load_game   = user_choices["load_game"]
         chosen_save = user_choices["chosen_save"]
@@ -280,28 +288,7 @@ def main():
         bot_level   = user_choices["bot_level"]
         gold_c      = user_choices["gold_at_center"]
 
-        # Si le joueur valide et que tout n'est pas encore chargé,
-        # on lance l'écran de progression bloquant
-        if not is_assets_loaded():
-            show_loading_screen_until_done(screen, sw, sh)
-
-        # Puisqu'on est potentiellement sorti du chargement,
-        # on est sûr que tout est dispo => on termine le thread de chargement
-        if t_assets.is_alive():
-            t_assets.join()
-
-        # On se base ensuite sur le choix mode_index pour éventuellement
-        # fermer la fenêtre Pygame si Terminal only
-        if mode_index == 1:
-            # Terminal only => on ferme l'affichage
-            pygame.display.quit()
-            screen = None
-
         # Création ou chargement de la map
-        from Models.Map import GameMap
-        from Controller.init_assets import ASSETS_LOADED
-        from Controller.init_player import init_players
-
         if load_game and chosen_save:
             game_map = GameMap(0, False, [], generate=False)
             game_map.load_map(chosen_save)
@@ -309,11 +296,11 @@ def main():
         else:
             players = init_players(nb_bots, bot_level)
             game_map = GameMap(grid_size, gold_c, players)
-  
 
-        # Si Terminal ou Both => on lance curses
+        # Terminal/curses si mode_index in [1, 2]
+        t_curses_started = False
         if mode_index in [1, 2]:
-            from Controller.terminal_display import start_terminal_interface
+            t_curses_started = True
             t_curses = threading.Thread(target=start_terminal_interface, args=(game_map,), daemon=True)
             t_curses.start()
         else:
@@ -321,11 +308,12 @@ def main():
 
         # Boucle de jeu
         from Controller.game_loop import game_loop
-        game_loop(screen, game_map, sw, sh, players)
+        game_loop_result = game_loop(screen, game_map, sw, sh, players)
+
         menu_result = user_choices.get("menu_result")
         if menu_result == "main_menu":
-            from Controller.terminal_display import stop_curses
-            stop_curses()
+            if t_curses_started:
+                stop_curses()
             pygame.quit()
             user_choices.clear()
             user_choices["menu_result"] = None
@@ -343,10 +331,30 @@ def main():
         elif menu_result == "quit":
             break
 
-        # Check si le joueur veut un retour au menu
+        # Nouveau cas : Switch Display
+        elif menu_result == "switch_display":
+            # On bascule 0<->1
+            if user_choices["index_terminal_display"] == 0:
+                user_choices["index_terminal_display"] = 1
+            elif user_choices["index_terminal_display"] == 1:
+                user_choices["index_terminal_display"] = 0
+            else:
+                # Si on était en Both, passer en Terminal only
+                user_choices["index_terminal_display"] = 1
+
+            # Fermer curses (au cas où) et le display pygame
+            if t_curses_started:
+                stop_curses()
+            pygame.display.quit()
+
+            # On retire la valeur dans user_choices pour boucler
+            user_choices["menu_result"] = None
+            continue
+
+        # Sinon, on regarde si le game_map demande un retour
         if game_map.game_state.get('return_to_menu'):
-            from Controller.terminal_display import stop_curses
-            stop_curses()
+            if t_curses_started:
+                stop_curses()
             pygame.quit()
 
             user_choices.clear()

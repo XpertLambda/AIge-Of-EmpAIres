@@ -25,7 +25,10 @@ def _curses_main(stdscr, game_map):
     """
     curses.curs_set(0)
     stdscr.nodelay(True)
-    stdscr.keypad(True)
+    stdscr.keypad(True)  # Important pour les touches F1-F12
+    
+    # Définition des codes des touches de fonction
+    F9_KEY = 273  # Code standard pour F9 dans curses
 
     # On divise l'écran en 2 : zone map + zone debug
     total_h, total_w = stdscr.getmaxyx()
@@ -136,6 +139,17 @@ def _curses_main(stdscr, game_map):
                 running = False
                 debug_print("Fermeture curses demandée (ESC).")
                 break
+
+            # F9 => switch display mode (curses <-> GUI)
+            elif key in [F9_KEY, curses.KEY_F9]:  # On teste les deux codes possibles
+                from Settings.setup import user_choices
+                if user_choices["index_terminal_display"] in [0, 1]:
+                    debug_print("[CURSES] F9 => Switch display mode requested")
+                    if game_map.game_state:
+                        game_map.game_state['switch_display'] = True
+                    user_choices["menu_result"] = "switch_display"
+                    running = False
+                    break
 
             move_amount = 1
 

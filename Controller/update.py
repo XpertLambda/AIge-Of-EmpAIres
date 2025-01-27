@@ -8,21 +8,26 @@ def update_game_state(game_state, delta_time):
     if not game_state.get('paused', False):
         game_map.patch(delta_time)
 
-def handle_camera(camera, delta_time):
+def handle_camera(camera, dt, is_terminal_only=None):
+    """
+    Gère les mouvements de caméra selon les touches pressées.
+    """
+    from Settings.setup import user_choices
+    if user_choices["index_terminal_display"] == 1:
+        return  # Ne rien faire en mode terminal
+        
+    import pygame
     keys = pygame.key.get_pressed()
-    move_speed = 300 * delta_time
-    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-        move_speed *= 2.5
+    move_speed = 500 * dt
 
-    dx, dy = 0, 0
-    if keys[pygame.K_q] or keys[pygame.K_LEFT]:
-        dx += move_speed
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        dx -= move_speed
-    if keys[pygame.K_z] or keys[pygame.K_UP]:
-        dy += move_speed
-    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        dy -= move_speed
+    # Déplacements caméra
+    if keys[pygame.K_LEFT] or keys[pygame.K_q]:
+        camera.offset_x += move_speed
+    if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        camera.offset_x -= move_speed
+    if keys[pygame.K_UP] or keys[pygame.K_z]:
+        camera.offset_y += move_speed
+    if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+        camera.offset_y -= move_speed
 
-    if dx != 0 or dy != 0:
-        camera.move(dx, dy)
+    camera.limit_camera()

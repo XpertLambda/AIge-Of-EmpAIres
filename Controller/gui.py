@@ -405,11 +405,15 @@ def draw_combo_box(screen, x, y, w, h, text, items_list, selected_idx, combo_typ
             pygame.draw.rect(screen, (200,200,200), (scroll_bar_x, cursor_y, 10, scroll_bar_height))
 
 def create_player_selection_surface(players, selected_player, minimap_rect, team_colors):
+    from Settings.setup import user_choices
+    if user_choices["index_terminal_display"] == 1:  # Terminal only mode
+        return None
+
     selection_height = 30
     padding = 5
 
     screen = pygame.display.get_surface()
-    screen_height = screen.get_height()
+    screen_height = screen.get_height() if screen else 600  # Default height if no screen
     max_height = screen_height / 3
 
     columns = 1
@@ -447,6 +451,10 @@ def create_player_selection_surface(players, selected_player, minimap_rect, team
     return surface
 
 def create_player_info_surface(selected_player, screen_width, screen_height, team_colors):
+    from Settings.setup import user_choices
+    if user_choices["index_terminal_display"] == 1:  # Terminal only mode
+        return None
+        
     font_info = pygame.font.Font(None, 24)
     padding_x = int(screen_width * 0.0)  # 0.7% du screen width comme padding horizontal
     padding_y = int(screen_height * 0.028)  # 2% du screen height comme padding vertical

@@ -132,6 +132,10 @@ def draw_progress_bar(screen, progress, screen_width, screen_height, progress_te
 
     pygame.display.flip()
 
+def resolve_asset_path(relative_path):
+    """Helper function to resolve asset paths relative to project root"""
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(project_root, relative_path)
 
 def load_sprites(screen, screen_width, screen_height, show_progress=False):
     """
@@ -149,18 +153,14 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
     global gui_elements
     gui_elements.clear()
 
-    # On calcule le total de fichiers
-    total_files = sum(len(files) for _, _, files in os.walk('assets'))
-    ASSETS_TOTAL = max(1, total_files)  # on évite la division par zéro
+    # Calculate total files using absolute path
+    total_files = sum(len(files) for _, _, files in os.walk(resolve_asset_path('assets')))
+    ASSETS_TOTAL = max(1, total_files)
 
-    # Pour avoir un éventuel fond "loading_screen" si on veut l'afficher
     loading_screen = None
     if show_progress:
-        # On charge rapidement l'écran de chargement lui-même
         try:
             from Controller.init_assets import get_scaled_gui
-            # Force un mini chargement manuel du répertoire 'loading_screen'
-            # Note: ci-dessous on appelle get_scaled_gui APRES un mini scan, etc.
             pass
         except:
             pass
@@ -173,15 +173,18 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
         if not directory:
             continue
         gui_elements[gui_key] = []
+        
+        # Use absolute path for directory
+        abs_directory = resolve_asset_path(directory)
         try:
-            dir_content = os.listdir(directory)
+            dir_content = os.listdir(abs_directory)
         except FileNotFoundError:
-            print(f"Directory not found: {directory}")
+            print(f"Directory not found: {abs_directory}")
             continue
 
         for filename in dir_content:
             if filename.lower().endswith("webp"):
-                filepath = os.path.join(directory, filename)
+                filepath = os.path.join(abs_directory, filename)
                 loaded_sprite = load_sprite(filepath, gui_scale, gui_adjust_scale)
                 gui_elements[gui_key].append(loaded_sprite)
 
@@ -199,6 +202,7 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
         sprites[category] = {}
         for sprite_name, value in sprite_config[category].items():
             directory = value['directory']
+            abs_directory = resolve_asset_path(directory)
             scale = value.get('scale')
             adjust = value.get('adjust_scale')
             if 'sheet_config' in value:
@@ -208,13 +212,13 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
             if category in ['resources']:
                 sprites[category][sprite_name] = []
                 try:
-                    dir_content = os.listdir(directory)
+                    dir_content = os.listdir(abs_directory)
                 except FileNotFoundError:
-                    print(f"Directory not found: {directory}")
+                    print(f"Directory not found: {abs_directory}")
                     continue
                 for filename in dir_content:
                     if filename.lower().endswith("webp"):
-                        filepath = os.path.join(directory, filename)
+                        filepath = os.path.join(abs_directory, filename)
                         sprite = load_sprite(filepath, scale, adjust)
                         sprites[category][sprite_name].append(sprite)
 
@@ -228,7 +232,7 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
 
             elif category == 'buildings':
                 sprites[category][sprite_name] = {}
-                sprite_path = directory
+                sprite_path = abs_directory
                 if os.path.isdir(sprite_path):
                     state_dirs = os.listdir(sprite_path)
                     for state_dir in state_dirs:
@@ -262,7 +266,7 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
 
             elif category == 'units':
                 sprites[category][sprite_name] = {}
-                sprite_path = directory
+                sprite_path = abs_directory
                 if os.path.isdir(sprite_path):
                     state_dirs = os.listdir(sprite_path)
                     for state_dir in state_dirs:
@@ -295,7 +299,7 @@ def load_sprites(screen, screen_width, screen_height, show_progress=False):
                                     draw_progress_bar(screen, progress, screen_width, screen_height, sprite_name, loading_screen)
             elif category == 'projectiles':
                 sprites[category][sprite_name] = {}
-                sprite_path = directory
+                sprite_path = abs_directory
                 if os.path.isdir(sprite_path):
                     state_dirs = os.listdir(sprite_path)
                     for state_dir in state_dirs:

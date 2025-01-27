@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\Controller\game_loop.py
 import time
 import pygame
 import sys
@@ -47,7 +48,6 @@ from Settings.setup import (
 from Controller.Bot import manage_battle
 
 def is_player_dead(player):
-    # Simple check: no units, no buildings, and zero resources to rebuild
     if not player.units and not player.buildings:
         if (player.resources.food <= 50 and
             player.resources.gold <= 225):
@@ -67,7 +67,6 @@ def draw_game_over_overlay(screen, game_state):
     screen.blit(button_text, button_rect)
     game_state['game_over_button_rect'] = button_rect
 
-    # Nouveau bouton "Menu Principal"
     main_menu_text = button_font.render("Menu Principal", True, (255, 255, 255))
     main_menu_rect = main_menu_text.get_rect(
         center=(game_state['screen_width'] // 2, game_state['screen_height'] // 2 + 100)
@@ -77,17 +76,31 @@ def draw_game_over_overlay(screen, game_state):
     game_state['main_menu_button_rect'] = main_menu_rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players):
-    clock = pygame.time.Clock()
-    pygame.key.set_repeat(0, 0)
+    # Protection contre les dimensions nulles
+    if screen_width <= 0 or screen_height <= 0:
+        screen_width = 800
+        screen_height = 600
+
+    # Si on est en mode terminal only, on n'initialise pas pygame
+    from Settings.setup import user_choices
+    is_terminal_only = user_choices["index_terminal_display"] == 1
+
+    if not is_terminal_only:  # Si pas en mode Terminal only
+        clock = pygame.time.Clock()
+        pygame.key.set_repeat(0, 0)
+        pygame.mouse.set_visible(False)
+        fullscreen = pygame.display.get_surface().get_flags() & pygame.FULLSCREEN
+    else:
+        clock = None
+        fullscreen = False
+
     camera = Camera(screen_width, screen_height)
     team_colors = generate_team_colors(len(players))
-    pygame.mouse.set_visible(False)
     font = pygame.font.SysFont(None, 24)
 
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
 
-    # Dynamically compute camera.min_zoom to see entire map:
     map_width = max_iso_x - min_iso_x
     map_height = max_iso_y - min_iso_y
     camera.min_zoom = min(
@@ -95,7 +108,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         screen_height / float(map_height)
     )
 
-    # Initial camera position - same as pressing 'M'
     camera.zoom_out_to_global()
 
     panel_width  = int(screen_width * PANEL_RATIO)
@@ -148,7 +160,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'screen_width': screen_width,
         'screen_height': screen_height,
         'screen': screen,
-        'fullscreen': pygame.display.get_surface().get_flags() & pygame.FULLSCREEN,
+        'fullscreen': fullscreen,  # On utilise la variable locale
         'minimap_dragging': False,
         'player_selection_updated': True,
         'player_info_updated': True,
@@ -162,10 +174,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'show_all_health_bars': False,
         'show_player_info': True,
         'show_gui_elements': True,
-        'return_to_menu': False,  # Nouveau flag
-        'pause_menu_active': False,  # Nouveau flag
+        'return_to_menu': False,
+        'pause_menu_active': False,
         'notification_message': "",
         'notification_start_time': 0.0,
+
+        # Nouveau bool pour déclencher un switch F9
+        'switch_display': False,
     }
     
     game_map.set_game_state(game_state)
@@ -175,46 +190,55 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     running = True
     update_counter = 0
-
     old_resources = {}
     for p in players:
         old_resources[p.teamID] = p.resources.copy()
 
     draw_timer = 0
     decision_timer = 0
+    players_target = [None for _ in range(len(players))]
 
-    players_target=[None for _ in range(0,len(players))]
     while running:
-        raw_dt = clock.tick(FPS_DRAW_LIMITER) / ONE_SECOND
+        # Gestion du temps selon le mode
+        if clock:  # Si on n'est pas en mode Terminal only
+            raw_dt = clock.tick(FPS_DRAW_LIMITER) / ONE_SECOND
+        else:
+            raw_dt = 0.016  # ~60 FPS
+            time.sleep(raw_dt)
+            
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
 
-        handle_camera(camera, raw_dt * GAME_SPEED)
-
-        events = pygame.event.get()
-        for event in events:
-            handle_events(event, game_state)
-            if event.type == pygame.QUIT:
-                running = False
-            if game_state.get('game_over', False):
-                # On rend la souris visible pour cliquer sur les boutons
-                pygame.mouse.set_visible(True)
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mx, my = pygame.mouse.get_pos()
-                    if 'game_over_button_rect' in game_state:
-                        if game_state['game_over_button_rect'].collidepoint(mx, my):
-                            user_choices["menu_result"] = "quit"
-                            running = False
-                    if 'main_menu_button_rect' in game_state:
-                        if game_state['main_menu_button_rect'].collidepoint(mx, my):
-                            user_choices["menu_result"] = "main_menu"
-                            # Retour au menu
-                            game_state['game_over'] = False
-                            user_choices["validated"] = False
-                            game_state['return_to_menu'] = True
+        # On ne gère la caméra que si on n'est pas en mode terminal
+        if not is_terminal_only:
+            handle_camera(camera, raw_dt * GAME_SPEED)
+            # Gestion des événements pygame uniquement en mode non-terminal
+            events = pygame.event.get()
+            for event in events:
+                handle_events(event, game_state)
+                if event.type == pygame.QUIT:
+                    running = False
+                if game_state.get('game_over', False):
+                    pygame.mouse.set_visible(True)
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        mx, my = pygame.mouse.get_pos()
+                        if 'game_over_button_rect' in game_state:
+                            if game_state['game_over_button_rect'].collidepoint(mx, my):
+                                user_choices["menu_result"] = "quit"
+                                running = False
+                        if 'main_menu_button_rect' in game_state:
+                            if game_state['main_menu_button_rect'].collidepoint(mx, my):
+                                user_choices["menu_result"] = "main_menu"
+                                game_state['game_over'] = False
+                                game_state['return_to_menu'] = True
 
         if game_state.get('return_to_menu'):
-            # On sort de la boucle => retour menu
+            break
+
+        # SI on a reçu le signal "switch_display" => on arrête la boucle
+        if game_state.get('switch_display'):
+            running = False
+            user_choices["menu_result"] = "switch_display"
             break
 
         screen = game_state['screen']
@@ -226,19 +250,18 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         game_map = game_state['game_map']
         camera = game_state['camera']
 
-        # Terminal only => pas d'affichage Pygame
         if user_choices["index_terminal_display"] == 1:
             screen = None
 
-        # Mise à jour (logique)
         if not game_state.get('paused', False):
             if update_counter > 1:
                 update_counter = 0
                 update_minimap_elements(game_state)
             update_counter += dt
 
-        manage_battle(selected_player,players_target,players,game_map,dt)
-        # Surfaces
+        # Simpliste manage battle
+        manage_battle(selected_player, players_target, players, game_map, dt)
+
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):
                 player_selection_surface = create_player_selection_surface(
@@ -258,9 +281,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 )
                 game_state['player_info_updated'] = False
 
-        update_game_state(game_state, dt)
+            update_game_state(game_state, dt)
 
-        # Remove players who are dead
         for p in players[:]:
             if is_player_dead(p):
                 debug_print(f"[GAME] Joueur {p.teamID} est éliminé.")
@@ -279,12 +301,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 game_state['player_info_updated'] = True
                 old_resources[selected_player.teamID] = current_res.copy()
 
-        # BOT IMPLEMENTATION 
-        if decision_timer >= 1/DPS :
-            decision_timer = 0
-            for player in players:
-                manage_battle(player,players_target,players,game_map,dt)
-
+        # N'effectuer le rendu que si on a un écran
         if screen is not None and draw_timer >= 1/FPS_DRAW_LIMITER:
             draw_timer = 0
             screen.fill((0, 0, 0))
@@ -321,10 +338,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                     screen.blit(player_selection_surface, (bg_rect.x, bg_rect.y - sel_h - 20))
 
                 if player_info_surface and game_state['show_player_info']:
-                    x_offset = int(screen_width * 0.03)  # 3% du screen width comme décalage
+                    x_offset = int(screen_width * 0.03)
                     screen.blit(player_info_surface, (x_offset, 0))
-            #archer = Archer(selected_player,0,0)
-            #train_units(selected_player,archer)
 
             draw_pointer(screen)
 
@@ -339,13 +354,12 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                         )
             display_fps(screen,screen_width, clock, font)
 
-            # Affichage de la notification - Nouvelle position
             if game_state['notification_message']:
                 if time.time() - game_state['notification_start_time'] < 3:
                     notif_font = pygame.font.SysFont(None, 28)
                     notif_surf = notif_font.render(game_state['notification_message'], True, (255,255,0))
                     fps_height = 30  
-                    margin = 10  # Marge à droite et en dessous des FPS
+                    margin = 10
                     notif_x = screen_width - notif_surf.get_width() - margin
                     notif_y = fps_height + margin
                     screen.blit(notif_surf, (notif_x, notif_y))
@@ -356,16 +370,17 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 draw_game_over_overlay(screen, game_state)
             if game_state.get('pause_menu_active'):
                 draw_pause_menu(screen, game_state)
-                draw_pointer(screen)  # draw pointer on top
+                draw_pointer(screen)
                 pygame.display.flip()
                 continue
+
             if game_state.get('force_full_redraw', False):
                 pygame.display.flip()
                 game_state['force_full_redraw'] = False
             else:
                 pygame.display.flip()
-                    # Rendu Pygame (GUI)
+
         draw_timer += raw_dt
         decision_timer += raw_dt
     
-    # fin de game_loop
+    return "done"
