@@ -46,10 +46,6 @@ class Villager(Unit):
             self.seekIdle()
             self.seekBuild(game_map)
             self.seekRepair(game_map, dt)
-            
-            #if self.task and self.state == 'idle':
-            #    self.state = self.task
-            # It's causing problems for building part 
         else:
             self.death(game_map, dt)
 
@@ -86,10 +82,11 @@ class Villager(Unit):
     def set_task(self, task, target = None):
         if task in villager_tasks:
             self.task = task
+            print(f'setted task : {task}')
             setattr(self, villager_tasks[task], target)
 
     def isAvailable(self):
-        if self.isAlive() and not self.task :
+        if self.isAlive() and self.state == 'idle' :
             return True
         return False
 
@@ -110,7 +107,7 @@ class Villager(Unit):
             max(left, min(self.x, right)),
             max(top, min(self.y, bottom))
         )
-        distance = math.dist(closest_point, (self.x, self.y)) - self.attack_range
+        distance = math.dist(closest_point, (self.x, self.y)) - 1
 
         # Stop if carrying too much or far away
         if distance > 0 or self.carry.total() >= MAXIMUM_CARRY:
@@ -194,7 +191,7 @@ class Villager(Unit):
             max(left, min(self.x, right)),
             max(top, min(self.y, bottom))
         )
-        distance = math.dist(closest_point, (self.x, self.y)) - abs(self.attack_range)
+        distance = math.dist(closest_point, (self.x, self.y)) - 1
 
         if distance > 0 :
             if self.path:
