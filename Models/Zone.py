@@ -2,7 +2,7 @@ from Controller.terminal_display_debug import debug_print
 
 class Zone:
     def __init__(self):
-        self.zone = set() 
+        self.zone = []
 
     def reset(self):
         self.zone.clear()
@@ -13,40 +13,56 @@ class Zone:
         x2, y2 = end
         for x in range(min(x1, x2), max(x1, x2) + 1):
             for y in range(min(y1, y2), max(y1, y2) + 1):
-                self.zone.add((x, y))
+                tile = (x, y)
+                self.zone.append(tile)
 
     def add_zone(self, start, end):
         x1, y1 = start
         x2, y2 = end
+        to_add = []
         for x in range(min(x1, x2), max(x1, x2) + 1):
             for y in range(min(y1, y2), max(y1, y2) + 1):
-                self.zone.add((x, y))
+                tile = (x, y)
+                to_add.append(tile)
+        for tile in to_add:
+            self.zone.append(tile)
+        return to_add
 
     def remove_zone(self, start, end):
         x1, y1 = start
         x2, y2 = end
-        for x in range(min(x1, x2), max(x1, x2) + 1):
-            for y in range(min(y1, y2), max(y1, y2) + 1):
-                self.zone.discard((x, y))
+        to_remove = []
+        print(f'zone before removal : {self.get_zone()}')
+        for x in range(int(min(x1, x2)), int(max(x1, x2) + 1)):
+            for y in range(int(min(y1, y2)), int(max(y1, y2) + 1)):
+                tile = (x, y)
+                if tile in self.zone:
+                    to_remove.append(tile)
+        print(f'zone to remove : {to_remove}')
+        for tile in to_remove:
+            self.zone.remove(tile)
+        print(f'zone after remove : {self.get_zone()}')
+        return to_remove
 
     def add_tile(self, position):
-        self.zone.add(position)
+        self.zone.append(position)
 
     def remove_tile(self, position):
-        self.zone.discard(position)
+        if position in self.zone:
+            self.zone.remove(position)
 
     def inZone(self, zone=None, tile=None):
         if tile is not None:
             return tile in self.zone
         if zone is not None and isinstance(zone, Zone):
-            return not self.zone.isdisjoint(zone.zone)
+            return any(tile in self.zone for tile in zone.zone)
         return False
 
     def get_zone(self):
-        return self.zone
+        return sorted(set(self.zone))
 
     def __eq__(self, other):
-        return isinstance(other, Zone) and self.zone == other.zone
+        return isinstance(other, Zone) and sorted(self.zone) == sorted(other.zone)
 
     def __repr__(self):
-        return f"Zone({sorted(self.zone)})"
+        return f"Zone({sorted(set(self.zone))})"

@@ -11,7 +11,7 @@ from Entity.Unit import *
 from Entity.Resource.Resource import *
 from Entity.Resource.Gold import Gold
 from Entity.Resource.Tree import Tree
-from Settings.setup import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE, SAVE_DIRECTORY
+from Settings.setup import BUILDING_ZONE_OFFSET, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, NUM_GOLD_TILES, NUM_WOOD_TILES, NUM_FOOD_TILES, GOLD_SPAWN_MIDDLE, SAVE_DIRECTORY
 from Controller.terminal_display_debug import debug_print
 
 class GameMap:
@@ -64,9 +64,9 @@ class GameMap:
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
         if entity.team != None:
-            if isinstance(entity, Building):
-                self.players[entity.team].zone.add_zone((x - 2 , y - 2), (x + entity.size + 2, y + entity.size + 2 ))
             self.players[entity.team].add_member(entity)
+            if isinstance(entity, Building):
+                zone = self.players[entity.team].zone.add_zone((x - BUILDING_ZONE_OFFSET , y - BUILDING_ZONE_OFFSET), (x + entity.size - 1 + BUILDING_ZONE_OFFSET, y + entity.size - 1 + BUILDING_ZONE_OFFSET ))
         return True
 
     def remove_entity(self, entity):
@@ -81,6 +81,11 @@ class GameMap:
                     if remove_counter >= entity.size * entity.size:
                         if entity.team != None:
                             self.players[entity.team].remove_member(entity)
+                            if isinstance(entity, Building):
+                                x, y = entity.x , entity.y
+                                starting_point = (x - entity.size/2 + 0.5  - BUILDING_ZONE_OFFSET, y - entity.size/2 + 0.5 - BUILDING_ZONE_OFFSET)
+                                end_point = (x + entity.size/2 - 0.5  + BUILDING_ZONE_OFFSET , y + entity.size/2 - 0.5 + BUILDING_ZONE_OFFSET)
+                                zone = self.players[entity.team].zone.remove_zone(starting_point, end_point)
                         return pos
         return False
 
