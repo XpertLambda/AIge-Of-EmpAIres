@@ -45,12 +45,13 @@ def get_input_non_blocking():
 def ask_terminal_inputs_non_blocking():
     """
     Menu Terminal non-bloquant.
-    [1] GUI only / [2] Terminal only / [3] Both (défaut=3)
+    [1] GUI only / [2] Terminal only / [3] Both ? (défaut=3)
     puis [1] nouvelle partie / [2] charger une sauvegarde, etc.
     On stocke le résultat dans user_choices et on met user_choices["validated"] = True à la fin.
     """
     step = 0
     saves = []
+    current_input = "" # Accumulate input characters
 
     while True:
         # Si on a déjà validé (peut arriver si l'utilisateur a cliqué dans le menu GUI),
@@ -62,142 +63,169 @@ def ask_terminal_inputs_non_blocking():
             print("\n--- Choisir le mode d'affichage ---")
             print("[1] GUI only / [2] Terminal only / [3] Both ? (défaut=3)")
             step = 1
+            current_input = "" # Reset input for new step
 
         elif step == 2:
             print("\n--- Menu Terminal ---")
             print("[1] Nouvelle partie / [2] Charger une sauvegarde ?")
             step = 3
+            current_input = ""
 
         elif step == 4:
             print("\n--- Paramètres de la nouvelle partie : ---")
             print("Tailles possibles :", VALID_GRID_SIZES)
             print(f"Taille (défaut={user_choices['grid_size']}) : ")
             step = 5
+            current_input = ""
 
         elif step == 6:
             print(f"Nb bots possibles : 1..55 (défaut={user_choices['num_bots']})")
             print("Nb bots : ")
             step = 7
+            current_input = ""
 
         elif step == 8:
             print("Niveaux possibles :", VALID_LEVELS)
             print(f"Niveau bots (défaut={user_choices['bot_level']}) : ")
             step = 9
+            current_input = ""
 
         elif step == 10:
             print("Or au centre ? (oui/non, défaut=non) : ")
             step = 11
+            current_input = ""
 
         # Lecture non bloquante
-        line_in = get_input_non_blocking()
-        if line_in is not None:
-            line = line_in.strip()
+        char_in = get_input_non_blocking()
+        if char_in is not None:
+            char = char_in
 
-            if step == 1:
-                # Par défaut => both
-                if line == "":
-                    user_choices["index_terminal_display"] = 2
-                    print("Aucun choix => Both.")
-                elif line in ['1', '2', '3']:
-                    val = int(line)
-                    if val == 1:
-                        user_choices["index_terminal_display"] = 0
-                        print("Mode choisi : GUI only.")
-                    elif val == 2:
-                        user_choices["index_terminal_display"] = 1
-                        print("Mode choisi : Terminal only.")
+            if char == '\r': # Enter key pressed (or equivalent for different OS)
+                line = current_input.strip()
+                print(f"DEBUG Terminal Input: Line='{line}', Step={step}") # DEBUG PRINT - Input received
+                if step == 1: # Display mode
+                    # Par défaut => both
+                    if line == "":
+                        user_choices["index_terminal_display"] = 2
+                        print("Aucun choix => Both.")
+                    elif line in ['1', '2', '3']:
+                        val = int(line)
+                        if val == 1:
+                            user_choices["index_terminal_display"] = 0
+                            print("Mode choisi : GUI only.")
+                        elif val == 2:
+                            user_choices["index_terminal_display"] = 1
+                            print("Mode choisi : Terminal only.")
+                        else:
+                            user_choices["index_terminal_display"] = 2
+                            print("Mode choisi : Both.")
                     else:
                         user_choices["index_terminal_display"] = 2
-                        print("Mode choisi : Both.")
-                else:
-                    user_choices["index_terminal_display"] = 2
-                    print("Choix invalide => Both.")
-                step = 2
+                        print("Choix invalide => Both.")
+                    step = 2 # Always move to step 2 after display mode
 
-            elif step == 3:
-                if line == '2':
-                    user_choices["load_game"] = True
-                    if os.path.isdir(SAVE_DIRECTORY):
-                        saves = [f for f in os.listdir(SAVE_DIRECTORY) if f.endswith('.pkl')]
-                        if saves:
-                            print("Saves disponibles :")
-                            for idx, sf in enumerate(saves):
-                                print(f"{idx+1} - {sf}")
-                            print("Sélection de la sauvegarde : ")
-                            step = 12
+                elif step == 3: # New game / Load game
+                    if line == '2':
+                        user_choices["load_game"] = True
+                        if os.path.isdir(SAVE_DIRECTORY):
+                            saves = [f for f in os.listdir(SAVE_DIRECTORY) if f.endswith('.pkl')]
+                            if saves:
+                                print("Saves disponibles :")
+                                for idx, sf in enumerate(saves):
+                                    print(f"{idx+1} - {sf}")
+                                print("Sélection de la sauvegarde : ")
+                                step = 12 # Go to save selection step
+                            else:
+                                print("Aucune sauvegarde => nouvelle partie.")
+                                user_choices["load_game"] = False
+                                step = 4  # Go to new game parameters
                         else:
-                            print("Aucune sauvegarde => nouvelle partie.")
+                            print("Pas de répertoire => nouvelle partie.")
                             user_choices["load_game"] = False
-                            step = 4
+                            step = 4 # Go to new game parameters
                     else:
-                        print("Pas de répertoire => nouvelle partie.")
+                        user_choices["load_game"] = False
+                        step = 4 # Go to new game parameters
+
+                elif step == 12: # Save selection
+                    if line == "":
+                        print("Pas de saisie => nouvelle partie.")
                         user_choices["load_game"] = False
                         step = 4
-                else:
-                    user_choices["load_game"] = False
-                    step = 4
-
-            elif step == 12:
-                if line == "":
-                    print("Pas de saisie => nouvelle partie.")
-                    user_choices["load_game"] = False
-                    step = 4
-                else:
-                    try:
-                        sel_idx = int(line) - 1
-                        if 0 <= sel_idx < len(saves):
-                            user_choices["chosen_save"] = os.path.join(SAVE_DIRECTORY, saves[sel_idx])
-                            user_choices["validated"] = True
-                            return  # On sort, menu validé
-                        else:
-                            print("Index invalide => nouvelle partie.")
+                    else:
+                        try:
+                            sel_idx = int(line) - 1
+                            if 0 <= sel_idx < len(saves):
+                                user_choices["chosen_save"] = os.path.join(SAVE_DIRECTORY, saves[sel_idx])
+                                user_choices["validated_by"] = "terminal" # Indicate terminal validation
+                                user_choices["validated"] = True
+                                return  # On sort, menu validé
+                            else:
+                                print("Index invalide => nouvelle partie.")
+                                user_choices["load_game"] = False
+                                step = 4
+                        except:
+                            print("Choix invalide => nouvelle partie.")
                             user_choices["load_game"] = False
                             step = 4
-                    except:
-                        print("Choix invalide => nouvelle partie.")
-                        user_choices["load_game"] = False
-                        step = 4
 
-            elif step == 5:
-                if line == "":
-                    print(f"Pas de saisie => taille par défaut {user_choices['grid_size']}")
-                else:
-                    if line.isdigit():
-                        val = int(line)
-                        if val in VALID_GRID_SIZES:
-                            user_choices["grid_size"] = val
-                            print(f"Taille : {val}")
-                step = 6
+                elif step == 5: # Grid size
+                    if line == "":
+                        print(f"Pas de saisie => taille par défaut {user_choices['grid_size']}")
+                    else:
+                        if line.isdigit():
+                            val = int(line)
+                            if val in VALID_GRID_SIZES:
+                                user_choices["grid_size"] = val
+                                print(f"Taille : {val}")
+                    step = 6 # Always move to step 6 after grid size
 
-            elif step == 7:
-                if line == "":
-                    print(f"Pas de saisie => nb bots par défaut {user_choices['num_bots']}")
-                else:
-                    if line.isdigit():
-                        val = int(line)
-                        if 1 <= val <= 55:
-                            user_choices["num_bots"] = val
-                            print(f"Nb bots : {val}")
-                step = 8
+                elif step == 7: # Number of bots
+                    if line == "":
+                        print(f"Pas de saisie => nb bots par défaut {user_choices['num_bots']}")
+                    else:
+                        if line.isdigit():
+                            val = int(line)
+                            if val in VALID_BOTS_COUNT:
+                                user_choices["num_bots"] = val
+                                print(f"Nb bots : {val}")
+                    step = 8 # Always move to step 8 after bot count
 
-            elif step == 9:
-                if line == "":
-                    print(f"Pas de saisie => niveau bots par défaut {user_choices['bot_level']}")
-                else:
-                    if line in VALID_LEVELS:
-                        user_choices["bot_level"] = line
-                        print(f"Niveau bots : {line}")
-                step = 10
+                elif step == 9: # Bot level
+                    if line == "":
+                        print(f"Pas de saisie => niveau bots par défaut {user_choices['bot_level']}")
+                    else:
+                        if line in VALID_LEVELS:
+                            user_choices["bot_level"] = line
+                            print(f"Niveau bots : {line}")
+                    step = 10 # Always move to step 10 after bot level
 
-            elif step == 11:
-                if line.lower() == "oui":
-                    user_choices["gold_at_center"] = True
-                step = 13
+                elif step == 11: # Corrected step number here
+                    if line == "":
+                        user_choices["gold_at_center"] = False
+                        step = 13
+                    elif line.lower() == "oui" or line.lower() == "o":
+                        user_choices["gold_at_center"] = True
+                        step = 13
+                    elif line.lower() == "non" or line.lower() == "n":
+                        user_choices["gold_at_center"] = False
+                        step = 13
+                    else:
+                        print("Choix invalide, default = non")
+                        user_choices["gold_at_center"] = False
+                        step = 13
 
-            if step == 13:
-                # Menu validé => plus besoin d'y revenir
-                user_choices["validated"] = True
-                return
+                if step == 13:
+                    user_choices["validated_by"] = "terminal" # Indicate terminal validation
+                    user_choices["validated"] = True
+                    return
+                current_input = "" # Reset input after processing line
+
+            elif char: # Accumulate character input
+                current_input += char
+                if platform.system() != "Windows": # Conditionally echo for non-Windows
+                    sys.stdout.write(char) # Echo character to terminal
+                    sys.stdout.flush()
 
         time.sleep(0.005)
 
@@ -261,6 +289,7 @@ def main():
             if user_choices["index_terminal_display"] in [0, 2]:
                 # On initialise la fenêtre Pygame
                 screen, sw, sh = init_pygame()
+                print("DEBUG: Initialized Pygame for GUI or Both mode") # DEBUG
 
                 # Lancement du chargement asynchrone des assets
                 t_assets = threading.Thread(
@@ -286,8 +315,9 @@ def main():
                 if t_assets.is_alive():
                     t_assets.join()
 
-            else:
+            elif user_choices["index_terminal_display"] == 1: # Changed to elif for clarity
                 # index_terminal_display == 1 => Terminal only
+                print("DEBUG: Running Terminal menu only") # DEBUG
                 # On peut directement lancer la lecture terminal
                 # (Bloquante ou non-bloquante selon vos préférences)
                 ask_terminal_inputs_non_blocking()
@@ -296,9 +326,26 @@ def main():
             # (soit dans le menu GUI, soit dans le menu Terminal).
 
         # 2) On a forcément sw, sh si on est passé par GUI, sinon on pose un fallback :
-        if user_choices["index_terminal_display"] == 1:
-            # Terminal only => on n'a pas forcément sw,sh
+        mode_index = user_choices["index_terminal_display"] # Get mode_index here for clarity
+
+        if mode_index == 0: # GUI only
+            # GUI only => on initialise pygame
+            screen, sw, sh = init_pygame()
+            print("DEBUG: GUI only mode: Initializing Pygame") # DEBUG
+        elif mode_index == 1: # Terminal only
+            # Terminal only => no pygame initialization, fallback resolution
             sw, sh = (800, 600)  # Valeurs de secours
+            screen = None # Ensure screen is None for terminal mode
+            print("DEBUG: Terminal only mode: No Pygame initialization, screen=None") # DEBUG
+        elif mode_index == 2: # Both
+            # Both => initialise pygame
+            screen, sw, sh = init_pygame()
+            print("DEBUG: Both mode: Initializing Pygame") # DEBUG
+        else: # Fallback/Error case
+            screen = None
+            sw, sh = (800, 600)
+
+
 
         mode_index  = user_choices["index_terminal_display"]
         load_game   = user_choices["load_game"]
@@ -307,6 +354,7 @@ def main():
         nb_bots     = user_choices["num_bots"]
         bot_level   = user_choices["bot_level"]
         gold_c      = user_choices["gold_at_center"]
+        validated_by = user_choices.get("validated_by")
 
         # 3) Création ou chargement de la map + players
         if load_game and chosen_save:
@@ -327,14 +375,35 @@ def main():
                 daemon=True
             )
             t_curses.start()
+            print("DEBUG: Curses thread started for Terminal or Both mode") # DEBUG
         else:
             t_curses = None
+            print("DEBUG: Curses not started for GUI only mode") # DEBUG
 
         # 5) Lancement éventuel du rendu Pygame si mode_index in [0, 2], sinon game_loop fait un "terminal" update
-        if mode_index in [0, 2]:
-            screen, sw, sh = init_pygame()  # si besoin de (ré)initialiser la fenêtre
-        else:
-            screen = None
+        if mode_index == 0: # Changed to elif and corrected condition
+            if screen is None: # Check if screen is None (meaning not initialized yet)
+                screen, sw, sh = init_pygame() # Initialize Pygame only if screen is None
+            if validated_by == "terminal":
+                print("Loading des assets...") # Simple print for terminal validation
+            elif validated_by != "terminal" and not is_assets_loaded(): # Loading screen only if not terminal validated and assets not loaded
+                show_loading_screen_until_done(screen, sw, sh)
+            print("DEBUG: GUI only mode, Pygame rendering will be used in game_loop") # DEBUG
+        elif mode_index == 2: # Explicitly handle 'Both' mode
+            if screen is None: # Check if screen is None (meaning not initialized yet)
+                screen, sw, sh = init_pygame() # Initialize Pygame only if screen is None
+            if validated_by == "terminal":
+                print("Loading des assets...") # Simple print for terminal validation
+            elif validated_by != "terminal" and not is_assets_loaded(): # Loading screen only if not terminal validated and assets not loaded
+                show_loading_screen_until_done(screen, sw, sh)
+            print("DEBUG: Both mode, Pygame rendering AND Curses will be used") # DEBUG
+        else: # mode_index == 1, Terminal only
+            screen = None # Ensure screen is None for terminal only mode
+            sw, sh = (800, 600) # Add fallback sw, sh for terminal mode
+            print("DEBUG: Terminal only mode, Pygame rendering will be skipped") # DEBUG
+
+
+        print("DEBUG: Calling game_loop now...") # DEBUG PRINT
 
         # 6) Boucle de jeu
         #    On utilise la fonction game_loop(...) qui peut (ou non) dessiner,
@@ -367,6 +436,7 @@ def main():
                 "bot_level": "lean",
                 "gold_at_center": False,
                 "validated": False,
+                "validated_by": None, # Reset validation source
                 "menu_result": None
             })
             # On relance la boucle => le menu sera rouvert
@@ -418,7 +488,7 @@ def main():
             # On ré-initialise user_choices => ce qui relancera le menu
             user_choices.clear()
             user_choices.update({
-                "index_terminal_display": 2,
+                #"index_terminal_display": 2,
                 "load_game": False,
                 "chosen_save": "",
                 "grid_size": 120,
@@ -426,6 +496,7 @@ def main():
                 "bot_level": "lean",
                 "gold_at_center": False,
                 "validated": False,
+                "validated_by": None, # Reset validation source
                 "menu_result": None
             })
             continue

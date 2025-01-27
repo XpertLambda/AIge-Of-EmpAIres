@@ -12,7 +12,6 @@ from Entity.Building import Building
 pygame.init()
 font = pygame.font.SysFont(None, 32)
 
-user_choices["index_terminal_display"] = 2
 
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     global gui_cache
@@ -83,9 +82,9 @@ def update_minimap_elements(game_state):
             if isinstance(ent, Building):
                 half_dim = max(MIN_BUILDING_SIZE, ent.size)
                 rect_building = pygame.Rect(
-                    mini_x - half_dim, 
-                    mini_y - half_dim, 
-                    half_dim * 2, 
+                    mini_x - half_dim,
+                    mini_y - half_dim,
+                    half_dim * 2,
                     half_dim * 2
                 )
                 pygame.draw.rect(minimap_surface, (*color_draw, 150), rect_building)
@@ -115,7 +114,7 @@ def run_gui_menu(screen, sw, sh):
         {"text": "Charger Partie",  "rect": pygame.Rect(0,0,200,50)},
         {"text": "Quitter",         "rect": pygame.Rect(0,0,200,50)},
     ]
-    
+
     back_button = {"text": "Retour", "rect": pygame.Rect(20, 20, 100, 40)}
 
     # On force la valeur par défaut à "Both" = index = 2
@@ -230,8 +229,8 @@ def run_gui_menu(screen, sw, sh):
                     combo_rect_lvl  = pygame.Rect(sw//2 - 100, 220, 200, 30)
 
                     # Si on clique en dehors, on referme
-                    if not (combo_rect_grid.collidepoint(mx,my) or 
-                            combo_rect_nbot.collidepoint(mx,my) or 
+                    if not (combo_rect_grid.collidepoint(mx,my) or
+                            combo_rect_nbot.collidepoint(mx,my) or
                             combo_rect_lvl.collidepoint(mx,my)):
                         combo_open = None
 
@@ -268,13 +267,14 @@ def run_gui_menu(screen, sw, sh):
 
                     valid_rect = pygame.Rect(sw//2 - 50, 340, 100, 40)
                     if valid_rect.collidepoint(mx,my):
+                        user_choices["validated_by"] = "gui"
                         user_choices["validated"] = True
                         running = False
 
                     # Insert toggle_button logic here
-                    if toggle_button["rect"].collidepoint(mx, my):
+                    if toggle_button["rect"].collidepoint(mx, my): # <- Only ONE block here now
                         toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
-                        user_choices["index_terminal_display"] = toggle_button["index"]
+
 
                 elif show_load_menu:
                     start_y = 100
@@ -291,7 +291,7 @@ def run_gui_menu(screen, sw, sh):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     combo_open = None
-        
+
         if show_main_menu:
             draw_main_menu(screen, sw, sh, main_buttons)
         elif show_config_menu:
@@ -308,10 +308,6 @@ def run_gui_menu(screen, sw, sh):
             screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
 
         pygame.display.flip()
-        
-        # Met à jour la variable globale index_terminal_display
-        # d'après l'état du bouton toggle_button
-        user_choices["index_terminal_display"] = toggle_button["index"]
 
 def draw_choose_display(screen, toggle_button):
     pygame.draw.rect(screen, (0, 122, 255), toggle_button["rect"])
@@ -454,7 +450,7 @@ def create_player_info_surface(selected_player, screen_width, screen_height, tea
     from Settings.setup import user_choices
     if user_choices["index_terminal_display"] == 1:  # Terminal only mode
         return None
-        
+
     font_info = pygame.font.Font(None, 24)
     padding_x = int(screen_width * 0.0)  # 0.7% du screen width comme padding horizontal
     padding_y = int(screen_height * 0.028)  # 2% du screen height comme padding vertical

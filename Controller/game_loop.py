@@ -1,4 +1,3 @@
-# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\Controller\game_loop.py
 import time
 import pygame
 import sys
