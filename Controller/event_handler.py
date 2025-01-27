@@ -110,7 +110,7 @@ def handle_events(event, game_state):
         #
         # (2) - Touche L => Sauvegarde
         #
-        elif event.key in [pygame.K_k]:
+        elif event.key in [pygame.K_k, pygame.K_F11]:
             game_state['game_map'].save_map()
             debug_print("[GUI] L => Sauvegarde effectuée.")
             game_state['notification_message'] = "Partie sauvegardée."
@@ -119,7 +119,7 @@ def handle_events(event, game_state):
         #
         # (3) - Touche l => Chargement
         #
-        elif event.key in [pygame.K_l]:
+        elif event.key in [pygame.K_l, pygame.K_F12]:
             from tkinter import Tk, filedialog
             try:
                 root = Tk()
@@ -192,6 +192,26 @@ def handle_events(event, game_state):
         if event.key == pygame.K_F4:
             game_state['show_unit_and_building_health_bars'] = not game_state.get('show_unit_and_building_health_bars', False)
             debug_print(f"[GUI] F4 => show_unit_and_building_health_bars={game_state['show_unit_and_building_health_bars']}")
+
+        elif event.key == pygame.K_j:
+            # Toggle fullscreen
+            screen = game_state['screen']
+            if game_state['fullscreen']:
+                # Get the current display info
+                display_info = pygame.display.Info()
+                # Set window size to 90% of screen size
+                window_width = int(display_info.current_w * 0.9)
+                window_height = int(display_info.current_h * 0.9)
+                screen = pygame.display.set_mode((window_width, window_height), pygame.RESIZABLE)
+            else:
+                screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+            
+            game_state['fullscreen'] = not game_state['fullscreen']
+            game_state['screen'] = screen
+            game_state['screen_width'] = screen.get_width()
+            game_state['screen_height'] = screen.get_height()
+            game_state['force_full_redraw'] = True
+            debug_print(f"[GUI] J => Toggle fullscreen: {game_state['fullscreen']}")
 
         #
         # (7) - Mouvements Terminal si on est en mode terminal/both
