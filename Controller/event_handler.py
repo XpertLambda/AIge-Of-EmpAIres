@@ -2,7 +2,7 @@ import pygame
 import sys
 import os
 import time
-import tkinter as tk
+from tkinter import Tk, filedialog
 from Entity.Building import Building, TownCentre
 from Settings.setup import HALF_TILE_SIZE, SAVE_DIRECTORY, MINIMAP_MARGIN, PANEL_RATIO, BG_RATIO
 from Controller.utils import *
@@ -120,7 +120,7 @@ def handle_events(event, game_state):
         # (3) - Touche l => Chargement
         #
         elif event.key in [pygame.K_l, pygame.K_F12]:
-            from tkinter import Tk, filedialog
+            
             try:
                 root = Tk()
                 root.withdraw()
@@ -281,9 +281,9 @@ def handle_events(event, game_state):
                         game_state['paused'] = False
                     elif label == "Load Game":
                         try:
-                            root = tk.Tk()
+                            root = Tk()
                             root.withdraw()
-                            chosen_path = tk.filedialog.askopenfilename(
+                            chosen_path = filedialog.askopenfilename(
                                 initialdir=SAVE_DIRECTORY,
                                 filetypes=[("Pickle","*.pkl")]
                             )
@@ -354,10 +354,13 @@ def handle_events(event, game_state):
                         if building_clicked.team == selected_player.teamID:
                             success = building_clicked.add_to_training_queue(selected_player)
                             game_state['player_info_updated'] = True
-                            if not success:
+                            if success in {-1, 0}:
                                 if 'insufficient_resources_feedback' not in game_state:
                                     game_state['insufficient_resources_feedback'] = {}
-                                game_state['insufficient_resources_feedback'][building_clicked.entity_id] = time.time()
+                                if success == -1:
+                                    game_state['insufficient_resources_feedback'][building_clicked.entity_id] = (time.time(), "Not enought resources")
+                                elif success == 0:
+                                    game_state['insufficient_resources_feedback'][building_clicked.entity_id] = (time.time(), "Maximum population reached")
                 else:
                     # Clique "normal" => sélectionner un entity ou drag box
                     entity = closest_entity(game_state, mouse_x, mouse_y)

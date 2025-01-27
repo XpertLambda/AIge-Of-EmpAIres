@@ -143,13 +143,13 @@ class Building(Entity):
     def add_to_training_queue(self, team):
         """
         Attempt to enqueue a new unit if enough resources and not in constuction. 
-        Return True if successful, False otherwise.
+        Return 1 if successful, 0 if max population's reached, otherwise -1.
         """
         if self.processTime < self.dynamicBuildTime:
-            return False
+            return -1
 
         if self.acronym not in UNIT_TRAINING_MAP:
-            return False
+            return -1
 
         unit_name = UNIT_TRAINING_MAP[self.acronym]
         unit_class = UNIT_CLASSES[unit_name]
@@ -159,9 +159,12 @@ class Building(Entity):
             team.population + len(self.training_queue) < team.maximum_population):
             team.resources.decrease_resources(unit.cost.get())
             self.training_queue.append(unit_name)
-            return True
+            return 1
+        
+        if team.population + len(self.training_queue) >= team.maximum_population:
+            return 0
 
-        return False
+        return -1
 
     # ---------------- Train Logic ----------------
 

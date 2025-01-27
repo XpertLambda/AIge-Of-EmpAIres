@@ -159,9 +159,9 @@ def draw_map(screen, screen_width, screen_height, game_map, camera, players, tea
                 # If not enough resources feedback
                 if 'insufficient_resources_feedback' in game_state:
                     if entity.entity_id in game_state['insufficient_resources_feedback']:
-                        start_time = game_state['insufficient_resources_feedback'][entity.entity_id]
+                        start_time = game_state['insufficient_resources_feedback'][entity.entity_id][0]
                         if current_time - start_time < 3:
-                            warn_text = "Not enough resources"
+                            warn_text = game_state['insufficient_resources_feedback'][entity.entity_id][1]
                             warn_surf = font_obj.render(warn_text, True, (255, 50, 50))
                             screen.blit(warn_surf, (button_x, button_y - 22))
                         else:
