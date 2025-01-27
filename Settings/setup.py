@@ -2,13 +2,26 @@ from collections import namedtuple
 from Models.Resources import Resources
 import os
 
+# Get the base directory of the project
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Define paths relative to the base directory
+SAVE_DIRECTORY = os.path.join(BASE_DIR, 'saves')
+ASSETS_DIRECTORY = os.path.join(BASE_DIR, 'assets')
+
+# Create necessary directories
+os.makedirs(SAVE_DIRECTORY, exist_ok=True)
+os.makedirs(ASSETS_DIRECTORY, exist_ok=True)
+
 # -------------------
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 1
-FPS_DRAW_LIMITER = 200
+GAME_SPEED = 10
+FPS_DRAW_LIMITER = 50
+
 BUILDING_TIME_REDUCTION = 0.75
+BUILDING_ZONE_OFFSET = 1
 RESOURCE_RATE_PER_SEC = 25 / 60
 MAXIMUM_CARRY = 20
 
@@ -74,17 +87,17 @@ difficulty_config = {
     'DEBUG' : {
         'Resources' : Resources(food=99999, gold=99999, wood=99999),
         'Units' : {
-            'Villager' : 1,
+            'Villager' : 5,
             'Archer' : 5,
             'Horseman' : 5,
-            'Swordsman' : 0
+            'Swordsman' : 3
         },
         'Buildings' : {
             'TownCenter' : 5,
-            'House' : 0,
-            'Barracks' : 0,
+            'House' : 1,
+            'Barracks' : 1,
             'Stable' : 0, 
-            'ArcheryRange' : 0,
+            'ArcheryRange' : 1,
             'Farm' : 0,
             'Keep' : 5,
             'Camp' : 0,
@@ -99,7 +112,7 @@ TILE_SIZE = 200
 HALF_TILE_SIZE = TILE_SIZE / 2
 MAP_WIDTH = 120 * TILE_SIZE
 MAP_HEIGHT = 120 * TILE_SIZE
-MIN_ZOOM = 0.15
+# MIN_ZOOM = 0.15  # Removed for dynamic calculation
 MAX_ZOOM = 3.0
 WINDOW_WIDTH = 1200
 WINDOW_HEIGHT = 1200
@@ -121,9 +134,9 @@ BG_RATIO    = 0.20
 # -------------------
 # Save Directory
 # -------------------
-SAVE_DIRECTORY = 'saves'
-if not os.path.exists(SAVE_DIRECTORY):
-    os.makedirs(SAVE_DIRECTORY)
+# SAVE_DIRECTORY = 'saves'
+# if not os.path.exists(SAVE_DIRECTORY):
+#     os.makedirs(SAVE_DIRECTORY)
 
 # -------------------
 # Sprites Configuration
@@ -401,3 +414,5 @@ RESOURCE_THRESHOLDS = {
     'wood': 350, 
     'gold': 350   
 }
+
+

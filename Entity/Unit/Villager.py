@@ -39,17 +39,13 @@ class Villager(Unit):
         self.animator(dt)
         if self.isAlive():
             self.seekAttack(game_map, dt)
-            self.seekCollision(game_map, dt)
+            #self.seekCollision(game_map, dt)
             self.seekCollect(game_map, dt)
             self.seekStock(game_map)
             self.seekMove(game_map, dt)
             self.seekIdle()
             self.seekBuild(game_map)
             self.seekRepair(game_map, dt)
-            
-            #if self.task and self.state == 'idle':
-            #    self.state = self.task
-            # It's causing problems for building part 
         else:
             self.death(game_map, dt)
 
@@ -89,7 +85,7 @@ class Villager(Unit):
             setattr(self, villager_tasks[task], target)
 
     def isAvailable(self):
-        if self.isAlive() and not self.task :
+        if self.isAlive() and self.state == 'idle' :
             return True
         return False
 
@@ -110,7 +106,7 @@ class Villager(Unit):
             max(left, min(self.x, right)),
             max(top, min(self.y, bottom))
         )
-        distance = math.dist(closest_point, (self.x, self.y)) - self.attack_range
+        distance = math.dist(closest_point, (self.x, self.y)) - 1
 
         # Stop if carrying too much or far away
         if distance > 0 or self.carry.total() >= MAXIMUM_CARRY:
@@ -150,7 +146,7 @@ class Villager(Unit):
         if self.task != 'stock':
             return
         if self.stock_target and self.stock_target.isAlive():
-            distance = math.dist((self.x, self.y), (self.stock_target.x, self.stock_target.y)) - self.stock_target.hitbox - self.attack_range
+            distance = math.dist((self.x, self.y), (self.stock_target.x, self.stock_target.y)) - self.stock_target.hitbox - 1
             if self.carry.total() == 0:
                     self.task = 'collect'
                     return
@@ -194,7 +190,7 @@ class Villager(Unit):
             max(left, min(self.x, right)),
             max(top, min(self.y, bottom))
         )
-        distance = math.dist(closest_point, (self.x, self.y)) - abs(self.attack_range)
+        distance = math.dist(closest_point, (self.x, self.y)) - 1
 
         if distance > 0 :
             if self.path:

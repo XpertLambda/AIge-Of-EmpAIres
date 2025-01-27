@@ -17,6 +17,10 @@ def start_terminal_interface(game_map):
     """
     curses.wrapper(_curses_main, game_map)
 
+def resolve_save_path(relative_path):
+    """Helper function to resolve save paths relative to project root"""
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(project_root, relative_path)
 
 def _curses_main(stdscr, game_map):
     """
@@ -25,7 +29,10 @@ def _curses_main(stdscr, game_map):
     """
     curses.curs_set(0)
     stdscr.nodelay(True)
-    stdscr.keypad(True)
+    stdscr.keypad(True)  # Important pour les touches F1-F12
+    
+    # Définition des codes des touches de fonction
+    F9_KEY = 273  # Code standard pour F9 dans curses
 
     # On divise l'écran en 2 : zone map + zone debug
     total_h, total_w = stdscr.getmaxyx()
@@ -137,6 +144,26 @@ def _curses_main(stdscr, game_map):
                 debug_print("Fermeture curses demandée (ESC).")
                 break
 
+            # F9 => switch display mode (curses <-> GUI)
+            elif key in [F9_KEY, curses.KEY_F9]:  # On teste les deux codes possibles
+                from Settings.setup import user_choices
+                if user_choices["index_terminal_display"] in [0, 1]:
+                    debug_print("[CURSES] F9 => Switch display mode requested")
+                    if game_map.game_state:
+                        game_map.game_state['switch_display'] = True
+                    user_choices["menu_result"] = "switch_display"
+                    running = False
+                    
+                    # Nettoyer l'écran avant de sortir
+                    stdscr.clear()
+                    win_map.clear()
+                    win_debug.clear()
+                    stdscr.refresh()
+                    win_map.refresh()
+                    win_debug.refresh()
+                    
+                    break
+
             move_amount = 1
 
             if key in [ord('Z'), ord('S'), ord('Q'), ord('D')]:
@@ -188,7 +215,7 @@ def _curses_main(stdscr, game_map):
             # 7) Touche L => Chargement
             elif key in [ord('l'), ord('L')]:
                 debug_print("[CURSES] L => Chargement. Listing saves...")
-                saves_folder = 'saves'
+                saves_folder = resolve_save_path('saves')
                 if not os.path.isdir(saves_folder):
                     debug_print("[CURSES] => Pas de dossier 'saves'")
                 else:

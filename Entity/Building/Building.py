@@ -72,7 +72,6 @@ class Building(Entity):
         self.current_training_unit = None
         self.current_training_time_left = 0
         self.training_progress = 0.0
-        self.removed = False
 
     # ---------------- Update Entity --------------
     def update(self, game_map, dt):
@@ -93,28 +92,20 @@ class Building(Entity):
         self.cooldown_frame = None
 
     # ---------------- Controller ----------------
-    def kill(self):
-        self.state = 'death'
-        self.current_frame = 0
-        self.hp = 0
+
+    def isBuilt(self):
+        return self.state != 'construction'
 
     def death(self, game_map):
         if self.state != 'death':
-            self.kill()
+            self.state = 'death'
+            self.current_frame = 0
+            self.hp = 0
 
-        # Keep state='death' so it properly appears in HTML instead of setting it to ''.
-        if self.current_frame == self.frames - 1 and not self.removed and self.state == 'death':
-            self.removed = True
-            for player in game_map.game_state['players']:
-                if hasattr(player, 'buildings') and self in player.buildings:
-                    player.buildings.remove(self)
-                    break
-            game_map.remove_entity(self)
+        if self.current_frame == self.frames - 1:
+            self.state = '' 
             game_map.game_state['player_info_updated'] = True
 
-    def is_walkable(self):
-        return self.walkable
-    
     # ---------------- Display Logic ----------------
     def animator(self, dt):
         if self.state != '':
@@ -128,7 +119,7 @@ class Building(Entity):
             self.current_frame = self.cooldown_frame
 
     def display(self, screen, screen_width, screen_height, camera, dt):
-        if self.state != '':
+        if self.state != '':  # Remove death_animation_complete check since state will be empty
             sx, sy = tile_to_screen(self.x, self.y, HALF_TILE_SIZE, HALF_TILE_SIZE / 2, camera, screen_width, screen_height)
             draw_sprite(screen, self.acronym, 'buildings', sx, sy, camera.zoom, state=self.state, frame=self.current_frame)
             self.display_buildProcess(screen, screen_width, screen_height, camera)
@@ -152,13 +143,13 @@ class Building(Entity):
     def add_to_training_queue(self, team):
         """
         Attempt to enqueue a new unit if enough resources and not in constuction. 
-        Return True if successful, False otherwise.
+        Return 1 if successful, 0 if max population's reached, otherwise -1.
         """
         if self.processTime < self.dynamicBuildTime:
-            return False
+            return -1
 
         if self.acronym not in UNIT_TRAINING_MAP:
-            return False
+            return -1
 
         unit_name = UNIT_TRAINING_MAP[self.acronym]
         unit_class = UNIT_CLASSES[unit_name]
@@ -168,9 +159,12 @@ class Building(Entity):
             team.population + len(self.training_queue) < team.maximum_population):
             team.resources.decrease_resources(unit.cost.get())
             self.training_queue.append(unit_name)
-            return True
+            return 1
+        
+        if team.population + len(self.training_queue) >= team.maximum_population:
+            return 0
 
-        return False
+        return -1
 
     # ---------------- Train Logic ----------------
 
@@ -271,6 +265,7 @@ class Building(Entity):
     # ---------------- Build Logic ----------------
     def set_builders(self, builders):
         self.builders = builders
+        self.state = 'construction'
 
     def get_buildTime(self, num_builders):
         return (3 * self.buildTime) / (num_builders + 2) if num_builders > 0 else self.buildTime
@@ -279,8 +274,7 @@ class Building(Entity):
         if self.processTime >= self.dynamicBuildTime or not self.builders:
             return
 
-        self.state = 'construction'
-        
+        self.state = 'construction' 
         for builder in self.builders.copy():
             if not builder.isAlive() or builder.state != 'task':
                 if builder.task != 'build' and builder.task != 'repair':

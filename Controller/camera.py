@@ -1,11 +1,12 @@
-from Settings.setup import MAX_ZOOM, MIN_ZOOM
+from Settings.setup import MAX_ZOOM
 from Controller.utils import screen_to_tile, tile_to_screen
 
 class Camera:
     def __init__(self, width, height):
         self.offset_x = 0
         self.offset_y = 0
-        self.zoom = MIN_ZOOM
+        self.min_zoom = 0.15  # Default value, will be adjusted based on map size
+        self.zoom = self.min_zoom  # Initialize with default min_zoom
         self.width = width
         self.height = height
         self.min_x = None
@@ -32,8 +33,8 @@ class Camera:
         self.limit_camera()
 
     def set_zoom(self, zoom_factor):
-        # Set the zoom level within allowed limits
-        self.zoom = max(MIN_ZOOM, min(zoom_factor, MAX_ZOOM))
+        # Set the zoom level within allowed limits using instance min_zoom
+        self.zoom = max(self.min_zoom, min(zoom_factor, MAX_ZOOM))
         self.limit_camera()
 
     def set_bounds(self, min_x, max_x, min_y, max_y):
@@ -64,9 +65,5 @@ class Camera:
         # Center the camera on the entire map and zoom out
         self.offset_x = - (self.min_x + self.max_x) / 2
         self.offset_y = - (self.min_y + self.max_y) / 2
-        
-        zoom_factor = 0.5 
-        self.zoom = zoom_factor * MIN_ZOOM
-        
-        self.zoom = max(MIN_ZOOM, min(self.zoom, MAX_ZOOM))
+        self.zoom = self.min_zoom  # Use the dynamic min_zoom directly
         self.limit_camera()

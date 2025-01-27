@@ -30,13 +30,7 @@ class Keep(Building):
         if self.isAlive():
             self.seekConstruction(dt)  
             self.seekAttack(game_map, dt)            
-            if self.spawnsUnits:
-                self.update_training(dt, game_map, self.team)
             self.seekIdle()
-            if self.current_training_unit:
-                self.state = 'training'
-            elif self.state == 'training':
-                self.state = 'idle'
         else:
             self.death(game_map)
         self.animator(dt)
@@ -71,36 +65,37 @@ class Keep(Building):
                         queue.append((nx, ny, dist + 1))
 
     def seekAttack(self, game_map, dt):
-        self.scanRange(game_map)
-        if not self.attack_target:
-            return
-        if self.attack_target.isAlive():
-            if hasattr(self.attack_target, 'path'):
-                distance = math.dist((self.x, self.y), (self.attack_target.x, self.attack_target.y))
-                distance -= (self.attack_target.hitbox + self.attack_range)
-            else:
-                corner_distance = self.attack_target.size / 2.0
-                left = self.attack_target.x - corner_distance
-                right = self.attack_target.x + corner_distance
-                top = self.attack_target.y - corner_distance
-                bottom = self.attack_target.y + corner_distance
-                closest_point = (
-                    max(left, min(self.x, right)),
-                    max(top, min(self.y, bottom))
-                )
-                distance = math.dist(closest_point, (self.x, self.y)) - self.attack_range          
-            
-            if distance <= 0 :
-                if self.attack_timer == 0:
-                    arrow = Arrow(self, self.attack_target)
-                    arrow.launch(game_map, z_launch=5.5)
+        if self.isBuilt():
+            self.scanRange(game_map)
+            if not self.attack_target:
+                return
+            if self.attack_target.isAlive():
+                if hasattr(self.attack_target, 'path'):
+                    distance = math.dist((self.x, self.y), (self.attack_target.x, self.attack_target.y))
+                    distance -= (self.attack_target.hitbox + self.attack_range)
+                else:
+                    corner_distance = self.attack_target.size / 2.0
+                    left = self.attack_target.x - corner_distance
+                    right = self.attack_target.x + corner_distance
+                    top = self.attack_target.y - corner_distance
+                    bottom = self.attack_target.y + corner_distance
+                    closest_point = (
+                        max(left, min(self.x, right)),
+                        max(top, min(self.y, bottom))
+                    )
+                    distance = math.dist(closest_point, (self.x, self.y)) - self.attack_range          
+                
+                if distance <= 0 :
+                    if self.attack_timer == 0:
+                        arrow = Arrow(self, self.attack_target)
+                        arrow.launch(game_map, z_launch=5.5)
 
-                self.state = 'attack'
-                self.attack_timer += dt
-                if self.attack_timer >= self.attack_speed:
-                    self.attack_target.hp -= self.attack_power
+                    self.state = 'attack'
+                    self.attack_timer += dt
+                    if self.attack_timer >= self.attack_speed:
+                        self.attack_target.hp -= self.attack_power
+                        self.attack_timer = 0
+                else :
                     self.attack_timer = 0
-            else :
-                self.attack_timer = 0
-        else: 
-            self.attack_target = None
+            else: 
+                self.attack_target = None
