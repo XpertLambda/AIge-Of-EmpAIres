@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\Controller\gui.py
 import pygame
 import os
 import sys
@@ -12,6 +13,7 @@ from Entity.Building import Building
 pygame.init()
 font = pygame.font.SysFont(None, 32)
 
+#user_choices["index_terminal_display"] = 2
 
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     global gui_cache
@@ -274,7 +276,7 @@ def run_gui_menu(screen, sw, sh):
                     # Insert toggle_button logic here
                     if toggle_button["rect"].collidepoint(mx, my): # <- Only ONE block here now
                         toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
-
+                    user_choices["index_terminal_display"] = toggle_button["index"]
 
                 elif show_load_menu:
                     start_y = 100
@@ -308,6 +310,10 @@ def run_gui_menu(screen, sw, sh):
             screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
 
         pygame.display.flip()
+
+        # Met à jour la variable globale index_terminal_display
+        # d'après l'état du bouton toggle_button
+        
 
 def draw_choose_display(screen, toggle_button):
     pygame.draw.rect(screen, (0, 122, 255), toggle_button["rect"])
