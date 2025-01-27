@@ -49,4 +49,4 @@ class Zone:
         return isinstance(other, Zone) and self.zone == other.zone
 
     def __repr__(self):
-        return f"Zone({sorted(list(self.zone))})"
+        return f"Zone({sorted(self.zone)})"
