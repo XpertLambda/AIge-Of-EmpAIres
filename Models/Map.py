@@ -64,7 +64,8 @@ class GameMap:
         entity.x = x + (entity.size - 1) / 2
         entity.y = y + (entity.size - 1) / 2
         if entity.team != None:
-            self.players[entity.team].zone.add_zone((x - 2 , y - 2), (x + entity.size + 2, y + entity.size + 2 ))
+            if isinstance(entity, Building):
+                self.players[entity.team].zone.add_zone((x - 2 , y - 2), (x + entity.size + 2, y + entity.size + 2 ))
             self.players[entity.team].add_member(entity)
         return True
 
