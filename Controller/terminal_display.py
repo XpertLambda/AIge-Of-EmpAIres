@@ -17,6 +17,10 @@ def start_terminal_interface(game_map):
     """
     curses.wrapper(_curses_main, game_map)
 
+def resolve_save_path(relative_path):
+    """Helper function to resolve save paths relative to project root"""
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(project_root, relative_path)
 
 def _curses_main(stdscr, game_map):
     """
@@ -211,7 +215,7 @@ def _curses_main(stdscr, game_map):
             # 7) Touche L => Chargement
             elif key in [ord('l'), ord('L')]:
                 debug_print("[CURSES] L => Chargement. Listing saves...")
-                saves_folder = 'saves'
+                saves_folder = resolve_save_path('saves')
                 if not os.path.isdir(saves_folder):
                     debug_print("[CURSES] => Pas de dossier 'saves'")
                 else:

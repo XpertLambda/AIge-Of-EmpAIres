@@ -14,6 +14,12 @@ from Entity.Unit.Unit import Unit
 from Controller.terminal_display_debug import debug_print
 
 
+def resolve_save_path(relative_path):
+    """Helper function to resolve save paths relative to project root"""
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(project_root, relative_path)
+
+
 def handle_events(event, game_state):
     """
     Gère les événements côté GUI/Pygame. 
@@ -121,7 +127,7 @@ def handle_events(event, game_state):
                 root = Tk()
                 root.withdraw()
                 chosen_path = filedialog.askopenfilename(
-                    initialdir=SAVE_DIRECTORY,
+                    initialdir=resolve_save_path('saves'),
                     filetypes=[("Pickle","*.pkl")]
                 )
                 root.destroy()
@@ -253,7 +259,7 @@ def handle_events(event, game_state):
                             root = Tk()
                             root.withdraw()
                             chosen_path = filedialog.askopenfilename(
-                                initialdir=SAVE_DIRECTORY,
+                                initialdir=resolve_save_path('saves'),
                                 filetypes=[("Pickle","*.pkl")]
                             )
                             root.destroy()
