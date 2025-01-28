@@ -203,12 +203,12 @@ class Bot:
     def update(self, game_map, dt):
         debug_print("Updating bot...")
         enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
-        
+
         # Log des ressources et des unités
         debug_print(f"Resources: {self.player_team.resources}")
         debug_print(f"Villagers: {sum(1 for unit in self.player_team.units if isinstance(unit, Villager))}")
         debug_print(f"Military units: {len(self.get_military_units())}")
-        
+
         # Appliquer la stratégie en fonction de la difficulté
         if self.difficulty == 'easy':
             self.easy_strategy(enemy_teams, game_map, dt)
@@ -216,13 +216,16 @@ class Bot:
             self.medium_strategy(enemy_teams, game_map, dt)
         elif self.difficulty == 'hard':
             self.hard_strategy(enemy_teams, game_map, dt)
-        
+
         # Scouter la carte pour trouver des ressources ou des ennemis
         self.scout_map(game_map)
-        
+
+        # Vérifier et gérer les ressources
+        self.check_and_address_resources(self.player_team, game_map, RESOURCE_THRESHOLDS)
+
         # Équilibrer les unités
         self.balance_units()
-        
+
         # Construire des structures si nécessaire
         self.build_structure(self.clock)
     def scout_map(self, game_map):
@@ -246,16 +249,18 @@ class Bot:
 
         # Parcourir la zone pour trouver des ressources ou des ennemis
         for (x, y) in scout_area:
-            tile = game_map.grid.get((x, y))  # Accéder directement à la grille
+            # Vérifier si la tuile contient des ressources en utilisant le dictionnaire resources
+            resources_at_tile = game_map.resources.get((x, y))  # Accéder aux ressources à la position (x, y)
 
-            if tile and tile.has_resource() :  # Vérifier si la tuile existe et a une ressource
-                resource_type = tile.resource.type
-                debug_print(f"Found {resource_type} at ({x}, {y}).")
-                # Adapter la stratégie en fonction des ressources trouvées
-                if resource_type == "wood":
-                    self.player_team.assign_villager_to_resource(x, y, "wood")
-                elif resource_type == "gold":
-                    self.player_team.assign_villager_to_resource(x, y, "gold")
+            if resources_at_tile:
+                for resource in resources_at_tile:
+                    # Utiliser le nom de la classe comme type de ressource
+                    resource_type = resource.__class__.__name__.lower()  # "Gold" -> "gold", "Wood" -> "wood"
+                    debug_print(f"Found {resource_type} at ({x}, {y}).")
+                    if resource_type == "wood":
+                        self.reallocate_villagers('wood', [unit for unit in self.player_team.units if isinstance(unit, Villager)], game_map)
+                    elif resource_type == "gold":
+                        self.reallocate_villagers('gold', [unit for unit in self.player_team.units if isinstance(unit, Villager)], game_map)
 
             # Vérifier si la tuile contient des unités ennemies
             for enemy_team in game_map.players:
@@ -270,10 +275,10 @@ class Bot:
                                 self.PRIORITY_UNITS['swordsman'] = 3  # Augmenter la priorité des épéistes
 
         # Si des ressources ou des ennemis sont trouvés, ajuster la stratégie
-        if self.player_team.resources["wood"] < 100:
+        if self.player_team.resources.wood < 100:
             debug_print("Low on wood. Prioritizing wood collection.")
             self.balance_units()
-        if self.player_team.resources["gold"] < 50:
+        if self.player_team.resources.gold < 50:
             debug_print("Low on gold. Prioritizing gold collection.")
             self.balance_units()
 
@@ -379,15 +384,123 @@ class Bot:
         else:
             debug_print(f"No building mapping found for unit type: {unit_type.__name__}.")
 
-    def is_under_attack(self, enemy_team, ):
-     zone=self.player_team.zone.get_zone()
 
-     for z in zone:
-      entities = self.game_map.get(z)  # Get the list of entities in the zone
-     for entity in entities:
-        if entity in enemy_team.units:
-            return True
-     return False
+    def easy_strategy(self, enemy_teams, game_map, dt):
+        for enemy_team in enemy_teams:
+            # Collecte des ressources de manière aléatoire
+            if random.random() < 0.5:
+                self.balance_units()
+
+            # Construit des bâtiments de manière aléatoire
+            if random.random() < 0.3:
+                self.build_structure()
+
+            # Réagit aux attaques ennemies
+            if self.is_under_attack(enemy_team):
+                critical_points = self.get_critical_points()
+                self.gather_units_for_defense(critical_points, enemy_team, game_map, dt)
+
+    def medium_strategy(self, enemy_teams, game_map, dt):
+        for enemy_team in enemy_teams:
+            # Gestion des ressources et des unités
+            self.balance_units()
+            self.adjust_priorities(enemy_team)
+
+            # Construction de bâtiments en fonction des besoins
+            if self.check_building_needs():
+                self.build_structure(self.clock)
+
+            # Construit des tours défensives près des points critiques
+            if self.is_under_attack(enemy_team):
+                critical_points = self.get_critical_points()
+                if critical_points and self.can_build_building(Keep):
+                    critical_location = (critical_points[0].x, critical_points[0].y)
+                    self.build_defensive_structure(Keep, critical_location, 3, game_map)
+
+            # Attaque avec une composition d'unités équilibrée
+            if len(self.get_military_units()) > 10:
+                self.manage_battle(enemy_team, game_map, dt)
+
+    def hard_strategy(self, enemy_teams, game_map, dt):
+        for enemy_team in enemy_teams:
+            # Gestion optimisée des ressources et des unités
+            self.balance_units()
+            self.adjust_priorities(enemy_team)
+
+            # Construction de bâtiments stratégiques
+            if self.check_building_needs():
+                self.build_structure(self.clock)
+
+            # Scoute la carte pour trouver des ressources ou des unités ennemies
+            self.scout_map(game_map)
+
+            # Attaque avec une composition d'unités adaptée
+            if len(self.get_military_units()) > 15:
+                attack_composition = self.choose_attack_composition()
+                for unit in attack_composition:
+                    if unit.idle:
+                        target = self.find_target_for_unit(unit)
+                        if target:
+                            unit.set_target(target)
+
+            # Défense proactive
+            if self.is_under_attack(enemy_team):
+                self.defend_under_attack(enemy_team, game_map, dt)
+    def get_military_units(self):
+        """
+        Retourne une liste des unités militaires (non villageois) de l'équipe.
+        """
+        return [unit for unit in self.player_team.units if not isinstance(unit, Villager)]
+
+    def train_units(self, unit_type):
+        """
+        Entraîne une unité en sélectionnant automatiquement le bon bâtiment.
+        :param unit_type: Le type d'unité à entraîner (par exemple, Villager, Archer, etc.).
+        """
+        # Dictionnaire qui associe chaque type d'unité à son bâtiment correspondant
+        UNIT_TO_BUILDING_MAP = {
+            'v': 'TownCentre',  # Villageois
+            'a': 'ArcheryRange',  # Archer
+            's': 'Barracks',  # Swordsman
+            'h': 'Stable'  # Horseman
+        }
+
+        # Récupérer l'acronyme de l'unité (par exemple, 'v' pour Villager)
+        unit_acronym = unit_type.acronym if hasattr(unit_type, 'acronym') else None
+
+        if unit_acronym and unit_acronym in UNIT_TO_BUILDING_MAP:
+            # Récupérer le type de bâtiment correspondant
+            building_type = UNIT_TO_BUILDING_MAP[unit_acronym]
+
+            # Trouver le premier bâtiment correspondant dans l'équipe du joueur
+            for building in self.player_team.buildings:
+                if building.acronym == building_type[0]:  # On compare avec le premier caractère de l'acronyme
+                    if hasattr(building, 'add_to_training_queue'):
+                        # Entraîner l'unité dans ce bâtiment
+                        success = building.add_to_training_queue(self.player_team)
+                        if success:
+                            debug_print(f"Added {unit_type.__name__} to training queue in {building.acronym}.")
+                        else:
+                            debug_print(f"Failed to add {unit_type.__name__} to training queue in {building.acronym}.")
+                        return
+            debug_print(f"No available {building_type} found to train {unit_type.__name__}.")
+        else:
+            debug_print(f"No building mapping found for unit type: {unit_type.__name__}.")
+
+    def is_under_attack(self, enemy_team):
+        """
+        Vérifie si l'équipe du joueur est sous attaque.
+        :param enemy_team: L'équipe ennemie.
+        :return: True si sous attaque, False sinon.
+        """
+        for building in self.player_team.buildings:
+            if building.hp < building.max_hp:  # Bâtiment endommagé
+                return True
+            for enemy in enemy_team.units:
+                if not isinstance(enemy, Villager):
+                    if math.dist((building.x, building.y), (enemy.x, enemy.y)) < self.ATTACK_RADIUS:
+                        return True
+        return False
     
     def get_critical_points(self):
        
