@@ -51,32 +51,44 @@ class Bot:
 
     def reallocate_villagers(self, resource_type):
         """
-        Reallocates Villagers to address resource shortages.
+        Reallocates available villagers to collect a specific resource type
+        :param resource_type: The type of resource to collect ('wood', 'gold', etc.)
         """
-        for villager in self.player_team.units:
-            if isinstance(villager, Villager) and villager.isAvailable():
-                nearest_drop_point = min(
-                    (b for b in self.player_team.buildings if hasattr(b, " resourceDropPoint=True")),
-                    key=lambda dp: math.dist((villager.x, villager.y), (dp.x, dp.y)),
-                    default=None
+        available_villagers = [unit for unit in self.player_team.units 
+                             if isinstance(unit, Villager) and unit.isAvailable()]
+        
+        for villager in available_villagers:
+            # Find nearest drop point
+            drop_points = [b for b in self.player_team.buildings if b.resourceDropPoint]
+            if not drop_points:
+                return
+                
+            nearest_drop_point = min(
+                drop_points,
+                key=lambda dp: math.dist((villager.x, villager.y), (dp.x, dp.y))
+            )
+
+            # Find resources of the specified type
+            resource_locations = []
+            for pos, entities in self.game_map.grid.items():
+                if isinstance(entities, set):
+                    for entity in entities:
+                        if isinstance(entity, Resource) and entity.__class__.__name__.lower() == resource_type:
+                            resource_locations.append((pos, entity))
+                elif isinstance(entities, Resource) and entities.__class__.__name__.lower() == resource_type:
+                    resource_locations.append((pos, entities))
+            
+            if resource_locations:
+                # Find closest resource to the drop point
+                closest_resource = min(
+                    resource_locations,
+                    key=lambda pos_entity: math.dist(
+                        (nearest_drop_point.x, nearest_drop_point.y), 
+                        pos_entity[0]
+                    )
                 )
-                if nearest_drop_point:
-                    resource_positions = [
-                        pos for pos, set in self.game_map.resources.items()
-                        if isinstance(set, resource_type)
-                    ]
-                    if resource_positions:
-                        nearest_resource = min(
-                            resource_positions,
-                            key=lambda pos: math.dist(
-                                (nearest_drop_point.x, nearest_drop_point.y), pos
-                            )
-                        )
-                        l=self.game_map.grid.get(nearest_resource,None)
-                        if l:
-                         resource_target = next((entity for entity in l if isinstance(entity, resource_type)), None)
-                        villager.set_target(resource_target)
-                        return
+                villager.set_target(closest_resource[1])
+                break  # Only assign one villager at a time
 
     def priorty7(self, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
      resource_shortage = self.get_resource_shortage( RESOURCE_THRESHOLDS)
@@ -248,16 +260,16 @@ class Bot:
 
         # Parcourir la zone pour trouver des ressources ou des ennemis
         for (x, y) in scout_area:
-            tile = game_map.grid.get((x, y))  # Accéder directement à la grille
+            # Vérifier si la tuile contient des ressources en utilisant le dictionnaire resources
+            resources_at_tile = game_map.resources.get((x, y))  # Accéder aux ressources à la position (x, y)
 
-            if tile and tile.has_resource() :  # Vérifier si la tuile existe et a une ressource
-                resource_type = tile.resource.type
-                debug_print(f"Found {resource_type} at ({x}, {y}).")
-                # Adapter la stratégie en fonction des ressources trouvées
-                if resource_type == "wood":
-                    self.player_team.assign_villager_to_resource(x, y, "wood")
-                elif resource_type == "gold":
-                    self.player_team.assign_villager_to_resource(x, y, "gold")
+            if resources_at_tile:
+                for resource in resources_at_tile:
+                    # Utiliser le nom de la classe comme type de ressource
+                    resource_type = resource.__class__.__name__.lower()  # "Gold" -> "gold", "Wood" -> "wood"
+                    debug_print(f"Found {resource_type} at ({x}, {y}).")
+                    if resource_type in ['wood', 'gold']:
+                        self.reallocate_villagers(resource_type)
 
             # Vérifier si la tuile contient des unités ennemies
             for enemy_team in game_map.players:
@@ -272,10 +284,10 @@ class Bot:
                                 self.PRIORITY_UNITS['swordsman'] = 3  # Augmenter la priorité des épéistes
 
         # Si des ressources ou des ennemis sont trouvés, ajuster la stratégie
-        if self.player_team.resources["wood"] < 100:
+        if self.player_team.resources.wood < 100:
             debug_print("Low on wood. Prioritizing wood collection.")
             self.balance_units()
-        if self.player_team.resources["gold"] < 50:
+        if self.player_team.resources.gold < 50:
             debug_print("Low on gold. Prioritizing gold collection.")
             self.balance_units()
 
