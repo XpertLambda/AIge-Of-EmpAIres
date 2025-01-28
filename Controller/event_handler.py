@@ -649,7 +649,6 @@ def closest_entity(game_state, mouse_x, mouse_y, search_radius=2):
         HALF_TILE_SIZE / 4
     )
     entity_set = game_map.grid.get((tile_x, tile_y), [])
-    print(f'found : {entity_set}')
     shortest_distance = 999999
     closest_ent = None
     for entity in entity_set:

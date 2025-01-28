@@ -76,6 +76,7 @@ class Building(Entity):
     # ---------------- Update Entity --------------
     def update(self, game_map, dt):
         if self.isAlive():
+            self.seekHp(dt)
             self.seekConstruction(dt)
             self.seekTrain(game_map, dt)              
             self.seekIdle()

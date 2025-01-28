@@ -45,6 +45,7 @@ class Unit(Entity):
     # ---------------- Update Unit ---------------
     def update(self, game_map, dt):
         if self.isAlive():
+            self.seekHp(dt)
             self.seekAttack(game_map, dt)
             self.seekMove(game_map, dt)
             #self.seekCollision(game_map, dt) 
@@ -58,14 +59,13 @@ class Unit(Entity):
     def seekIdle(self):
         if not self.attack_target and not self.path:
             self.state = 'idle'
-        self.cooldown_frame = None
+            self.cooldown_frame = None
 
     def set_target(self, target):
         self.attack_target = None
         self.set_destination(None, None)
         if target and target.team != None and target.isAlive() and target.entity_id != self.entity_id and target.team != self.team:
             self.attack_target = target
-            
 
     def set_destination(self, destination, game_map):
         if destination and game_map:
@@ -84,6 +84,7 @@ class Unit(Entity):
     def seekMove(self, game_map, dt, ALLOWED_ANGLES=ALLOWED_ANGLES):
         if self.path:
             self.state = 'walk'
+            self.cooldown_frame = None
             target_tile = self.path[0]        
             snapped_angle = get_snapped_angle(((self.x, self.y)), (target_tile[0], target_tile[1]))
             self.direction = get_direction(snapped_angle)
@@ -144,8 +145,29 @@ class Unit(Entity):
             return True
 
     # ---------------- Attack Logic ----------------
+    def findTarget(self, game_map):
+        if not self.isAlive():
+            return
+        x, y = int(round(self.x)), int(round(self.y))
+        closest_target = None
+        closest_distance = float('inf')
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                neighbor = (x + dx, y + dy)
+                if neighbor in game_map.grid:
+                    for entity in game_map.grid[neighbor]:
+                        if entity and entity != self and entity.team != None and entity.isAlive() and entity.team != self.team:
+                            distance = math.dist((self.x, self.y), (entity.x, entity.y))
+                            if distance < closest_distance:
+                                closest_distance = distance
+                                closest_target = entity
+        if closest_target:
+            self.set_target(closest_target)
+
     def seekAttack(self, game_map, dt):
-        self.range_color = (255, 255, 255)
+        if self.isHit():
+            self.findTarget(game_map)
+
         if self.attack_target and self.attack_target.isAlive():
             if isinstance(self.attack_target, Unit):
                 distance = math.dist((self.x, self.y), (self.attack_target.x, self.attack_target.y))
@@ -178,8 +200,6 @@ class Unit(Entity):
                     self.attack_timer = 0
                     self.cooldown_frame = None
             else :
-                self.hitbox_color = (255, 255, 255)
-                self.attack_target.hitbox_color = (255, 255, 255)
                 if isinstance(self.attack_target, Unit):
                     if self.path:
                         self.path = [self.path[0]] + a_star((self.x, self.y), (self.attack_target.x,self.attack_target.y), game_map)

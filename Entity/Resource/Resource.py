@@ -14,6 +14,7 @@ class Resource(Entity):
 
     def update(self, game_map, dt):
         self.animator(dt)
+        self.seekHp(dt)
         if not self.isAlive():
             self.kill()
 

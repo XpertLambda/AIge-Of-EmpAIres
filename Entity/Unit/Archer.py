@@ -30,7 +30,9 @@ class Archer(Unit):
         self.threw = False
 
     def seekAttack(self, game_map, dt):
-        self.range_color = (255, 255, 255)
+        if self.isHit():
+            self.findTarget(game_map)
+        
         if self.attack_target and self.attack_target.isAlive():
             if isinstance(self.attack_target, Unit):
                 distance = math.dist((self.x, self.y), (self.attack_target.x, self.attack_target.y))
@@ -68,8 +70,6 @@ class Archer(Unit):
                     self.cooldown_frame = None
 
             else :
-                self.hitbox_color = (255, 255, 255)
-                self.attack_target.hitbox_color = (255, 255, 255)
                 if isinstance(self.attack_target, Unit):
                     if self.path:
                         self.path = [self.path[0]] + a_star((self.x, self.y), (self.attack_target.x,self.attack_target.y), game_map)

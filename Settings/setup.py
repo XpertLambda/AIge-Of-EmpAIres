@@ -17,7 +17,7 @@ os.makedirs(ASSETS_DIRECTORY, exist_ok=True)
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 10
+GAME_SPEED = 1
 FPS_DRAW_LIMITER = 50
 
 BUILDING_TIME_REDUCTION = 0.75
@@ -42,7 +42,7 @@ FRAMES_PER_PROJECTILE = 11
 UNIT_HITBOX = 0.3
 UNIT_ATTACKRANGE = 0.6
 ATTACK_RANGE_EPSILON = 0.5
-
+HP_SEEK_LIMITER = 1
 # -------------------
 # Config For Teams
 # -------------------
@@ -87,16 +87,16 @@ difficulty_config = {
     'DEBUG' : {
         'Resources' : Resources(food=99999, gold=99999, wood=99999),
         'Units' : {
-            'Villager' : 5,
-            'Archer' : 5,
-            'Horseman' : 5,
-            'Swordsman' : 3
+            'Villager' : 10,
+            'Archer' : 10,
+            'Horseman' : 10,
+            'Swordsman' : 10
         },
         'Buildings' : {
             'TownCenter' : 5,
-            'House' : 1,
+            'House' : 5,
             'Barracks' : 1,
-            'Stable' : 0, 
+            'Stable' : 1, 
             'ArcheryRange' : 1,
             'Farm' : 5,
             'Keep' : 5,

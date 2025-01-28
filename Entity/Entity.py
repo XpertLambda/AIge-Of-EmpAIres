@@ -1,7 +1,7 @@
 import time
 import math
 from Models.Resources import Resources
-from Settings.setup import HALF_TILE_SIZE, user_choices
+from Settings.setup import HALF_TILE_SIZE, user_choices, HP_SEEK_LIMITER
 from Controller.utils import tile_to_screen
 from Controller.drawing import draw_healthBar, draw_hitbox
 import pygame
@@ -32,6 +32,9 @@ class Entity:
         self.hasResources = hasResources
   
         self.hp = max_hp
+        self.hp_seeker = max_hp
+        self.hp_seek_timer = 0
+
         self.hitbox = hitbox if hitbox > 0 else size/2
         self.last_damage_time = 0
         self.last_clicked_time = 0
@@ -59,6 +62,15 @@ class Entity:
         if self.hp > 0:
             return True
         return False
+
+    def seekHp(self, dt):
+        if self.hp_seeker != self.hp : 
+            self.hp_seek_timer += dt
+        if self.hp_seek_timer >= HP_SEEK_LIMITER:
+            self.hp_seeker = self.hp
+
+    def isHit(self):
+        return not self.hp_seeker == self.hp
 
     def isIdle(self):
         if self.state == 'idle':

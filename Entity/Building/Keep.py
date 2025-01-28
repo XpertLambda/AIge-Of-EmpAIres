@@ -28,6 +28,7 @@ class Keep(Building):
 
     def update(self, game_map, dt):
         if self.isAlive():
+            self.seekHp(dt)
             self.seekConstruction(dt)  
             self.seekAttack(game_map, dt)            
             self.seekIdle()
