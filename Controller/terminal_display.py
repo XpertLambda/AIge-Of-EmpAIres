@@ -87,6 +87,9 @@ def _curses_main(stdscr, game_map):
         """
         Dessine la portion visible de la map ASCII dans la fenêtre curses 'win_map'.
         """
+        # Recalculer les couleurs avant chaque affichage
+        team_colors_curses_indices = init_team_colors()
+        
         height, width = win_map.getmaxyx()
 
         # Calcul des "limites" de défilement
@@ -138,7 +141,9 @@ def _curses_main(stdscr, game_map):
                 for col_idx, char_data in enumerate(line_chars):
                     char, color_index = char_data
                     if color_index > 0 and char != ' ': # Apply color only for entities and not for space
-                        win_map.chgat(row, col_idx, 1, curses.color_pair(color_index))
+                        # Utiliser les nouvelles couleurs fraîchement calculées
+                        color_pair = team_colors_curses_indices.get(color_index - 1, 0)
+                        win_map.chgat(row, col_idx, 1, curses.color_pair(color_pair))
             except curses.error:
                  pass
 
@@ -171,46 +176,49 @@ def _curses_main(stdscr, game_map):
     def clear_and_reset_curses(stdscr, win_map, win_debug, team_colors_curses_indices):
         """Helper function to properly clear and reset curses windows"""
         try:
-            # 1. Reset des couleurs d'abord
+            # 1. Reset complet des couleurs d'abord
             curses.start_color()
-            time.sleep(0.05)  # Petit délai pour laisser le temps aux couleurs de se réinitialiser
+            curses.use_default_colors()
             
-            # 2. Clear complet des fenêtres
-            stdscr.clear()
-            win_map.clear()
-            win_debug.clear()
-            time.sleep(0.05)  # Délai pour le clear
+            # 2. Réinitialisation agressive de toutes les paires de couleurs
+            for i in range(1, curses.COLORS):
+                try:
+                    curses.init_pair(i, -1, -1)
+                except:
+                    pass
+                    
+            # 3. Clear agressif des fenêtres
+            for win in [stdscr, win_map, win_debug]:
+                win.clear()
+                win.erase()
+                win.refresh()
+                # Remplir explicitement avec des espaces
+                h, w = win.getmaxyx()
+                for y in range(h):
+                    try:
+                        win.addstr(y, 0, " " * w)
+                    except curses.error:
+                        pass
+                # Reset des attributs
+                win.attrset(curses.A_NORMAL)
+                win.bkgd(' ', curses.A_NORMAL)
+                
+            # 4. Régénérer complètement les nouvelles couleurs
+            team_colors_curses_indices = init_team_colors()
             
-            # 3. Erase du contenu
-            win_map.erase()
-            win_debug.erase()
-            stdscr.erase()
-            
-            # 4. Reset des attributs
-            win_map.bkgd(' ', curses.A_NORMAL)
-            win_debug.bkgd(' ', curses.A_NORMAL)
-            stdscr.bkgd(' ', curses.A_NORMAL)
-            
-            # 5. Redraw des bordures
-            win_map.box()
-            win_debug.box()
-            
-            # 6. Refresh dans le bon ordre
+            # 5. Forcer un refresh complet
             stdscr.noutrefresh()
             win_map.noutrefresh()
             win_debug.noutrefresh()
-            curses.doupdate()  # Update physique de l'écran
+            curses.doupdate()
             
-            # 7. Réinitialisation des couleurs
-            team_colors_curses_indices = init_team_colors()
-            
-            time.sleep(0.1)  # Délai final pour s'assurer que tout est bien appliqué
+            time.sleep(0.1)  # Petit délai pour s'assurer que tout est appliqué
             
             return team_colors_curses_indices
-            
+                
         except curses.error as e:
             debug_print(f"Error during curses reset: {e}")
-            return team_colors_curses_indices
+            return init_team_colors()  # En cas d'erreur, on retourne quand même de nouvelles couleurs
 
     debug_print("=== Mode curses démarré ===")
     debug_print(f"Map size: {game_map.num_tiles_x} x {game_map.num_tiles_y}")
@@ -384,6 +392,10 @@ def _curses_main(stdscr, game_map):
                     team_colors_curses_indices = clear_and_reset_curses(stdscr, win_map, win_debug, team_colors_curses_indices)
                     
                     game_map.load_map(TEMP_SAVE_PATH)
+                    
+                    # Recalculer explicitement les couleurs après chargement
+                    team_colors_curses_indices = init_team_colors()
+                    
                     debug_print("[CURSES] Temp save loaded successfully")
                     
                     os.remove(TEMP_SAVE_PATH)

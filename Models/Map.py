@@ -307,58 +307,75 @@ class GameMap:
             if not filename.endswith('.pkl'):
                 filename += '.pkl'
         full_path = os.path.join(SAVE_DIRECTORY, filename)
-        data = {
-            'grid': self.grid,
-            'grid_size': self.grid_size,
-            'center_gold_flag': self.center_gold_flag,
-            'players': self.players,
-            'game_state': self.game_state  # Sauvegarder aussi le game_state
-        }
-        with open(full_path, 'wb') as f:
-            pickle.dump(data, f)
-        debug_print(f"Game map saved successfully to {full_path}.")
+
+        # Temporarily store and remove unpicklable objects
+        gui_state = {}
+        if self.game_state:
+            gui_state = {
+                'screen': self.game_state.pop('screen', None),
+                'minimap_panel_sprite': self.game_state.pop('minimap_panel_sprite', None),
+                'minimap_background': self.game_state.pop('minimap_background', None),
+                'minimap_entities_surface': self.game_state.pop('minimap_entities_surface', None),
+                'player_selection_surface': self.game_state.pop('player_selection_surface', None),
+                'train_button_rects': self.game_state.pop('train_button_rects', {}),
+                'pause_menu_button_rects': self.game_state.pop('pause_menu_button_rects', {})
+            }
+
+        try:
+            data = {
+                'grid': self.grid,
+                'grid_size': self.grid_size,
+                'center_gold_flag': self.center_gold_flag,
+                'players': self.players,
+                'game_state': self.game_state
+            }
+            with open(full_path, 'wb') as f:
+                pickle.dump(data, f)
+            debug_print(f"Game map saved successfully to {full_path}.")
+        finally:
+            # Restore unpicklable objects
+            if self.game_state:
+                self.game_state.update(gui_state)
 
     def load_map(self, filename):
         try:
             with open(filename, 'rb') as f:
                 data = pickle.load(f)
             
-            # Sauvegarder quelques paramètres clés de l'ancien game_state si nécessaire
-            old_gui_settings = None
+            # Store any existing GUI state before loading
+            old_gui_state = None
             if self.game_state:
-                old_gui_settings = {
-                    'show_gui_elements': self.game_state.get('show_gui_elements', True),
-                    'show_player_info': self.game_state.get('show_player_info', True),
-                    'show_all_health_bars': self.game_state.get('show_all_health_bars', False),
-                    'camera': self.game_state.get('camera'),
+                old_gui_state = {
                     'screen': self.game_state.get('screen'),
                     'screen_width': self.game_state.get('screen_width'),
-                    'screen_height': self.game_state.get('screen_height')
+                    'screen_height': self.game_state.get('screen_height'),
+                    'camera': self.game_state.get('camera'),
+                    'minimap_panel_sprite': self.game_state.get('minimap_panel_sprite'),
+                    'minimap_background': self.game_state.get('minimap_background'),
+                    'minimap_entities_surface': self.game_state.get('minimap_entities_surface'),
+                    'player_selection_surface': self.game_state.get('player_selection_surface')
                 }
 
-            # Charger les données de la sauvegarde
+            # Load the data
             self.grid = data['grid']
             self.grid_size = data['grid_size']
             self.center_gold_flag = data['center_gold_flag']
             self.players = data['players']
             self.num_tiles_x = self.num_tiles_y = self.grid_size
-            
-            # Si nous avions un ancien game_state, réintégrer uniquement les paramètres d'interface
-            if old_gui_settings:
-                self.game_state = data.get('game_state', {})  # Utiliser le game_state de la sauvegarde
-                # Restaurer uniquement les paramètres d'interface
-                for key, value in old_gui_settings.items():
-                    if value is not None:  # Ne pas écraser avec None
-                        self.game_state[key] = value
-            else:
-                self.game_state = data.get('game_state', {})
+            self.game_state = data.get('game_state', {})
 
-            # S'assurer que old_resources est correctement initialisé après le chargement
+            # Restore GUI state if it existed
+            if old_gui_state:
+                for key, value in old_gui_state.items():
+                    if value is not None:
+                        self.game_state[key] = value
+
+            # Initialize old_resources if needed
             if self.game_state:
                 self.game_state['old_resources'] = {
                     p.teamID: p.resources.copy() for p in self.players
                 }
-                
+
             debug_print(f"Game map loaded successfully from {filename}.")
         except Exception as e:
             debug_print(f"Error loading game map: {e}")

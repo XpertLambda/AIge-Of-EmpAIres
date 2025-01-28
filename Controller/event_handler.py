@@ -20,42 +20,104 @@ def resolve_save_path(relative_path):
     return os.path.join(project_root, relative_path)
 
 
+def clean_and_reset_display(game_state):
+    """Helper function for proper display cleanup during loads"""
+    if not game_state.get('screen'):
+        return
+        
+    screen = game_state['screen']
+    screen.fill((0, 0, 0))
+    pygame.display.flip()
+    
+    # Reset GUI surfaces
+    panel_width = int(game_state['screen_width'] * PANEL_RATIO)
+    panel_height = int(game_state['screen_height'] * PANEL_RATIO)
+    
+    from Controller.init_assets import get_scaled_gui
+    game_state['minimap_panel_sprite'] = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
+    
+    from Controller.drawing import create_minimap_background
+    bg_width = int(game_state['screen_width'] * BG_RATIO)
+    bg_height = int(game_state['screen_height'] * BG_RATIO)
+    
+    mb, ms, mo_x, mo_y, mi_x, mi_y = create_minimap_background(
+        game_state['game_map'], bg_width, bg_height
+    )
+    
+    game_state['minimap_background'] = mb
+    game_state['minimap_scale'] = ms
+    game_state['minimap_offset_x'] = mo_x
+    game_state['minimap_offset_y'] = mo_y
+    game_state['minimap_min_iso_x'] = mi_x
+    game_state['minimap_min_iso_y'] = mi_y
+    
+    game_state['minimap_entities_surface'] = pygame.Surface(
+        (mb.get_width(), mb.get_height()),
+        pygame.SRCALPHA
+    )
+    game_state['minimap_entities_surface'].fill((0, 0, 0, 0))
+    
+    # Force refresh des éléments GUI
+    game_state['player_selection_updated'] = True
+    game_state['player_info_updated'] = True
+    game_state['force_full_redraw'] = True
+
 def handle_load_game(game_state, chosen_path):
     try:
         from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
         from Models.Map import GameMap
-        from Controller.sync_manager import save_for_sync  # Ajouter l'import
+        from Controller.sync_manager import save_for_sync
         
         camera = game_state['camera']
         
-        # Charger la nouvelle map
+        # Clean display before loading
+        clean_and_reset_display(game_state)
+        
+        # Backup GUI state
+        old_gui_state = {
+            'screen': game_state.get('screen'),
+            'screen_width': game_state.get('screen_width'),
+            'screen_height': game_state.get('screen_height'),
+            'camera': camera
+        }
+        
+        # Load the new map
         game_state['game_map'] = GameMap(0, False, [], generate=False)
         game_state['game_map'].load_map(chosen_path)
         
-        # Mettre à jour les joueurs
+        # Update player related state
         game_state['players'].clear()
         game_state['players'].extend(game_state['game_map'].players)
+        
+        # Initialize player selection and colors
         if game_state['players']:
             game_state['selected_player'] = game_state['players'][0]
+            game_state['old_resources'] = {
+                p.teamID: p.resources.copy() for p in game_state['players']
+            }
         else:
             game_state['selected_player'] = None
-
-        # Mettre à jour la caméra et les couleurs
+        
+        game_state['team_colors'] = generate_team_colors(len(game_state['players']))
+        
+        # Restore and update GUI state
+        for key, value in old_gui_state.items():
+            if value is not None:
+                game_state[key] = value
+        
+        # Reset camera position and bounds
         camera.offset_x = 0
         camera.offset_y = 0
         camera.zoom = 1.0
         min_x, max_x, min_y, max_y = compute_map_bounds(game_state['game_map'])
         camera.set_bounds(min_x, max_x, min_y, max_y)
-        game_state['team_colors'] = generate_team_colors(len(game_state['players']))
         
-        # Sauvegarder pour la synchro avec le terminal
+        # Synchronize with terminal
         save_for_sync(game_state['game_map'])
         
-        # Forcer le rafraîchissement
-        game_state['force_full_redraw'] = True
-        game_state['player_selection_updated'] = True
+        # Final GUI refresh
+        clean_and_reset_display(game_state)
         
-        # Message de confirmation
         game_state['notification_message'] = "Partie chargée."
         game_state['notification_start_time'] = time.time()
         
