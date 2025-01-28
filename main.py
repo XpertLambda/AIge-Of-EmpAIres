@@ -69,35 +69,61 @@ def ask_terminal_inputs_non_blocking():
             step = 1
             current_input = "" # Reset input for new step
 
+        elif step == 1: # Display mode input
+            pass # Wait for input in the main loop
+
         elif step == 2:
             print("\n--- Menu Terminal ---")
             print("[1] Nouvelle partie / [2] Charger une sauvegarde ?")
             step = 3
             current_input = ""
 
+        elif step == 3: # New/Load game input
+            pass # Wait for input in the main loop
+
         elif step == 4:
             print("\n--- Paramètres de la nouvelle partie : ---")
-            print("Tailles possibles :", VALID_GRID_SIZES)
-            print(f"Taille (défaut={user_choices['grid_size']}) : ")
+            print(f"Largeur (multiples de 10, défaut={user_choices['grid_width']}) : ")
             step = 5
             current_input = ""
 
+        elif step == 5: # Width input
+            pass # Wait for input in the main loop
+
         elif step == 6:
-            print(f"Nb bots possibles : 1..55 (défaut={user_choices['num_bots']})")
-            print("Nb bots : ")
+            print(f"Hauteur (multiples de 10, défaut={user_choices['grid_height']}) : ")
             step = 7
             current_input = ""
 
+        elif step == 7: # Height input
+            pass # Wait for input in the main loop
+
         elif step == 8:
-            print("Niveaux possibles :", VALID_LEVELS)
-            print(f"Niveau bots (défaut={user_choices['bot_level']}) : ")
+            print(f"Nb bots possibles : 1..55 (défaut={user_choices['num_bots']})")
+            print("Nb bots : ")
             step = 9
             current_input = ""
 
+        elif step == 9: # Bots input
+            pass # Wait for input in the main loop
+
         elif step == 10:
-            print("Or au centre ? (oui/non, défaut=non) : ")
+            print("Niveaux possibles :", VALID_LEVELS)
+            print(f"Niveau bots (défaut={user_choices['bot_level']}) : ")
             step = 11
             current_input = ""
+
+        elif step == 11: # Bot level input
+            pass # Wait for input in the main loop
+
+        elif step == 12:
+            print("Or au centre ? (oui/non, défaut=non) : ")
+            step = 13
+            current_input = ""
+
+        elif step == 13: # Gold at center input
+            pass # Wait for input in the main loop
+
 
         # Lecture non bloquante
         char_in = get_input_non_blocking()
@@ -126,7 +152,7 @@ def ask_terminal_inputs_non_blocking():
                     else:
                         user_choices["index_terminal_display"] = 2
                         print("Choix invalide => Both.")
-                    step = 2 # Always move to step 2 after display mode
+                    step = 2 # Move to Menu terminal choix
 
                 elif step == 3: # New game / Load game
                     if line == '2':
@@ -138,7 +164,7 @@ def ask_terminal_inputs_non_blocking():
                                 for idx, sf in enumerate(saves):
                                     print(f"{idx+1} - {sf}")
                                 print("Sélection de la sauvegarde : ")
-                                step = 12 # Go to save selection step
+                                step = 14 # Go to save selection step (was 12, corrected to 14 to avoid confusion with gold_at_center step numbering)
                             else:
                                 print("Aucune sauvegarde => nouvelle partie.")
                                 user_choices["load_game"] = False
@@ -151,7 +177,7 @@ def ask_terminal_inputs_non_blocking():
                         user_choices["load_game"] = False
                         step = 4 # Go to new game parameters
 
-                elif step == 12: # Save selection
+                elif step == 14: # Save selection (was 12, corrected to 14)
                     if line == "":
                         print("Pas de saisie => nouvelle partie.")
                         user_choices["load_game"] = False
@@ -173,18 +199,33 @@ def ask_terminal_inputs_non_blocking():
                             user_choices["load_game"] = False
                             step = 4
 
-                elif step == 5: # Grid size
+                elif step == 5: # Width input
                     if line == "":
-                        print(f"Pas de saisie => taille par défaut {user_choices['grid_size']}")
+                        print(f"Pas de saisie => largeur par défaut {user_choices['grid_width']}")
                     else:
                         if line.isdigit():
                             val = int(line)
                             if val in VALID_GRID_SIZES:
-                                user_choices["grid_size"] = val
-                                print(f"Taille : {val}")
-                    step = 6 # Always move to step 6 after grid size
+                                user_choices["grid_width"] = val
+                                print(f"Largeur : {val}")
+                            else:
+                                print(f"Valeur invalide => largeur par défaut {user_choices['grid_width']}")
+                    step = 6
 
-                elif step == 7: # Number of bots
+                elif step == 7: # height input
+                    if line == "":
+                        print(f"Pas de saisie => hauteur par défaut {user_choices['grid_height']}")
+                    else:
+                        if line.isdigit():
+                            val = int(line)
+                            if val in VALID_GRID_SIZES:
+                                user_choices["grid_height"] = val
+                                print(f"hauteur : {val}")
+                            else:
+                                print(f"Valeur invalide => hauteur par défaut {user_choices['grid_height']}")
+                    step = 8
+
+                elif step == 9: # Number of bots
                     if line == "":
                         print(f"Pas de saisie => nb bots par défaut {user_choices['num_bots']}")
                     else:
@@ -193,36 +234,39 @@ def ask_terminal_inputs_non_blocking():
                             if val in VALID_BOTS_COUNT:
                                 user_choices["num_bots"] = val
                                 print(f"Nb bots : {val}")
-                    step = 8 # Always move to step 8 after bot count
+                            else:
+                                print(f"Valeur invalide => nb bots par défaut {user_choices['num_bots']}")
+                    step = 10 # Always move to step 10 after bot count
 
-                elif step == 9: # Bot level
+                elif step == 11: # Bot level
                     if line == "":
                         print(f"Pas de saisie => niveau bots par défaut {user_choices['bot_level']}")
                     else:
                         if line in VALID_LEVELS:
                             user_choices["bot_level"] = line
                             print(f"Niveau bots : {line}")
-                    step = 10 # Always move to step 10 after bot level
+                        else:
+                            print(f"Valeur invalide => niveau bots par défaut {user_choices['bot_level']}")
+                    step = 12 # Always move to step 12 after bot level
 
-                elif step == 11: # Corrected step number here
+                elif step == 13: # Gold at center (was 11, corrected to 13)
                     if line == "":
                         user_choices["gold_at_center"] = False
-                        step = 13
+                        print("Pas de saisie => Or au centre = non (défaut)")
                     elif line.lower() == "oui" or line.lower() == "o":
                         user_choices["gold_at_center"] = True
-                        step = 13
+                        print("Or au centre = oui")
                     elif line.lower() == "non" or line.lower() == "n":
                         user_choices["gold_at_center"] = False
-                        step = 13
+                        print("Or au centre = non")
                     else:
-                        print("Choix invalide, default = non")
+                        print("Choix invalide => Or au centre = non (défaut)")
                         user_choices["gold_at_center"] = False
-                        step = 13
-
-                if step == 13:
+                    step = 15 # Move to validation step (was 14, corrected to 15)
                     user_choices["validated_by"] = "terminal" # Indicate terminal validation
                     user_choices["validated"] = True
-                    return
+                    return # On sort, menu validé
+
                 current_input = "" # Reset input after processing line
 
             elif char: # Accumulate character input
@@ -352,7 +396,8 @@ def main():
         mode_index  = user_choices["index_terminal_display"]
         load_game   = user_choices["load_game"]
         chosen_save = user_choices["chosen_save"]
-        grid_size   = user_choices["grid_size"]
+        grid_w      = user_choices["grid_width"]
+        grid_h      = user_choices["grid_height"]
         nb_bots     = user_choices["num_bots"]
         bot_level   = user_choices["bot_level"]
         gold_c      = user_choices["gold_at_center"]
@@ -369,7 +414,7 @@ def main():
             players = game_map.players
         else:
             players = init_players(nb_bots, bot_level)
-            game_map = GameMap(grid_size, gold_c, players)
+            game_map = GameMap(grid_w, grid_h, gold_c, players)
 
         # 4) Lancement éventuel de curses si mode_index in [1, 2]
         t_curses_started = False
@@ -439,7 +484,8 @@ def main():
                 "index_terminal_display": 2,
                 "load_game": False,
                 "chosen_save": "",
-                "grid_size": 120,
+                "grid_width": 120,
+                "grid_height": 120,
                 "num_bots": 2,
                 "bot_level": "lean",
                 "gold_at_center": False,
@@ -461,7 +507,7 @@ def main():
         # c) Switch display
         elif menu_result == "switch_display":
             print("[MAIN] Starting display switch process...")
-            
+
             # Sauvegarde de l'état actuel si pas déjà fait
             if not os.path.exists(TEMP_SAVE_PATH):
                 game_map.save_map(TEMP_SAVE_PATH)
@@ -516,7 +562,8 @@ def main():
                 # "index_terminal_display": 2,  # si vous voulez par défaut 'both'
                 "load_game": False,
                 "chosen_save": "",
-                "grid_size": 120,
+                "grid_width": 120,
+                "grid_height": 120,
                 "num_bots": 2,
                 "bot_level": "lean",
                 "gold_at_center": False,

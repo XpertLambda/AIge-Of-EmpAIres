@@ -1,8 +1,12 @@
+# Path: Settings/setup.py
 from collections import namedtuple
 from Models.Resources import Resources
 import os
 
 # Get the base directory of the project
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Define paths relative to the base directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Define paths relative to the base directory
@@ -17,7 +21,7 @@ os.makedirs(ASSETS_DIRECTORY, exist_ok=True)
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 1
+GAME_SPEED = 5
 FPS_DRAW_LIMITER = 50
 
 BUILDING_TIME_REDUCTION = 0.75
@@ -79,7 +83,7 @@ difficulty_config = {
         'Buildings' : {
             'TownCenter' : 3,
             'Barracks' : 2,
-            'Stable' : 2, 
+            'Stable' : 2,
             'ArcheryRange' : 2,
         }
     },
@@ -150,11 +154,11 @@ gui_config = {
     },
 
     'ResourcesPanel' :{
-        'directory' : 'assets/UI/Panels/resourcesPan', 
-    }, 
+        'directory' : 'assets/UI/Panels/resourcesPan',
+    },
 
     'minimapPanel' :{
-        'directory' : 'assets/UI/Panels/minimapPan', 
+        'directory' : 'assets/UI/Panels/minimapPan',
     },
 
     'gold':{
@@ -174,6 +178,9 @@ gui_config = {
     },
 
 }
+
+MAX_VISIBLE_ITEMS = 5
+ITEM_HEIGHT = 20
 
 BAR_HEIGHT = 30
 BAR_BORDER_RADIUS = 30
@@ -211,7 +218,7 @@ Acronym = {
         's': 'swordsman',
         'v': 'villager'
     },
-    
+
     'projectiles': {
         'a': 'arrow'
     }
@@ -315,8 +322,8 @@ sprite_config = {
             'states' : 2,
             'adjust_scale': TILE_SIZE / 120,
             'sheet_config': {
-                'columns': 10,
-                'rows': 10
+                'columns': 1,
+                'rows': 1
             },
         },
     },
@@ -382,8 +389,10 @@ sprite_config = {
 # Menu
 # ----
 
+# Modify user_choices to have separate width and height
 user_choices = {
-    "grid_size":      120,
+    "grid_width":     120, # map width
+    "grid_height":    120, # map height
     "num_bots":       2,
     "bot_level":      "lean",
     "gold_at_center": False,
@@ -393,25 +402,21 @@ user_choices = {
     "index_terminal_display" : 0 # 0: GUI, 1: Terminal, 2: Both
 }
 
+# Update combo scroll positions to include both dimensions
+combo_scroll_positions = {
+    "width": 0,  # width scroll position
+    "height": 0, # height scroll position
+    "nbot": 0,
+    "lvl":  0
+}
+
+# Define valid grid sizes
 VALID_GRID_SIZES = [i for i in range(100, 1000, 10)]
 VALID_BOTS_COUNT = [i for i in range(1, 56)]
 VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
 
-# Pour la gestion du scroll dans chaque combo
-combo_scroll_positions = {
-    "grid": 0,
-    "nbot": 0,
-    "lvl":  0
-}
-MAX_VISIBLE_ITEMS = 5
-ITEM_HEIGHT = 25
-
-
-
 RESOURCE_THRESHOLDS = {
-    'food': 300, 
-    'wood': 350, 
-    'gold': 350   
+    'food': 300,
+    'wood': 350,
+    'gold': 350
 }
-
-

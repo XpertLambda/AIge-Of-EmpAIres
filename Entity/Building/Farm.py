@@ -16,3 +16,9 @@ class Farm(Building):
             walkable=True,
         )
         self.storage = Resources(food=300, gold=0, wood=0)
+
+    def death(self, game_map):
+        self.current_frame = 0
+        self.state = ''
+        self.hp = 0
+        game_map.game_state['player_info_updated'] = True

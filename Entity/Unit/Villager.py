@@ -54,7 +54,7 @@ class Villager(Unit):
         if not self.attack_target and not self.collect_target and not self.stock_target and not self.build_target  and not self.path :
             self.state = 'idle'
             self.set_task(None)
-        self.cooldown_frame = None
+            self.cooldown_frame = None
 
     def set_target(self, target):
         self.attack_target = None
@@ -80,6 +80,7 @@ class Villager(Unit):
 
     def set_task(self, task, target = None):
         if task in villager_tasks:
+            self.cooldown_frame = None
             self.task = task
             setattr(self, villager_tasks[task], target)
 
