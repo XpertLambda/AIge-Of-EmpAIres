@@ -96,28 +96,29 @@ class Bot:
         self.reallocate_villagers(resource_shortage)
 
 
-    def search_for_target(self, unit, enemy_team, attack_mode=True):
+    def search_for_target(unit, enemy_team, attack_mode=True):
+
         """
         Searches for the closest enemy unit or building depending on the mode.
         vise en premier les keeps puis les units puis les villagers et buildings
         """
-        if enemy_team == None:
+        if enemy_team==None:
             return
         closest_distance = float("inf")
         closest_entity = None
-        keeps = [keep for keep in enemy_team.buildings if isinstance(keep, Keep)]
-        targets = [unit for unit in enemy_team.units if not isinstance(unit, Villager)]
+        keeps=[keep for keep in enemy_team.buildings if isinstance(keep,Keep)]  
+        targets=[unit for unit in enemy_team.units if not isinstance(unit,Villager)]
 
         for enemy in targets:
             dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
             if dist < closest_distance:
                 closest_distance = dist
                 closest_entity = enemy
-        if attack_mode and closest_entity == None:
-            targets = [unit for unit in enemy_team.units if isinstance(unit, Villager)]
+        if attack_mode and closest_entity==None:
+            targets=[unit for unit in enemy_team.units if isinstance(unit,Villager)]
             for enemy in targets:
                 dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-                if attack_mode or not isinstance(enemy, Villager):
+                if attack_mode or not isinstance(enemy,Villager): 
                     if dist < closest_distance:
                         closest_distance = dist
                         closest_entity = enemy
@@ -130,29 +131,19 @@ class Bot:
         if attack_mode:
             for enemy in keeps:
                 dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-                if attack_mode or not isinstance(enemy, Villager):
+                if attack_mode or not isinstance(enemy,Villager): 
                     if dist < closest_distance:
                         closest_distance = dist
-                        closest_entity = enemy
-        if closest_entity != None:
-            if keeps != [] and attack_mode:
+                        closest_entity = enemy 
+        if closest_entity!=None:
+            if keeps!=[] and attack_mode:
                 for keep in keeps:
-                    dist = math.dist((keep.x, keep.y), (closest_entity.x, closest_entity.y))
-                    if dist < keep.attack_range:
-                        closest_entity = keep
-
+                    dist=math.dist((keep.x,keep.y),(closest_entity.x,closest_entity.y))
+                    if dist<keep.attack_range:
+                        closest_entity=keep
+        
         unit.set_target(closest_entity)
         return unit.attack_target is not None
-
-    def priority_2(self, players, selected_player, players_target):
-        """
-        Lance l'attaque en essayant de choisir une cible.
-        Si elle réussit, vise en premier les keeps ou les units.
-        """
-        if players_target[selected_player.teamID] != None:
-            # Attaque déjà en cours
-            return False
-        return self.choose_target(players, selected_player, players_target)
 
     def modify_target(self, player, target, players_target):
         """
@@ -164,9 +155,6 @@ class Bot:
             unit.set_target(None)
 
     def choose_target(self, players, selected_player, players_target):
-        """
-        Choisit une cible pour l'attaque en fonction du nombre d'unités et de bâtiments ennemis.
-        """
         count_max = 300
         target = None
         for enemy_team in players:
@@ -179,34 +167,43 @@ class Bot:
         if target != None:
             self.modify_target(selected_player, target, players_target)
         return target != None
+    
+    def priority_2(self, players, selected_player, players_target):
+        #lance l'attaque en essayant de choisir une cible
+        #si elle réussi vise en premier les keeps ou les units
+        if players_target[selected_player.teamID] != None:
+            #attaque déjà en cours
+            return False
+        return self.choose_target(players, selected_player, players_target)
 
-    def manage_battle(self, selected_player, players_target, players, game_map,dt):
-        """
-        Réassigne une target à chaque unité d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense.
-        Arrête les combats si nécessaire.
-        """
-        enemy = players_target[selected_player.teamID]
-        attack_mode = True
-        # Defense
-        # if any([is_under_attack(selected_player, enemy_team) for enemy_team in players]):
-        if self.is_under_attack(enemy):
-            # On cherche la team qui est en train de nous attaquer si les frontières ont été violées
-            for i in range(0, len(players_target)):
-                if players_target[i] == selected_player:
+    def manage_battle(self, selected_player, players_target, players, game_map, dt):
+        #réassigne une target a chaque unit d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense
+        #arrete les combats
+        enemy=players_target[selected_player.teamID]
+        attack_mode=True
+        #defense
+        #if any([is_under_attack(selected_player,enemy_team) for enemy_team in players]):
+        if True:
+        #on cherche la team qui est entrain de nous attaquer si les frontieres on été violer:
+            for i in range(0,len(players_target)):
+                if players_target[i]==selected_player:
                     for team in players:
-                        if team.teamID == i:
-                            players_target[selected_player.teamID] = None
-                            enemy = team
-                            attack_mode = False
-        if enemy != None and (len(enemy.units) != 0 or len(enemy.buildings) != 0):
+                        if team.teamID==i:
+                                players_target[selected_player.teamID]=None
+                                enemy=team
+                                attack_mode=False
+        if enemy!=None and (len(enemy.units)!=0 or len(enemy.buildings)!=0):
             for unit in selected_player.units:
-                if not isinstance(unit, Villager) or (len(selected_player.units) == 0 and not attack_mode):
-                    if unit.attack_target == None or not unit.attack_target.isAlive():
-                        self.search_for_target(unit, enemy, attack_mode)
+                if enemy!=None and (len(enemy.units)!=0 or len(enemy.buildings)!=0):
+                    for unit in selected_player.units:
+                        if not isinstance(unit,Villager) or (len(selected_player.units)==0 and not attack_mode):
+                            if unit.attack_target==None or not unit.attack_target.isAlive():
+                                self.search_for_target(unit, enemy, attack_mode)
         else:
             self.modify_target(selected_player, None, players_target)
-        if self.get_military_unit_count(selected_player) == 0:
+        if self.get_military_unit_count(selected_player)==0:
             self.modify_target(selected_player, None, players_target)
+
 
     def get_military_unit_count(self, player):
         """

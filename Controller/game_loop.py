@@ -213,13 +213,19 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         bot = Bot(player, game_map, clock, difficulty='medium')  # Crée un bot pour chaque joueur AI
         bots.append(bot)
 
+    bot_update_timer = 0  # Timer pour les mises à jour des bots
+    bot_update_interval = 1.0 / DPS  
+
     while running:
         raw_dt = clock.tick(400) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
 
-        for bot in bots:
-            bot.update(game_map, dt)
+        bot_update_timer += dt
+        if bot_update_timer >= bot_update_interval:
+            for bot in bots:
+                bot.update(game_map, dt)
+            bot_update_timer = 0  
 
         # On ne gère la caméra que si on n'est pas en mode terminal
         if not is_terminal_only:
