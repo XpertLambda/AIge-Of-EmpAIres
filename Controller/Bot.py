@@ -1,6 +1,9 @@
 import math
 import time
+import math
+import time
 from Models.Team import *
+from Settings.setup import RESOURCE_THRESHOLDS, TILE_SIZE
 from Settings.setup import RESOURCE_THRESHOLDS, TILE_SIZE
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
 from Entity.Building import Building, Keep, Barracks, TownCentre, Camp, House, Farm, Stable, ArcheryRange
