@@ -188,7 +188,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'notification_message': "",
         'notification_start_time': 0.0,
         'players_target': [None for _ in range(len(players))],
-        'old_resources': {}, # AJOUTER CETTE LIGNE : initialiser old_resources dans game_state
+        'old_resources': {p.teamID: p.resources.copy() for p in players},  # Initialize for all players
 
         # Nouveau bool pour déclencher un switch F9
         'switch_display': False,

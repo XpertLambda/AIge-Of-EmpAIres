@@ -70,6 +70,9 @@ class GameMap:
         return True
 
     def remove_entity(self, entity):
+        if not entity or entity.team is None:
+            return False
+            
         remove_counter = 0
         for pos, matrix_entities in list(self.grid.items()):
             for matrix_entity in list(matrix_entities):
@@ -81,6 +84,11 @@ class GameMap:
                     if remove_counter >= entity.size * entity.size:
                         if entity.team != None:
                             self.players[entity.team].remove_member(entity)
+                            # Mise à jour de old_resources quand une entité est supprimée
+                            if self.game_state and 'old_resources' in self.game_state:
+                                if entity.team in self.game_state['old_resources']:
+                                    self.game_state['old_resources'][entity.team] = self.players[entity.team].resources.copy()
+                            
                             if isinstance(entity, Building):
                                 x, y = entity.x , entity.y
                                 starting_point = (x - entity.size/2 + 0.5  - BUILDING_ZONE_OFFSET, y - entity.size/2 + 0.5 - BUILDING_ZONE_OFFSET)
@@ -345,6 +353,12 @@ class GameMap:
             else:
                 self.game_state = data.get('game_state', {})
 
+            # S'assurer que old_resources est correctement initialisé après le chargement
+            if self.game_state:
+                self.game_state['old_resources'] = {
+                    p.teamID: p.resources.copy() for p in self.players
+                }
+                
             debug_print(f"Game map loaded successfully from {filename}.")
         except Exception as e:
             debug_print(f"Error loading game map: {e}")

@@ -483,6 +483,14 @@ def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_st
                 game_state['selected_player'] = player_obj
                 game_state['player_selection_updated'] = True
                 game_state['player_info_updated'] = True
+                
+                # S'assurer que le joueur a une entrée dans old_resources
+                if 'old_resources' not in game_state:
+                    game_state['old_resources'] = {}
+                if player_obj.teamID not in game_state['old_resources']:
+                    game_state['old_resources'][player_obj.teamID] = player_obj.resources.copy()
+                
+                # Centrer la caméra sur son TownCentre si possible
                 for building_obj in player_obj.buildings:
                     if isinstance(building_obj, TownCentre):
                         iso_x, iso_y = to_isometric(
