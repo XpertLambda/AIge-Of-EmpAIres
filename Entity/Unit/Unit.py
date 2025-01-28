@@ -201,7 +201,7 @@ class Unit(Entity):
                     self.cooldown_frame = None
             else :
                 if isinstance(self.attack_target, Unit):
-                    if self.path:
+                    if self.path and self.attack_target.path:
                         self.path = [self.path[0]] + a_star((self.x, self.y), (self.attack_target.x,self.attack_target.y), game_map)
                     else:
                         self.set_destination((self.attack_target.x,self.attack_target.y), game_map)
