@@ -1,3 +1,5 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
 import pygame
 import os
 import sys
@@ -240,9 +242,9 @@ def background_load_assets(screen, sw, sh):
 
 def show_loading_screen_until_done(screen, sw, sh):
     """
-    Tant que tous les assets ne sont pas chargés,
-    on affiche la barre de progression.
-    """
+     Tant que tous les assets ne sont pas chargés,
+     on affiche la barre de progression.
+     """
     from Controller.init_assets import draw_progress_bar
     clock = pygame.time.Clock()
 
@@ -355,11 +357,15 @@ def main():
         bot_level   = user_choices["bot_level"]
         gold_c      = user_choices["gold_at_center"]
         validated_by = user_choices.get("validated_by")
+        game_state = {} # create game_state here to pass it to load_map
 
         # 3) Création ou chargement de la map + players
         if load_game and chosen_save:
             game_map = GameMap(0, False, [], generate=False)
             game_map.load_map(chosen_save)
+            if game_state:
+               game_state['game_map'] = game_map # update game_map in game_state as well
+
             players = game_map.players
         else:
             players = init_players(nb_bots, bot_level)

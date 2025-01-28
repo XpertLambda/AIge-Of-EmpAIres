@@ -8,7 +8,9 @@ from Models.Map import GameMap  # si besoin
 from Settings.setup import user_choices
 from Models.html import write_full_html
 from Controller.drawing import generate_team_colors # Importez generate_team_colors depuis drawing.py
+from Settings.sync import TEMP_SAVE_PATH
 
+TEMP_SAVE_FILENAME = "temp_save.pkl"
 
 def stop_curses():
     curses.endwin()
@@ -266,11 +268,37 @@ def _curses_main(stdscr, game_map):
                             num_str = stdscr.getstr().decode('utf-8')
                             choice_idx = int(num_str)
                             chosen_file = save_files[choice_idx]
-                            game_map.load_map(os.path.join(saves_folder, chosen_file))
-                            debug_print(f"[CURSES] => Chargement réussi: {chosen_file}")
+                            save_path = os.path.join(saves_folder, chosen_file)
+                            
+                            # Load the save first
+                            game_map.load_map(save_path)
+                            debug_print(f"[CURSES] => Loaded save: {chosen_file}")
+                            
+                            # Then save to temp file and notify GUI
+                            game_map.save_map(TEMP_SAVE_PATH)
+                            debug_print("[CURSES] => Created temp save for GUI sync")
                         except Exception as e:
-                            debug_print(f"[CURSES] => Erreur de chargement: {e}")
+                            debug_print(f"[CURSES] => Error during load/sync: {e}")
                         stdscr.nodelay(True)
+
+        # If GUI loaded a save and set force_sync => reload here
+        if game_map.game_state.get('force_sync'):
+            if os.path.exists(TEMP_SAVE_FILENAME):
+                game_map.load_map(TEMP_SAVE_FILENAME)
+                # Reset force_sync so we don't reload forever
+                game_map.game_state['force_sync'] = False
+
+        # After handling keys but before redrawing
+        # Check if GUI has requested a sync via temp file
+        if os.path.exists(TEMP_SAVE_PATH):
+            try:
+                debug_print("[CURSES] Found temp save, reloading for sync...")
+                game_map.load_map(TEMP_SAVE_PATH)
+                debug_print("[CURSES] Temp save loaded successfully")
+                os.remove(TEMP_SAVE_PATH)  # Delete temp file after loading
+                debug_print("[CURSES] Temp save file deleted")
+            except Exception as e:
+                debug_print(f"[CURSES] Error loading temp save: {e}")
 
         # Redraw
         win_map.erase()

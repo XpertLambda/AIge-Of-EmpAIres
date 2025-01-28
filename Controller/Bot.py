@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\Bot.py
 from Models.Team import *
 from Settings.setup import  RESOURCE_THRESHOLDS
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
@@ -10,7 +11,7 @@ def get_military_unit_count(player_team):
     #print(f"MUC : {sum(1 for unit in player_team.units if not isinstance(unit, Villager))}")
 
     return sum(1 for unit in player_team.units if not isinstance(unit, Villager))
-    
+
 
 def train_units(player_team, building):
     return building.add_to_training_queue(player_team)
@@ -57,14 +58,14 @@ def maintain_army(player_team):
                     unit.kill()
                 else:
                     unit.setIdle()
-                    
+
 def priorite_5(player_team,unit,building):
     train_units(player_team,unit,building)
     balance_units(player_team)
     choose_attack_composition(player_team)
     maintain_army(player_team)
 
-#Priorty seven avoid ressources shortage 
+#Priorty seven avoid ressources shortage
 
 def get_resource_shortage(current_resources, RESOURCE_THRESHOLDS):
     for resource in ['food', 'wood', 'gold']:
@@ -133,7 +134,7 @@ def search_for_target(unit, enemy_team, attack_mode=True):
     if targets!=[] and attack_mode:
         for enemy in targets:
             dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-            if attack_mode or not isinstance(enemy,Villager): 
+            if attack_mode or not isinstance(enemy,Villager):
                 if dist < closest_distance:
                     closest_distance = dist
                     closest_entity = enemy
@@ -155,11 +156,11 @@ def search_for_target(unit, enemy_team, attack_mode=True):
         targets=[unit for unit in enemy_team.units if isinstance(unit,Villager)]
         for enemy in targets:
             dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-            if attack_mode or not isinstance(enemy,Villager): 
+            if attack_mode or not isinstance(enemy,Villager):
                 if dist < closest_distance:
                     closest_distance = dist
                     closest_entity = enemy
-    
+
         for enemy_building in enemy_team.buildings:
             dist = math.dist((unit.x, unit.y), (enemy_building.x, enemy_building.y))
             if dist < closest_distance:
@@ -182,7 +183,7 @@ def search_for_target(unit, enemy_team, attack_mode=True):
     if targets!=[] and attack_mode:
         for enemy in targets:
             dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-            if attack_mode or not isinstance(enemy,Villager): 
+            if attack_mode or not isinstance(enemy,Villager):
                 if dist < closest_distance:
                     closest_distance = dist
                     closest_entity = enemy
@@ -204,11 +205,11 @@ def search_for_target(unit, enemy_team, attack_mode=True):
         targets=[unit for unit in enemy_team.units if isinstance(unit,Villager)]
         for enemy in targets:
             dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
-            if attack_mode or not isinstance(enemy,Villager): 
+            if attack_mode or not isinstance(enemy,Villager):
                 if dist < closest_distance:
                     closest_distance = dist
                     closest_entity = enemy
-    
+
         for enemy_building in enemy_team.buildings:
             dist = math.dist((unit.x, unit.y), (enemy_building.x, enemy_building.y))
             if dist < closest_distance:
@@ -240,7 +241,7 @@ def modify_target(player,target,players_target):
             unit.task=True
             if unit.target:
                 unit.attack(target,map)
-        
+
 def choose_target(players,selected_player,players_target):
     #testé
     count_max=201
@@ -261,7 +262,13 @@ def is_under_attack():
 def manage_battle(selected_player,players_target,players,game_map,dt):
     #réassigne une target a chaque unit d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense
     #arrete les combats
-    enemy=players_target[selected_player.teamID]
+    if selected_player.teamID < len(players_target): # AJOUTER CETTE LIGNE DE VERIFICATION
+        enemy=players_target[selected_player.teamID]
+    else:
+        enemy = None # OU autre gestion si l'index est hors limites
+        print(f"Warning: selected_player.teamID {selected_player.teamID} out of range for players_target (length {len(players_target)}).") # DEBUG
+        return # Sortir de la fonction pour éviter l'erreur
+
     attack_mode=True
     #defense
     if is_under_attack():
@@ -309,7 +316,7 @@ def assign_villager_to_repair(player_team, building):
 def repair_critical_buildings(player_team):
     damaged_buildings = get_damaged_buildings(player_team)
     for building in damaged_buildings:
-        repair_cost = {"wood": 50} 
+        repair_cost = {"wood": 50}
         if can_repair_building(player_team, repair_cost):
             if not assign_villager_to_repair(player_team, building):
                 print("Réparation différée faute de ressources ou de main-d'œuvre.")

@@ -1,4 +1,4 @@
-# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\Controller\event_handler.py
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\event_handler.py
 import pygame
 import sys
 import os
@@ -12,6 +12,8 @@ from Models.html import write_full_html
 from AiUtils.aStar import a_star
 from Entity.Unit.Unit import Unit
 from Controller.terminal_display_debug import debug_print
+from Controller.gui import create_player_selection_surface  # Importez create_player_selection_surface
+from Settings.sync import TEMP_SAVE_PATH
 
 
 def resolve_save_path(relative_path):
@@ -22,7 +24,7 @@ def resolve_save_path(relative_path):
 
 def handle_events(event, game_state):
     """
-    Gère les événements côté GUI/Pygame. 
+    Gère les événements côté GUI/Pygame.
     (Touches Pygame, clic souris, resize fenêtre, etc.)
     """
     camera = game_state['camera']
@@ -56,10 +58,10 @@ def handle_events(event, game_state):
         from Controller.utils import get_centered_rect_in_bottom_right
 
         new_panel_rect = get_centered_rect_in_bottom_right(
-            panel_width, 
-            panel_height, 
-            sw, 
-            sh, 
+            panel_width,
+            panel_height,
+            sw,
+            sh,
             MINIMAP_MARGIN
         )
         game_state['minimap_panel_rect'] = new_panel_rect
@@ -134,6 +136,9 @@ def handle_events(event, game_state):
                 if chosen_path:
                     from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
                     from Models.Map import GameMap
+
+                    game_state['selected_player'] = None # AJOUTER CETTE LIGNE : réinitialiser avant chargement
+
                     game_state['game_map'] = GameMap(0, False, [], generate=False)
                     game_state['game_map'].load_map(chosen_path)
                     game_state['players'].clear()
@@ -143,6 +148,26 @@ def handle_events(event, game_state):
                     else:
                         game_state['selected_player'] = None
 
+                    game_state['players_target'] = [None for _ in range(len(game_state['players']))]
+
+                    # --- AJOUTER CE BLOC POUR REINITIALISER old_resources ---
+                    old_resources = {} # Vider complètement d'abord
+                    for p in game_state['players']: # Puis re-remplir avec les ressources initiales des NOUVEAUX joueurs
+                        old_resources[p.teamID] = p.resources.copy()
+                    game_state['old_resources'] = old_resources # METTRE A JOUR game_state['old_resources']
+                    # --- FIN AJOUT ---
+
+                    # --- AJOUTER CE BLOC DE VERIFICATION DES teamID (APRES CHARGEMENT) ---
+                    if game_state['players']:
+                        if not 0 <= game_state['selected_player'].teamID < len(game_state['players']):
+                            print(f"DEBUG WARNING: selected_player.teamID {game_state['selected_player'].teamID} out of valid range after load!")
+
+                        for player in game_state['players']:
+                            if not 0 <= player.teamID < len(game_state['players']):
+                                print(f"DEBUG WARNING: player.teamID {player.teamID} out of valid range after load!")
+                    # --- FIN VERIFICATION teamID ---
+
+
                     game_state['team_colors'] = generate_team_colors(len(game_state['players']))
                     camera.offset_x = 0
                     camera.offset_y = 0
@@ -151,12 +176,25 @@ def handle_events(event, game_state):
                     camera.set_bounds(min_x, max_x, min_y, max_y)
                     game_state['force_full_redraw'] = True
                     game_state['notification_message'] = "Partie chargée."
+                    game_state['player_selection_updated'] = True
+                    player_selection_surface = create_player_selection_surface(
+                        game_state['players'],
+                        game_state['selected_player'],
+                        game_state['minimap_background_rect'],
+                        game_state['team_colors']
+                    )
+                    game_state['player_selection_surface'] = player_selection_surface
                     game_state['notification_start_time'] = time.time()
+                    # Force sync with other interface
+                    game_state['force_sync'] = True
+                    debug_print("[GUI] Forcing sync across interfaces.")
+                    game_state['game_map'].save_map(TEMP_SAVE_PATH)
+                    debug_print("[GUI] Created temp save for terminal sync")
                 else:
                     debug_print("[GUI] M => Aucune sauvegarde choisie (annulé).")
-            
+
             except Exception as e:
-                debug_print(f"[GUI] Error loading: {e}")
+                debug_print(f"[GUI] Error during load/sync: {e}")
                 game_state['notification_message'] = f"Erreur: {str(e)}"
                 game_state['notification_start_time'] = time.time()
             pass
@@ -194,7 +232,7 @@ def handle_events(event, game_state):
                 screen = pygame.display.set_mode((window_width, window_height), pygame.RESIZABLE)
             else:
                 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-            
+
             game_state['fullscreen'] = not game_state['fullscreen']
             game_state['screen'] = screen
             game_state['screen_width'] = screen.get_width()
@@ -266,6 +304,9 @@ def handle_events(event, game_state):
                             if chosen_path:
                                 from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
                                 from Models.Map import GameMap
+
+                                game_state['selected_player'] = None # AJOUTER CETTE LIGNE : réinitialiser avant chargement
+
                                 game_state['game_map'] = GameMap(0, False, [], generate=False)
                                 game_state['game_map'].load_map(chosen_path)
                                 game_state['players'].clear()
@@ -275,6 +316,26 @@ def handle_events(event, game_state):
                                 else:
                                     game_state['selected_player'] = None
 
+                                game_state['players_target'] = [None for _ in range(len(game_state['players']))]
+
+                                # --- AJOUTER CE BLOC POUR REINITIALISER old_resources ---
+                                old_resources = {} # Vider complètement d'abord
+                                for p in game_state['players']: # Puis re-remplir avec les ressources initiales des NOUVEAUX joueurs
+                                    old_resources[p.teamID] = p.resources.copy()
+                                game_state['old_resources'] = old_resources # METTRE A JOUR game_state['old_resources']
+                                # --- FIN AJOUT ---
+
+                                # --- AJOUTER CE BLOC DE VERIFICATION DES teamID (APRES CHARGEMENT) ---
+                                if game_state['players']:
+                                    if not 0 <= game_state['selected_player'].teamID < len(game_state['players']):
+                                        print(f"DEBUG WARNING: selected_player.teamID {game_state['selected_player'].teamID} out of valid range after load!")
+
+                                    for player in game_state['players']:
+                                        if not 0 <= player.teamID < len(game_state['players']):
+                                            print(f"DEBUG WARNING: player.teamID {player.teamID} out of valid range after load!")
+                                # --- FIN VERIFICATION teamID ---
+
+
                                 game_state['team_colors'] = generate_team_colors(len(game_state['players']))
                                 camera.offset_x = 0
                                 camera.offset_y = 0
@@ -283,12 +344,25 @@ def handle_events(event, game_state):
                                 camera.set_bounds(min_x, max_x, min_y, max_y)
                                 game_state['force_full_redraw'] = True
                                 game_state['notification_message'] = "Partie chargée."
+                                game_state['player_selection_updated'] = True
+                                player_selection_surface = create_player_selection_surface(
+                                    game_state['players'],
+                                    game_state['selected_player'],
+                                    game_state['minimap_background_rect'],
+                                    game_state['team_colors']
+                                )
+                                game_state['player_selection_surface'] = player_selection_surface
                                 game_state['notification_start_time'] = time.time()
+                                # Force sync with other interface
+                                game_state['force_sync'] = True
+                                debug_print("[GUI] Forcing sync across interfaces.")
+                                game_state['game_map'].save_map(TEMP_SAVE_PATH)
+                                debug_print("[GUI] Created temp save for terminal sync")
                             else:
                                 debug_print("[GUI] M => Aucune sauvegarde choisie (annulé).")
-                        
+
                         except Exception as e:
-                            debug_print(f"[GUI] Error loading: {e}")
+                            debug_print(f"[GUI] Error during load/sync: {e}")
                             game_state['notification_message'] = f"Erreur: {str(e)}"
                             game_state['notification_start_time'] = time.time()
                         pass
@@ -341,9 +415,9 @@ def handle_events(event, game_state):
                             entity.notify_clicked()
                     else:
                         handle_left_click_on_panels_or_start_box_selection(
-                            mouse_x, 
-                            mouse_y, 
-                            game_state, 
+                            mouse_x,
+                            mouse_y,
+                            game_state,
                             ctrl_pressed
                         )
 
@@ -395,28 +469,28 @@ def handle_events(event, game_state):
             camera.set_zoom(camera.zoom / 1.1)
             debug_print("[GUI] molette bas => zoom arrière")
 
-    elif event.type == pygame.MOUSEMOTION:
-        if game_state['minimap_dragging']:
-            current_x, current_y = event.pos
-            mini_rect = game_state['minimap_background_rect']
-            local_x = current_x - mini_rect.x
-            local_y = current_y - mini_rect.y
+        elif event.type == pygame.MOUSEMOTION:
+            if game_state['minimap_dragging']:
+                current_x, current_y = event.pos
+                mini_rect = game_state['minimap_background_rect']
+                local_x = current_x - mini_rect.x
+                local_y = current_y - mini_rect.y
 
-            scale = game_state['minimap_scale']
-            offset_x = game_state['minimap_offset_x']
-            offset_y = game_state['minimap_offset_y']
-            map_min_iso_x = game_state['minimap_min_iso_x']
-            map_min_iso_y = game_state['minimap_min_iso_y']
+                scale = game_state['minimap_scale']
+                offset_x = game_state['minimap_offset_x']
+                offset_y = game_state['minimap_offset_y']
+                map_min_iso_x = game_state['minimap_min_iso_x']
+                map_min_iso_y = game_state['minimap_min_iso_y']
 
-            iso_x = (local_x - offset_x) / scale + map_min_iso_x
-            iso_y = (local_y - offset_y) / scale + map_min_iso_y
+                iso_x = (local_x - offset_x) / scale + map_min_iso_x
+                iso_y = (local_y - offset_y) / scale + map_min_iso_y
 
-            camera.offset_x = -iso_x
-            camera.offset_y = -iso_y
-            camera.limit_camera()
-        else:
-            if game_state.get('selecting_entities', False):
-                game_state['selection_end'] = event.pos
+                camera.offset_x = -iso_x
+                camera.offset_y = -iso_y
+                camera.limit_camera()
+            else:
+                if game_state.get('selecting_entities', False):
+                    game_state['selection_end'] = event.pos
 
     elif event.type == pygame.MOUSEBUTTONUP:
         if event.button == 1:
@@ -485,20 +559,26 @@ def handle_left_click_on_panels_or_start_box_selection(mouse_x, mouse_y, game_st
                 game_state['selected_player'] = player_obj
                 game_state['player_selection_updated'] = True
                 game_state['player_info_updated'] = True
+                # Centering on TownCenter here:
+                town_center_found = False # Flag to ensure we break after centering
                 for building_obj in player_obj.buildings:
                     if isinstance(building_obj, TownCentre):
                         iso_x, iso_y = to_isometric(
-                            building_obj.x, 
-                            building_obj.y, 
-                            HALF_TILE_SIZE, 
+                            building_obj.x,
+                            building_obj.y,
+                            HALF_TILE_SIZE,
                             HALF_TILE_SIZE / 2
                         )
                         camera.offset_x = -iso_x
                         camera.offset_y = -iso_y
                         camera.limit_camera()
-                        break
+                        town_center_found = True # Set flag to True
+                        break # Break inner loop once TownCenter is found and centered
+                if town_center_found: # Only set clicked_player_panel if centering occurred
+                    clicked_player_panel = True
+                    break
             clicked_player_panel = True
-            break
+            break # Break outer loop after handling player panel click
 
     if not clicked_player_panel:
         game_state['selecting_entities'] = True
@@ -545,12 +625,12 @@ def finalize_box_selection(game_state):
 
     for entity_obj in all_entities:
         screen_x, screen_y = tile_to_screen(
-            entity_obj.x, 
+            entity_obj.x,
             entity_obj.y,
-            HALF_TILE_SIZE, 
+            HALF_TILE_SIZE,
             HALF_TILE_SIZE / 2,
-            camera, 
-            screen_width, 
+            camera,
+            screen_width,
             screen_height
         )
         if select_rect.collidepoint(screen_x, screen_y):
@@ -570,10 +650,10 @@ def closest_entity(game_state, mouse_x, mouse_y, search_radius=2):
     mouse_2_5d = screen_to_2_5d(mouse_x, mouse_y, screen_width, screen_height, camera, HALF_TILE_SIZE, HALF_TILE_SIZE/2)
 
     tile_x, tile_y = screen_to_tile(
-        mouse_x, mouse_y, 
-        screen_width, screen_height, 
-        camera, 
-        HALF_TILE_SIZE / 2, 
+        mouse_x, mouse_y,
+        screen_width, screen_height,
+        camera,
+        HALF_TILE_SIZE / 2,
         HALF_TILE_SIZE / 4
     )
     entity_set = game_map.grid.get((tile_x, tile_y), [])
