@@ -17,11 +17,12 @@ from Models.Map import GameMap
 from random import *
 from AiUtils.aStar import a_star
 from Controller.Decisonnode import Decision
+
 class Bot:
     def __init__(self, player_team, game_map, clock, difficulty = 'medium'):
         self.clock= clock
         self.player_team = player_team
-        self.decsion=Decision(self)
+        self.decision=Decision(self)
         self.game_map = game_map
         self.difficulty = difficulty
         self.PRIORITY_UNITS = {
@@ -47,7 +48,7 @@ class Bot:
             resource_amount = resource_quantities[i] if i < len(resource_quantities) else 0
             shortages[key] = RESOURCE_THRESHOLDS[key] - resource_amount
 
-        critical_shortage = RESOURCE_MAPPING.key(min(shortages, key=shortages.get))
+        critical_shortage = RESOURCE_MAPPING.keys(min(shortages, key=shortages.get))
         return critical_shortage if shortages[critical_shortage] > 0 else None
 
     
@@ -586,6 +587,14 @@ class Bot:
                         # Si aucune cible n'est trouvée, on met l'unité en état idle
                         unit.setIdle()
 
+    def priority_5(self, enemy_teams):
+        # Étape 1 : Ajuster les priorités en fonction des unités ennemies
+        self.adjust_priorities(enemy_teams)
+        # Étape 2 : Équilibrer les unités (villageois et unités militaires)
+        self.balance_units()
+        # Étape 3 : Maintenir l'armée (équilibrage ou attaque)
+        self.maintain_army()
+
     def check_building_needs(self):
         needed_buildings = []
         if not any(isinstance(building, Barracks) for building in self.player_team.buildings):
@@ -640,10 +649,21 @@ class Bot:
                     if location:
                         x, y = location
                         building = building_class(team=self.player_team.teamID, x=x, y=y)
-                        if self.player_team.buildBuilding(building, clock, nb=3, game_map=self.game_map):
+                        if self.player_team.build(building, clock, nb=3, game_map=self.game_map):
                             return True
         return False
     
-    def update(self ):
+    def priority_4(self, clock):
+        # Appeler check_building_needs pour obtenir la liste des bâtiments nécessaires
+        needed_buildings = self.check_building_needs()
+        
+        # Si aucun bâtiment n'est nécessaire, on retourne False
+        if not needed_buildings:
+            return False
+        
+        # Appeler build_structure pour essayer de construire les bâtiments nécessaires
+        return self.build_structure(clock)
+    
+    def update(self):
          self.decision.execute()
 

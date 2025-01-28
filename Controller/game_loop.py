@@ -505,7 +505,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
             bot_update_timer += dt
             if bot_update_timer >= bot_update_interval:
                 for bot in bots:
-                    bot.update(game_map, bot_update_interval)  # Passe l'intervalle fixe
+                    bot.update()  # Passe l'intervalle fixe
                 bot_update_timer = 0  # Reset du timer
 
         # On ne gère la caméra que si on n'est pas en mode terminal

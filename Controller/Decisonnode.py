@@ -26,7 +26,7 @@ class Decision:
             debug_print(f"Executing Priority 4: Building {needed_buildings}")
             self.bot.build_structure(self.bot.clock)
             return
-
+        
         # Priority 5: Train Units
         if len(self.bot.get_military_units()) < 20:
             debug_print("Executing Priority 5: Training military units")
