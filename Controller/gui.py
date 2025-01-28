@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\Controller\gui.py
 import pygame
 import os
 import sys
@@ -5,14 +6,14 @@ import time
 from collections import OrderedDict, Counter
 from Settings.setup import *
 from Controller.init_assets import *
-from Settings.setup import HALF_TILE_SIZE, MINIMAP_MARGIN, PANEL_RATIO, BG_RATIO
+from Settings.setup import *
 from Controller.utils import to_isometric, get_color_for_terrain
 from Entity.Building import Building
 
 pygame.init()
 font = pygame.font.SysFont(None, 32)
 
-user_choices["index_terminal_display"] = 2
+#user_choices["index_terminal_display"] = 2
 
 def get_scaled_gui(ui_name, variant=0, target_width=None, target_height=None):
     global gui_cache
@@ -83,9 +84,9 @@ def update_minimap_elements(game_state):
             if isinstance(ent, Building):
                 half_dim = max(MIN_BUILDING_SIZE, ent.size)
                 rect_building = pygame.Rect(
-                    mini_x - half_dim, 
-                    mini_y - half_dim, 
-                    half_dim * 2, 
+                    mini_x - half_dim,
+                    mini_y - half_dim,
+                    half_dim * 2,
                     half_dim * 2
                 )
                 pygame.draw.rect(minimap_surface, (*color_draw, 150), rect_building)
@@ -115,28 +116,33 @@ def run_gui_menu(screen, sw, sh):
         {"text": "Charger Partie",  "rect": pygame.Rect(0,0,200,50)},
         {"text": "Quitter",         "rect": pygame.Rect(0,0,200,50)},
     ]
-    
+
     back_button = {"text": "Retour", "rect": pygame.Rect(20, 20, 100, 40)}
 
     # On force la valeur par défaut à "Both" = index = 2
     toggle_button = {
-        "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
+        "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),  # Position ajustée
         "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
         "index": 2  # => Both
     }
+
+    # S'assurer que user_choices est synchronisé avec le bouton
+    user_choices["index_terminal_display"] = toggle_button["index"]
 
     save_files = []
     if os.path.isdir(SAVE_DIRECTORY):
         save_files = [f for f in os.listdir(SAVE_DIRECTORY) if f.endswith('.pkl')]
 
-    if user_choices["grid_size"] not in VALID_GRID_SIZES:
-        user_choices["grid_size"] = VALID_GRID_SIZES[0]
-    idx_grid = VALID_GRID_SIZES.index(user_choices["grid_size"])
+    # Initialize indices for width and height
+    idx_width = VALID_GRID_SIZES.index(user_choices["grid_width"])
+    idx_height = VALID_GRID_SIZES.index(user_choices["grid_height"])
     idx_nbot = VALID_BOTS_COUNT.index(user_choices["num_bots"])
     idx_lvl  = VALID_LEVELS.index(user_choices["bot_level"])
 
     gold_checked = user_choices["gold_at_center"]
     combo_open = None
+
+    valid_button_rect = pygame.Rect(sw//2 - 50, 460, 100, 40)  # Position fixe
 
     running = True
     while running:
@@ -153,13 +159,20 @@ def run_gui_menu(screen, sw, sh):
                 sys.exit()
 
             elif event.type == pygame.MOUSEWHEEL:
-                if combo_open == "grid":
+                if combo_open == "width":
                     if event.y < 0:
-                        if combo_scroll_positions["grid"] < len(VALID_GRID_SIZES) - MAX_VISIBLE_ITEMS:
-                            combo_scroll_positions["grid"] += 1
+                        if combo_scroll_positions["width"] < len(VALID_GRID_SIZES) - MAX_VISIBLE_ITEMS:
+                            combo_scroll_positions["width"] += 1
                     else:
-                        if combo_scroll_positions["grid"] > 0:
-                            combo_scroll_positions["grid"] -= 1
+                        if combo_scroll_positions["width"] > 0:
+                            combo_scroll_positions["width"] -= 1
+                elif combo_open == "height":
+                    if event.y < 0:
+                        if combo_scroll_positions["height"] < len(VALID_GRID_SIZES) - MAX_VISIBLE_ITEMS:
+                            combo_scroll_positions["height"] += 1
+                    else:
+                        if combo_scroll_positions["height"] > 0:
+                            combo_scroll_positions["height"] -= 1
                 elif combo_open == "nbot":
                     if event.y < 0:
                         if combo_scroll_positions["nbot"] < len(VALID_BOTS_COUNT) - MAX_VISIBLE_ITEMS:
@@ -183,8 +196,8 @@ def run_gui_menu(screen, sw, sh):
                     show_load_menu = False
                     continue
 
-                if combo_open == "grid":
-                    start_idx = combo_scroll_positions["grid"]
+                if combo_open == "width":
+                    start_idx = combo_scroll_positions["width"]
                     visible_items = VALID_GRID_SIZES[start_idx:start_idx + MAX_VISIBLE_ITEMS]
                     item_height = ITEM_HEIGHT
                     expanded_rect = pygame.Rect(sw//2 - 100, 100 + item_height, 200, item_height * len(visible_items))
@@ -193,16 +206,29 @@ def run_gui_menu(screen, sw, sh):
                         item_index = relative_y // item_height
                         if 0 <= item_index < len(visible_items):
                             new_val = visible_items[item_index]
-                            idx_grid = VALID_GRID_SIZES.index(new_val)
-                            user_choices["grid_size"] = new_val
+                            idx_width = VALID_GRID_SIZES.index(new_val)
+                            user_choices["grid_width"] = new_val
+                        combo_open = None
+                        continue
+                elif combo_open == "height":
+                    start_idx = combo_scroll_positions["height"]
+                    visible_items = VALID_GRID_SIZES[start_idx:start_idx + MAX_VISIBLE_ITEMS]
+                    expanded_rect = pygame.Rect(sw//2 - 100, 160 + ITEM_HEIGHT, 200, ITEM_HEIGHT * len(visible_items))
+                    if expanded_rect.collidepoint(mx,my):
+                        relative_y = my - (160 + ITEM_HEIGHT)
+                        item_index = relative_y // ITEM_HEIGHT
+                        if 0 <= item_index < len(visible_items):
+                            new_val = visible_items[item_index]
+                            idx_height = VALID_GRID_SIZES.index(new_val)
+                            user_choices["grid_height"] = new_val
                         combo_open = None
                         continue
                 elif combo_open == "nbot":
                     start_idx = combo_scroll_positions["nbot"]
                     visible_items = VALID_BOTS_COUNT[start_idx:start_idx + MAX_VISIBLE_ITEMS]
-                    expanded_rect = pygame.Rect(sw//2 - 100, 160 + ITEM_HEIGHT, 200, ITEM_HEIGHT * len(visible_items))
+                    expanded_rect = pygame.Rect(sw//2 - 100, 220 + ITEM_HEIGHT, 200, ITEM_HEIGHT * len(visible_items))
                     if expanded_rect.collidepoint(mx,my):
-                        relative_y = my - (160 + ITEM_HEIGHT)
+                        relative_y = my - (220 + ITEM_HEIGHT)
                         item_index = relative_y // ITEM_HEIGHT
                         if 0 <= item_index < len(visible_items):
                             new_val = visible_items[item_index]
@@ -213,9 +239,9 @@ def run_gui_menu(screen, sw, sh):
                 elif combo_open == "lvl":
                     start_idx = combo_scroll_positions["lvl"]
                     visible_items = VALID_LEVELS[start_idx:start_idx + MAX_VISIBLE_ITEMS]
-                    expanded_rect = pygame.Rect(sw//2 - 100, 220 + ITEM_HEIGHT, 200, ITEM_HEIGHT * len(visible_items))
+                    expanded_rect = pygame.Rect(sw//2 - 100, 280 + ITEM_HEIGHT, 200, ITEM_HEIGHT * len(visible_items))
                     if expanded_rect.collidepoint(mx,my):
-                        relative_y = my - (220 + ITEM_HEIGHT)
+                        relative_y = my - (280 + ITEM_HEIGHT)
                         item_index = relative_y // ITEM_HEIGHT
                         if 0 <= item_index < len(visible_items):
                             new_val = visible_items[item_index]
@@ -225,13 +251,15 @@ def run_gui_menu(screen, sw, sh):
                         continue
 
                 if combo_open:
-                    combo_rect_grid = pygame.Rect(sw//2 - 100, 100, 200, 30)
-                    combo_rect_nbot = pygame.Rect(sw//2 - 100, 160, 200, 30)
-                    combo_rect_lvl  = pygame.Rect(sw//2 - 100, 220, 200, 30)
+                    combo_rect_width = pygame.Rect(sw//2 - 100, 100, 200, 30)
+                    combo_rect_height = pygame.Rect(sw//2 - 100, 160, 200, 30)
+                    combo_rect_nbot = pygame.Rect(sw//2 - 100, 220, 200, 30)
+                    combo_rect_lvl  = pygame.Rect(sw//2 - 100, 280, 200, 30)
 
                     # Si on clique en dehors, on referme
-                    if not (combo_rect_grid.collidepoint(mx,my) or 
-                            combo_rect_nbot.collidepoint(mx,my) or 
+                    if not (combo_rect_width.collidepoint(mx,my) or
+                            combo_rect_height.collidepoint(mx,my) or
+                            combo_rect_nbot.collidepoint(mx,my) or
                             combo_rect_lvl.collidepoint(mx,my)):
                         combo_open = None
 
@@ -251,30 +279,34 @@ def run_gui_menu(screen, sw, sh):
                                 sys.exit()
 
                 elif show_config_menu:
-                    combo_rect_grid = pygame.Rect(sw//2 - 100, 100, 200, 30)
-                    combo_rect_nbot = pygame.Rect(sw//2 - 100, 160, 200, 30)
-                    combo_rect_lvl  = pygame.Rect(sw//2 - 100, 220, 200, 30)
-                    if combo_rect_grid.collidepoint(mx,my):
-                        combo_open = ("grid" if combo_open != "grid" else None)
+                    combo_rect_width = pygame.Rect(sw//2 - 100, 100, 200, 30)
+                    combo_rect_height = pygame.Rect(sw//2 - 100, 160, 200, 30)
+                    combo_rect_nbot = pygame.Rect(sw//2 - 100, 220, 200, 30)
+                    combo_rect_lvl  = pygame.Rect(sw//2 - 100, 280, 200, 30)
+                    if combo_rect_width.collidepoint(mx,my):
+                        combo_open = ("width" if combo_open != "width" else None)
+                    elif combo_rect_height.collidepoint(mx,my):
+                        combo_open = ("height" if combo_open != "height" else None)
                     elif combo_rect_nbot.collidepoint(mx,my):
                         combo_open = ("nbot" if combo_open != "nbot" else None)
                     elif combo_rect_lvl.collidepoint(mx,my):
                         combo_open = ("lvl" if combo_open != "lvl" else None)
 
-                    chk_rect = pygame.Rect(sw//2 - 100, 280, 30, 30)
+                    chk_rect = pygame.Rect(sw//2 - 100, 340, 30, 30)
                     if chk_rect.collidepoint(mx,my):
                         gold_checked = not gold_checked
                         user_choices["gold_at_center"] = gold_checked
 
-                    valid_rect = pygame.Rect(sw//2 - 50, 340, 100, 40)
-                    if valid_rect.collidepoint(mx,my):
-                        user_choices["validated"] = True
-                        running = False
-
-                    # Insert toggle_button logic here
+                    # Toggle display mode button
                     if toggle_button["rect"].collidepoint(mx, my):
                         toggle_button["index"] = (toggle_button["index"] + 1) % len(toggle_button["texts"])
                         user_choices["index_terminal_display"] = toggle_button["index"]
+
+                    # Validation button moved down
+                    if valid_button_rect.collidepoint(mx,my):
+                        user_choices["validated_by"] = "gui"
+                        user_choices["validated"] = True
+                        running = False
 
                 elif show_load_menu:
                     start_y = 100
@@ -291,11 +323,11 @@ def run_gui_menu(screen, sw, sh):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     combo_open = None
-        
+
         if show_main_menu:
             draw_main_menu(screen, sw, sh, main_buttons)
         elif show_config_menu:
-            draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, combo_open)
+            draw_config_menu(screen, sw, sh, idx_width, idx_height, idx_nbot, idx_lvl, gold_checked, combo_open)
             draw_choose_display(screen, toggle_button)
             pygame.draw.rect(screen, (100, 100, 200), back_button["rect"])
             txt = font.render(back_button["text"], True, (255,255,255))
@@ -308,10 +340,10 @@ def run_gui_menu(screen, sw, sh):
             screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
 
         pygame.display.flip()
-        
+
         # Met à jour la variable globale index_terminal_display
         # d'après l'état du bouton toggle_button
-        user_choices["index_terminal_display"] = toggle_button["index"]
+        
 
 def draw_choose_display(screen, toggle_button):
     pygame.draw.rect(screen, (0, 122, 255), toggle_button["rect"])
@@ -330,35 +362,57 @@ def draw_main_menu(screen, sw, sh, buttons):
         txt = font.render(btn["text"], True, (255,255,255))
         screen.blit(txt, txt.get_rect(center=btn["rect"].center))
 
-def draw_config_menu(screen, sw, sh, idx_grid, idx_nbot, idx_lvl, gold_checked, combo_open):
-    if combo_open != "grid":
-        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Taille: {VALID_GRID_SIZES[idx_grid]}", None, idx_grid)
+def draw_config_menu(screen, sw, sh, idx_width, idx_height, idx_nbot, idx_lvl, gold_checked, combo_open):
+    # Width combo box
+    if combo_open != "width":
+        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Largeur: {VALID_GRID_SIZES[idx_width]}", None, idx_width)
+    
+    # Height combo box (moved up from previous position)
+    if combo_open != "height":
+        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Hauteur: {VALID_GRID_SIZES[idx_height]}", None, idx_height)
+    
+    # Bots combo box
     if combo_open != "nbot":
-        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}", None, idx_nbot)
+        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}", None, idx_nbot)
+    
+    # Level combo box
     if combo_open != "lvl":
-        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}", None, idx_lvl)
+        draw_combo_box(screen, sw//2 - 100, 280, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}", None, idx_lvl)
 
-    chk_rect = pygame.Rect(sw//2 - 100, 280, 30, 30)
+    # Draw expanded combo boxes if open
+    if combo_open == "width":
+        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Largeur: {VALID_GRID_SIZES[idx_width]}",
+                       VALID_GRID_SIZES, idx_width, combo_type="width")
+    elif combo_open == "height":
+        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Hauteur: {VALID_GRID_SIZES[idx_height]}",
+                       VALID_GRID_SIZES, idx_height, combo_type="height")
+    elif combo_open == "nbot":
+        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}",
+                       VALID_BOTS_COUNT, idx_nbot, combo_type="nbot")
+    elif combo_open == "lvl":
+        draw_combo_box(screen, sw//2 - 100, 280, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}",
+                       VALID_LEVELS, idx_lvl, combo_type="lvl")
+
+    # Rest of the buttons
+    # Gold checkbox
+    chk_rect = pygame.Rect(sw//2 - 100, 340, 30, 30)
     pygame.draw.rect(screen, (200,200,200), chk_rect)
     if gold_checked:
         pygame.draw.line(screen, (0,0,0), (chk_rect.x+5, chk_rect.centery), (chk_rect.right-5, chk_rect.centery), 3)
     txt = font.render("Or au centre ?", True, (255,255,255))
     screen.blit(txt, (chk_rect.right+10, chk_rect.y))
 
-    valid_rect = pygame.Rect(sw//2 - 50, 340, 100, 40)
+    # Toggle display mode button position
+    toggle_y = 400  # Position pour le bouton toggle
+
+    # Validation button position (moved down)
+    valid_rect = pygame.Rect(sw//2 - 50, 460, 100, 40)  # Y position changed to 460
     pygame.draw.rect(screen, (80,200,80), valid_rect)
     vtxt = font.render("Valider", True, (255,255,255))
     screen.blit(vtxt, vtxt.get_rect(center=valid_rect.center))
 
-    if combo_open == "grid":
-        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Taille: {VALID_GRID_SIZES[idx_grid]}",
-                       VALID_GRID_SIZES, idx_grid, combo_type="grid")
-    elif combo_open == "nbot":
-        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}",
-                       VALID_BOTS_COUNT, idx_nbot, combo_type="nbot")
-    elif combo_open == "lvl":
-        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}",
-                       VALID_LEVELS, idx_lvl, combo_type="lvl")
+    # Store the valid_rect in game state for click detection
+    return valid_rect  # Return the rect so it can be used for click detection
 
 def draw_load_menu(screen, sw, sh, save_files):
     start_y = 100
@@ -454,7 +508,7 @@ def create_player_info_surface(selected_player, screen_width, screen_height, tea
     from Settings.setup import user_choices
     if user_choices["index_terminal_display"] == 1:  # Terminal only mode
         return None
-        
+
     font_info = pygame.font.Font(None, 24)
     padding_x = int(screen_width * 0.0)  # 0.7% du screen width comme padding horizontal
     padding_y = int(screen_height * 0.028)  # 2% du screen height comme padding vertical
@@ -502,7 +556,7 @@ def create_player_info_surface(selected_player, screen_width, screen_height, tea
 
     # Population
     population_text = f"Population: {selected_player.population} / {selected_player.maximum_population}"
-    population_surface = font.render(population_text, True, (255, 255, 255))
+    population_surface = font_info.render(population_text, True, (255, 255, 255))
     surface.blit(population_surface, (padding_x, y_after_resources))
 
     return surface

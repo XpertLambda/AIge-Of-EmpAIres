@@ -10,7 +10,7 @@ class TownCentre(Building):
             acronym='T',
             size=4,
             max_hp=1200,
-            cost=Resources(food=0, gold=0, wood=200),
+            cost=Resources(food=0, gold=0, wood=350),
             buildTime=100,
             population=5,
             resourceDropPoint=True,

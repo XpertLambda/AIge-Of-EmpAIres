@@ -12,5 +12,7 @@ class Farm(Building):
             max_hp=100,
             cost=Resources(food=0, gold=0, wood=60),
             buildTime=10,
-            walkable=True
+            hasResources = True,
+            walkable=True,
         )
+        self.storage = Resources(food=300, gold=0, wood=0)
