@@ -1,4 +1,6 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\Decisonnode.py
 from Controller.Bot import *
+from Controller.terminal_display_debug import debug_print
 
 class DecisionNode:
     def __init__(self, condition, true_branch=None, false_branch=None, action=None):
@@ -19,96 +21,147 @@ class DecisionNode:
             elif self.action:
                 return self.action()
 
-# Priority Actions (Using Logic from Bot.py)
-def priorty1(bot, enemy_team, players_target, game_map, dt):
-    debug_print("Defending against attack.")
-    bot.priorty1(enemy_team, players_target, dt)
-
-def priority_2(bot, enemy_teams, game_map):
-    debug_print("Attacking the enemy.")
-    bot.priority_2(enemy_teams, game_map)
-
-def priority_6(bot):
-    debug_print("Repairing critical buildings.")
-    bot.priority_6()
-
-def priorty_5(bot):
-    debug_print("Maintaining military units.")
-    bot.priorite_5()
-
-def priorty7(bot):
-    debug_print("Managing resource shortages.")
-    bot.priorty7()
-
-def check_building_needs(bot):
-    debug_print("Checking building needs.")
-    return bot.check_building_needs()
-
-def build_structure(bot):
-    debug_print("Building structures.")
-    if bot.check_building_needs():
-        bot.build_structure()
-
-# Conditions (Using Logic from Bot.py)
-def is_under_attack(bot, enemy_team):
+# --- Conditions ---
+def is_under_attack_condition(bot, enemy_team):
     return bot.is_under_attack(enemy_team)
 
-def gold_food_wood_low(bot):
+def is_resource_shortage_condition(bot):
     return bot.get_resource_shortage() is not None
 
-def building_needs(bot):
+def are_buildings_needed_condition(bot):
     return bot.check_building_needs()
 
-def army_below_threshold(bot):
-    return bot.get_military_unit_count(bot.player_team) < 20
+def is_army_below_threshold_condition(bot):
+    return bot.get_military_unit_count(bot.player_team) < 15 # Reduced threshold for example
 
-def damaged_buildings(bot):
+def are_damaged_buildings_condition(bot):
     return len(bot.get_critical_points()) > 0
 
-# Decision Tree
-def create_decision_tree(bot, enemy_team, enemy_teams, game_map, dt):
+def is_military_count_low_condition(bot):
+    return bot.get_military_unit_count(bot.player_team) < 10 # Example threshold
+
+# --- Actions ---
+def defend_action(bot, enemy_team, players_target, game_map, dt):
+    debug_print("Decision Node Action: Defend under attack.")
+    bot.priorty1(enemy_team, players_target, dt) # Using priority 1 for defense
+
+def address_resource_shortage_action(bot):
+    debug_print("Decision Node Action: Addressing resource shortage.")
+    bot.priorty7() # Using priority 7 for resource management
+
+def build_needed_structure_action(bot):
+    debug_print("Decision Node Action: Building needed structures.")
+    bot.build_structure(bot.clock) # Build structure action
+
+def balance_army_action(bot):
+    debug_print("Decision Node Action: Balancing army units.")
+    bot.balance_units() # Balance units action
+
+def repair_buildings_action(bot):
+    debug_print("Decision Node Action: Repairing damaged buildings.")
+    # Assuming priority_6 is for repair as per your initial request
+    # if priority_6 action is not defined in Bot.py please check and adapt or replace with relevant repair logic
+    pass # bot.priority_6() # Repair buildings action - adapt if needed
+
+def manage_offense_action(bot, players, selected_player, players_target, game_map, dt):
+    debug_print("Decision Node Action: Managing battle offensively.")
+    bot.manage_battle(selected_player, players_target, players, game_map, dt) # Offensive battle management
+
+# --- Decision Trees ---
+
+def create_economic_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
+    """Decision tree for Economic mode - focuses on economy, defends if attacked."""
     return DecisionNode(
-        condition=lambda: is_under_attack(bot, enemy_team),
+        condition=lambda: is_under_attack_condition(bot, enemy_team),
         true_branch=DecisionNode(
-            action=lambda: priorty1(bot, enemy_team, None, game_map, dt)
+            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt) # Défend si attaqué
         ),
         false_branch=DecisionNode(
-            condition=lambda: gold_food_wood_low(bot),
+            condition=lambda: is_resource_shortage_condition(bot),
             true_branch=DecisionNode(
-                action=lambda: priorty7(bot)
+                action=lambda: address_resource_shortage_action(bot) # Fix resource shortage
             ),
             false_branch=DecisionNode(
-                condition=lambda: building_needs(bot),
+                condition=lambda: are_buildings_needed_condition(bot),
                 true_branch=DecisionNode(
-                    condition=lambda: army_below_threshold(bot), 
-                    true_branch=DecisionNode(
-                        action=lambda: priorty_5(bot)
-                    ),
-                    false_branch=DecisionNode(
-                        action=lambda: build_structure(bot)
-                    )
+                    action=lambda: build_needed_structure_action(bot) # Build economic buildings
                 ),
-                false_branch=DecisionNode(
-                    condition=lambda: damaged_buildings(bot),
-                    true_branch=DecisionNode(
-                        action=lambda: priority_6(bot)
-                    ),
-                    false_branch=DecisionNode(
-                        action=lambda: priority_2(bot, enemy_teams, game_map)
-                    )
+                false_branch=DecisionNode( # If no urgent needs, balance army
+                    action=lambda: balance_army_action(bot)
                 )
             )
         )
     )
 
-# Example Usage
-bot = Bot(player_team="player_team", game_map="game_map", clock="clock")
-decision_tree = create_decision_tree(
-    bot=bot,
-    enemy_team="enemy_team",
-    enemy_teams=["enemy_team_1", "enemy_team_2"],
-    game_map="game_map",
-    dt="dt"
-)
+def create_defensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
+    """Decision tree for Defensive mode - focuses on defense and strong economy."""
+    return DecisionNode(
+        condition=lambda: is_under_attack_condition(bot, enemy_team),
+        true_branch=DecisionNode(
+            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt) # Prioritize defense
+        ),
+        false_branch=DecisionNode(
+            condition=lambda: are_damaged_buildings_condition(bot),
+            true_branch=DecisionNode(
+                action=lambda: repair_buildings_action(bot) # Repair buildings if damaged
+            ),
+            false_branch=DecisionNode(
+                condition=lambda: is_resource_shortage_condition(bot),
+                true_branch=DecisionNode(
+                    action=lambda: address_resource_shortage_action(bot) # Ensure good economy
+                ),
+                false_branch=DecisionNode( # If base is secure and economy good, then balance army
+                    action=lambda: balance_army_action(bot)
+                )
+            )
+        )
+    )
 
-decision_tree.evaluate()
+
+def create_offensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
+    """Decision tree for Offensive mode - focuses on aggressive military actions."""
+    return DecisionNode(
+        condition=lambda: is_under_attack_condition(bot, enemy_team),
+        true_branch=DecisionNode(
+            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt) # Défend si attaqué en premier
+        ),
+        false_branch=DecisionNode(
+            condition=lambda: is_army_below_threshold_condition(bot),
+            true_branch=DecisionNode(
+                action=lambda: balance_army_action(bot) # Build army if small
+            ),
+            false_branch=DecisionNode( # If army is decent size, attack!
+                action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt) # Manage offensive battle
+            )
+        )
+    )
+
+def create_default_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
+    """Fallback decision tree - a balanced approach."""
+    return DecisionNode(
+        condition=lambda: is_under_attack_condition(bot, enemy_team),
+        true_branch=DecisionNode(
+            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt)
+        ),
+        false_branch=DecisionNode(
+            condition=lambda: is_resource_shortage_condition(bot),
+            true_branch=DecisionNode(
+                action=lambda: address_resource_shortage_action(bot)
+            ),
+            false_branch=DecisionNode(
+                condition=lambda: are_buildings_needed_condition(bot),
+                true_branch=DecisionNode(
+                    action=lambda: build_needed_structure_action(bot)
+                ),
+                false_branch=DecisionNode(
+                    condition=lambda: is_military_count_low_condition(bot),
+                    true_branch=DecisionNode(
+                        action=lambda: balance_army_action(bot)
+                    ),
+                    false_branch=DecisionNode(
+                        action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt) # Balanced approach: manage offense if nothing else needed
+                    )
+                )
+            )
+        )
+    )
