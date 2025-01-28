@@ -1,5 +1,6 @@
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 import time
 import pygame
 import sys
@@ -50,6 +51,7 @@ from Settings.setup import (
 from Controller.Bot import manage_battle
 import os # Import os for path operations
 from Settings.sync import TEMP_SAVE_PATH
+from Controller.sync_manager import check_and_load_sync
 
 TEMP_SAVE_FILENAME = "temp_save.pkl" # Define temporary save file name
 TEMP_SAVE_PATH = os.path.join(SAVE_DIRECTORY, TEMP_SAVE_FILENAME) # Define the full path to the temp save
@@ -217,7 +219,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     # Check if temp save exists and load if so, only on initial game_loop start, not after mode switch
     if os.path.exists(TEMP_SAVE_PATH) and not game_state.get('switch_display'): # Check switch_display to prevent loading after switch
-        debug_print("Loading game state from temp save...")
+        print("Loading game state from temp save...") # MODIFIED DEBUG PRINT
         game_map.load_map(TEMP_SAVE_PATH)
         players = game_map.players # Reload players from loaded map
         game_state['players'] = players
@@ -230,6 +232,85 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         players_target = players_target[:len(players)]  # Update players_target length to match loaded players
         os.remove(TEMP_SAVE_PATH) # Clean up temp save after loading
 
+    # Check for temp save at startup
+    if os.path.exists(TEMP_SAVE_PATH):
+        try:
+            print("[GUI] Loading game state from temp save...") # MODIFIED DEBUG PRINT
+            # Store current game_state
+            old_game_state = game_map.game_state
+
+            # Load the map
+            game_map.load_map(TEMP_SAVE_PATH)
+
+            # Restore and update game_state
+            game_map.game_state = old_game_state
+
+            # Update players and other state
+            players = game_map.players
+            game_state['players'] = players
+            if players:
+                game_state['selected_player'] = players[0]
+            else:
+                game_state['selected_player'] = None
+
+            game_state['players_target'] = [None for _ in range(len(players))]
+            game_state['team_colors'] = generate_team_colors(len(players))
+
+            os.remove(TEMP_SAVE_PATH)
+            print("[GUI] Successfully loaded temp save") # MODIFIED DEBUG PRINT
+
+            # Force a redraw
+            game_state['force_full_redraw'] = True
+            game_state['player_selection_updated'] = True
+
+        except Exception as e:
+            debug_print(f"[GUI] Error loading temp save: {e}")
+            if os.path.exists(TEMP_SAVE_PATH):
+                os.remove(TEMP_SAVE_PATH)
+
+    # Quand on charge une sauvegarde depuis le terminal
+    if os.path.exists(TEMP_SAVE_PATH):
+            try:
+                print("[GUI - GAME LOOP] Found temp save, reloading for sync...") # MODIFIED DEBUG PRINT
+                game_map.load_map(TEMP_SAVE_PATH)
+
+                players = game_map.players
+                game_state['players'] = players
+                game_state['selected_player'] = players[0] if players else None
+                game_state['players_target'] = [None for _ in range(len(players))]
+                game_state['team_colors'] = generate_team_colors(len(players))
+                game_state['old_resources'] = {
+                    p.teamID: p.resources.copy() for p in players
+                }
+
+                # --- GUI REFRESH EXPLICIT STEPS (in game loop) ---
+                print("[GUI - GAME LOOP - LOOP LOAD] Before GUI refresh, player count:", len(game_state['players'])) # DEBUG
+                min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map) # Recompute map bounds
+                camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y) # Reset camera bounds
+                camera.zoom_out_to_global() # Reset zoom
+                game_state['force_full_redraw'] = True
+                game_state['player_selection_updated'] = True
+                player_selection_surface = create_player_selection_surface(
+                    game_state['players'],
+                    game_state['selected_player'],
+                    game_state['minimap_background_rect'],
+                    game_state['team_colors']
+                )
+                game_state['player_selection_surface'] = player_selection_surface
+                game_state['player_info_updated'] = True # Ensure player info is also updated
+                game_state['player_info_updated'] = True
+                game_state['notification_start_time'] = time.time()
+                print("[GUI - GAME LOOP - LOOP LOAD] After GUI refresh completed") # DEBUG
+                # --- END GUI REFRESH ---
+
+
+                os.remove(TEMP_SAVE_PATH)
+                print("[GUI - GAME LOOP] Successfully loaded new game state") # MODIFIED DEBUG PRINT
+
+            except Exception as e:
+                debug_print(f"[GUI] Error loading temp save: {e}")
+                if os.path.exists(TEMP_SAVE_PATH):
+                    os.remove(TEMP_SAVE_PATH)
 
     while running:
         current_time = time.time()
@@ -296,6 +377,12 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             update_counter += dt
 
         # Simpliste manage battle
+        if selected_player and selected_player.teamID >= len(players_target):
+            # Redimensionner si nécessaire
+            players_target.clear()
+            players_target.extend([None] * len(players))
+            game_state['players_target'] = players_target
+
         manage_battle(selected_player, players_target, players, game_map, dt)
 
         if not game_state.get('paused', False):
@@ -438,27 +525,39 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         # Check if terminal has created a temp save
         if os.path.exists(TEMP_SAVE_PATH):
             try:
-                debug_print("[GUI] Found temp save, reloading for sync...")
+                print("[GUI] Found temp save, reloading for sync...") # MODIFIED DEBUG PRINT
+
+                # Charger directement la nouvelle map
                 game_map.load_map(TEMP_SAVE_PATH)
+
+                # Mettre à jour l'état avec les nouvelles données
                 players = game_map.players
                 game_state['players'] = players
                 game_state['selected_player'] = players[0] if players else None
-                players_target = [None for _ in range(len(players))]
-                game_state['players_target'] = players_target
+                game_state['players_target'] = [None for _ in range(len(players))]
                 game_state['team_colors'] = generate_team_colors(len(players))
+                game_state['old_resources'] = {
+                    p.teamID: p.resources.copy() for p in players
+                }
+
+                # Forcer mise à jour visuelle
                 game_state['force_full_redraw'] = True
                 game_state['player_selection_updated'] = True
-                debug_print("[GUI] Temp save loaded successfully")
-                os.remove(TEMP_SAVE_PATH)  # Delete temp file after loading
-                debug_print("[GUI] Temp save file deleted")
+                game_state['player_info_updated'] = True
+
+                os.remove(TEMP_SAVE_PATH)
+                print("[GUI] Successfully loaded new game state") # MODIFIED DEBUG PRINT
+
             except Exception as e:
                 debug_print(f"[GUI] Error loading temp save: {e}")
+                if os.path.exists(TEMP_SAVE_PATH):
+                    os.remove(TEMP_SAVE_PATH)
 
         # After updating everything, force sync if requested
         if game_state.get('force_sync'):
-            debug_print("[GAME_LOOP] Forcing game state sync across interfaces...")
+            print("[GAME_LOOP] Forcing game state sync across interfaces...") # MODIFIED DEBUG PRINT
             game_map.save_map(TEMP_SAVE_PATH)
-            debug_print("[GAME_LOOP] Reloading from temp save for sync.")
+            print("[GAME_LOOP] Reloading from temp save for sync.") # MODIFIED DEBUG PRINT
             game_map.load_map(TEMP_SAVE_PATH)
             players = game_map.players
             game_state['players'] = players
@@ -468,5 +567,16 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             game_state['team_colors'] = team_colors
             os.remove(TEMP_SAVE_PATH)
             game_state['force_sync'] = False
+
+        # Vérifier régulièrement les synchros
+        if check_and_load_sync(game_map):
+            print("[GUI] Sync state loaded")
+            # Mettre à jour l'état complet
+            players = game_map.players
+            game_state['players'] = players
+            game_state['selected_player'] = players[0] if players else None
+            game_state['team_colors'] = generate_team_colors(len(players))
+            game_state['force_full_redraw'] = True
+            game_state['player_selection_updated'] = True
 
     return "done"

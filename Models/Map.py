@@ -303,7 +303,8 @@ class GameMap:
             'grid': self.grid,
             'grid_size': self.grid_size,
             'center_gold_flag': self.center_gold_flag,
-            'players': self.players
+            'players': self.players,
+            'game_state': self.game_state  # Sauvegarder aussi le game_state
         }
         with open(full_path, 'wb') as f:
             pickle.dump(data, f)
@@ -313,14 +314,41 @@ class GameMap:
         try:
             with open(filename, 'rb') as f:
                 data = pickle.load(f)
+            
+            # Sauvegarder quelques paramètres clés de l'ancien game_state si nécessaire
+            old_gui_settings = None
+            if self.game_state:
+                old_gui_settings = {
+                    'show_gui_elements': self.game_state.get('show_gui_elements', True),
+                    'show_player_info': self.game_state.get('show_player_info', True),
+                    'show_all_health_bars': self.game_state.get('show_all_health_bars', False),
+                    'camera': self.game_state.get('camera'),
+                    'screen': self.game_state.get('screen'),
+                    'screen_width': self.game_state.get('screen_width'),
+                    'screen_height': self.game_state.get('screen_height')
+                }
+
+            # Charger les données de la sauvegarde
             self.grid = data['grid']
             self.grid_size = data['grid_size']
             self.center_gold_flag = data['center_gold_flag']
             self.players = data['players']
             self.num_tiles_x = self.num_tiles_y = self.grid_size
+            
+            # Si nous avions un ancien game_state, réintégrer uniquement les paramètres d'interface
+            if old_gui_settings:
+                self.game_state = data.get('game_state', {})  # Utiliser le game_state de la sauvegarde
+                # Restaurer uniquement les paramètres d'interface
+                for key, value in old_gui_settings.items():
+                    if value is not None:  # Ne pas écraser avec None
+                        self.game_state[key] = value
+            else:
+                self.game_state = data.get('game_state', {})
+
             debug_print(f"Game map loaded successfully from {filename}.")
         except Exception as e:
             debug_print(f"Error loading game map: {e}")
+            raise
 
     def move_to_inactive(self, entity):
         self.remove_entity(entity)

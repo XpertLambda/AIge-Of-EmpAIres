@@ -259,38 +259,43 @@ def choose_target(players,selected_player,players_target):
 def is_under_attack():
     return True
 
-def manage_battle(selected_player,players_target,players,game_map,dt):
-    #réassigne une target a chaque unit d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense
-    #arrete les combats
-    if selected_player.teamID < len(players_target): # AJOUTER CETTE LIGNE DE VERIFICATION
-        enemy=players_target[selected_player.teamID]
-    else:
-        enemy = None # OU autre gestion si l'index est hors limites
-        print(f"Warning: selected_player.teamID {selected_player.teamID} out of range for players_target (length {len(players_target)}).") # DEBUG
-        return # Sortir de la fonction pour éviter l'erreur
+def manage_battle(selected_player, players_target, players, game_map, dt):
+    # Add safety checks at the start of the function
+    if not selected_player or not players_target or len(players_target) != len(players):
+        # Resize players_target if needed
+        players_target[:] = [None for _ in range(len(players))]
+        return
 
-    attack_mode=True
-    #defense
+    if selected_player.teamID >= len(players_target):
+        print(f"Warning: Invalid teamID {selected_player.teamID}. Skipping battle management.")
+        return
+
+    enemy = players_target[selected_player.teamID]  # Initialize enemy with current target
+    attack_mode = True
+
+    # defense
     if is_under_attack():
-    #on cherche la team qui est entrain de nous attaquer si les frontieres on été violer:
-        for i in range(0,len(players_target)):
-            if players_target[i]==selected_player:
+        # on cherche la team qui est entrain de nous attaquer si les frontieres on été violer:
+        for i in range(0, len(players_target)):
+            if players_target[i] == selected_player:
                 for team in players:
-                    if team.teamID==i:
-                            players_target[selected_player.teamID]=None
-                            enemy=team
-                            attack_mode=False
-    if enemy!=None and (len(enemy.units)!=0 or len(enemy.buildings)!=0):
+                    if team.teamID == i:
+                        players_target[selected_player.teamID] = None
+                        enemy = team
+                        attack_mode = False
+                        break  # Added break to exit loop once enemy is found
+
+    if enemy is not None and (len(enemy.units) != 0 or len(enemy.buildings) != 0):
         for unit in selected_player.units:
-            if not isinstance(unit,Villager) or (len(selected_player.units)==0 and not attack_mode):
-                if unit.attack_target!=None and unit.attack_target.state!='death':
-                    unit.seekAttack(game_map,dt)
+            if not isinstance(unit, Villager) or (len(selected_player.units) == 0 and not attack_mode):
+                if unit.attack_target is not None and unit.attack_target.state != 'death':
+                    unit.seekAttack(game_map, dt)
                 else:
-                    search_for_target(unit,enemy,attack_mode)
+                    search_for_target(unit, enemy, attack_mode)
     else:
-        modify_target(selected_player,None,players_target)
-    if get_military_unit_count(selected_player)==0:
-        modify_target(selected_player,None,players_target)
+        modify_target(selected_player, None, players_target)
+    if get_military_unit_count(selected_player) == 0:
+        modify_target(selected_player, None, players_target)
 
 
 #Priorité 6

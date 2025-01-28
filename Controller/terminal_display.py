@@ -50,26 +50,29 @@ def _curses_main(stdscr, game_map):
     win_debug = curses.newwin(debug_h, total_w, map_h, 0)
     win_debug.scrollok(True)
 
-    # Initialize color pairs for teams dynamically from game colors
-    curses.start_color()
-    team_colors_rgb = generate_team_colors(len(game_map.players)) # Get RGB team colors from your drawing.py
-    team_colors_curses_indices = {}
-    start_color_index = 10  # Start allocating color pairs from index 10 to avoid overwriting defaults
-    for i, rgb_color in enumerate(team_colors_rgb):
-        r, g, b = rgb_color
-        curses_r = int(r / 255 * 1000)
-        curses_g = int(g / 255 * 1000)
-        curses_b = int(b / 255 * 1000)
-        curses_color_num = start_color_index + i
-        try:
-            curses.init_color(curses_color_num, curses_r, curses_g, curses_b)
-            curses.init_pair(curses_color_num - start_color_index + 1, curses_color_num, curses.COLOR_BLACK) # Pair index starts from 1
-            team_colors_curses_indices[i] = curses_color_num - start_color_index + 1
-        except curses.error as e:
-            debug_print(f"Error initializing color for team {i}: {e}")
-            team_colors_curses_indices[i] = 0 # Fallback to default color pair
+    # Move color initialization to a function we can call again when needed
+    def init_team_colors():
+        curses.start_color()
+        team_colors_rgb = generate_team_colors(len(game_map.players))
+        team_colors_curses_indices = {}
+        start_color_index = 10
+        for i, rgb_color in enumerate(team_colors_rgb):
+            r, g, b = rgb_color
+            curses_r = int(r / 255 * 1000)
+            curses_g = int(g / 255 * 1000)
+            curses_b = int(b / 255 * 1000)
+            curses_color_num = start_color_index + i
+            try:
+                curses.init_color(curses_color_num, curses_r, curses_g, curses_b)
+                curses.init_pair(curses_color_num - start_color_index + 1, curses_color_num, curses.COLOR_BLACK)
+                team_colors_curses_indices[i] = curses_color_num - start_color_index + 1
+            except curses.error as e:
+                debug_print(f"Error initializing color for team {i}: {e}")
+                team_colors_curses_indices[i] = 0
+        return team_colors_curses_indices
 
-
+    # Initial color setup
+    team_colors_curses_indices = init_team_colors()
 
     # "Injection" de la fenêtre de debug dans terminal_display_debug.py
     debug_print_set_window(win_debug)
@@ -141,11 +144,83 @@ def _curses_main(stdscr, game_map):
 
         win_map.refresh()
 
+    def clear_all_windows():
+        """Helper function to aggressively clear all curses windows"""
+        # Fill entire windows with spaces
+        win_map.bkgd(' ', curses.A_NORMAL)
+        win_debug.bkgd(' ', curses.A_NORMAL)
+        stdscr.bkgd(' ', curses.A_NORMAL)
+        
+        # Clear and delete all content
+        win_map.clear()
+        win_map.erase()
+        win_debug.clear()
+        win_debug.erase()
+        stdscr.clear()
+        stdscr.erase()
+        
+        # Redraw borders if needed
+        win_map.box()
+        win_debug.box()
+        
+        # Refresh everything
+        win_map.refresh()
+        win_debug.refresh()
+        stdscr.refresh()
+
+    def clear_and_reset_curses(stdscr, win_map, win_debug, team_colors_curses_indices):
+        """Helper function to properly clear and reset curses windows"""
+        try:
+            # 1. Reset des couleurs d'abord
+            curses.start_color()
+            time.sleep(0.05)  # Petit délai pour laisser le temps aux couleurs de se réinitialiser
+            
+            # 2. Clear complet des fenêtres
+            stdscr.clear()
+            win_map.clear()
+            win_debug.clear()
+            time.sleep(0.05)  # Délai pour le clear
+            
+            # 3. Erase du contenu
+            win_map.erase()
+            win_debug.erase()
+            stdscr.erase()
+            
+            # 4. Reset des attributs
+            win_map.bkgd(' ', curses.A_NORMAL)
+            win_debug.bkgd(' ', curses.A_NORMAL)
+            stdscr.bkgd(' ', curses.A_NORMAL)
+            
+            # 5. Redraw des bordures
+            win_map.box()
+            win_debug.box()
+            
+            # 6. Refresh dans le bon ordre
+            stdscr.noutrefresh()
+            win_map.noutrefresh()
+            win_debug.noutrefresh()
+            curses.doupdate()  # Update physique de l'écran
+            
+            # 7. Réinitialisation des couleurs
+            team_colors_curses_indices = init_team_colors()
+            
+            time.sleep(0.1)  # Délai final pour s'assurer que tout est bien appliqué
+            
+            return team_colors_curses_indices
+            
+        except curses.error as e:
+            debug_print(f"Error during curses reset: {e}")
+            return team_colors_curses_indices
+
     debug_print("=== Mode curses démarré ===")
     debug_print(f"Map size: {game_map.num_tiles_x} x {game_map.num_tiles_y}")
     debug_print("Tapez ESC pour fermer curses.")
 
     running = True
+
+    # Ajouter le compteur de tentatives pour la détection du fichier temp
+    check_temp_counter = 0
+
     while running:
         try:
             key = stdscr.getch()
@@ -270,12 +345,16 @@ def _curses_main(stdscr, game_map):
                             chosen_file = save_files[choice_idx]
                             save_path = os.path.join(saves_folder, chosen_file)
                             
-                            # Load the save first
+                            # Charger la nouvelle save
                             game_map.load_map(save_path)
-                            debug_print(f"[CURSES] => Loaded save: {chosen_file}")
                             
-                            # Then save to temp file and notify GUI
+                            # Clear et reset propre de curses
+                            team_colors_curses_indices = clear_and_reset_curses(stdscr, win_map, win_debug, team_colors_curses_indices)
+                            
+                            # Sauvegarder pour la GUI
                             game_map.save_map(TEMP_SAVE_PATH)
+                            
+                            debug_print(f"[CURSES] => Loaded save: {chosen_file}")
                             debug_print("[CURSES] => Created temp save for GUI sync")
                         except Exception as e:
                             debug_print(f"[CURSES] => Error during load/sync: {e}")
@@ -288,17 +367,30 @@ def _curses_main(stdscr, game_map):
                 # Reset force_sync so we don't reload forever
                 game_map.game_state['force_sync'] = False
 
-        # After handling keys but before redrawing
-        # Check if GUI has requested a sync via temp file
-        if os.path.exists(TEMP_SAVE_PATH):
-            try:
-                debug_print("[CURSES] Found temp save, reloading for sync...")
-                game_map.load_map(TEMP_SAVE_PATH)
-                debug_print("[CURSES] Temp save loaded successfully")
-                os.remove(TEMP_SAVE_PATH)  # Delete temp file after loading
-                debug_print("[CURSES] Temp save file deleted")
-            except Exception as e:
-                debug_print(f"[CURSES] Error loading temp save: {e}")
+        # Vérifier plus fréquemment l'existence du fichier temp
+        check_temp_counter += 1
+        if check_temp_counter >= 10:  # Vérifier toutes les 10 itérations
+            check_temp_counter = 0
+            from Controller.sync_manager import check_and_load_sync
+            if check_and_load_sync(game_map):
+                debug_print("[CURSES] Sync state loaded")
+                # Réinitialiser les couleurs
+                team_colors_curses_indices = init_team_colors()
+            if os.path.exists(TEMP_SAVE_PATH):
+                try:
+                    debug_print("[CURSES] Found temp save, reloading for sync...")
+                    
+                    # Clear et reset propre avant chargement
+                    team_colors_curses_indices = clear_and_reset_curses(stdscr, win_map, win_debug, team_colors_curses_indices)
+                    
+                    game_map.load_map(TEMP_SAVE_PATH)
+                    debug_print("[CURSES] Temp save loaded successfully")
+                    
+                    os.remove(TEMP_SAVE_PATH)
+                except Exception as e:
+                    debug_print(f"[CURSES] Error loading temp save: {e}")
+                    if os.path.exists(TEMP_SAVE_PATH):
+                        os.remove(TEMP_SAVE_PATH)  # Nettoyer même en cas d'erreur
 
         # Redraw
         win_map.erase()
