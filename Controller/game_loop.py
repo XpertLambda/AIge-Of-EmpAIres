@@ -488,6 +488,14 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
     bot_update_timer = 0
     bot_update_interval = 1.0 / DPS  # 0.5 secondes pour DPS = 2
 
+    # Initialisation des bots - CORRECTION
+    bots = []
+    for player in players:  # On boucle sur tous les joueurs, pas de joueur humain
+        bot_mode = user_choices.get("bot_mode", "economique")  # Récupérer le mode choisi
+        bot_level = user_choices.get("bot_level", "medium")    # Récupérer le niveau choisi
+        bot = Bot(player, game_map, clock, difficulty=bot_level, mode=bot_mode)  # Créer un bot avec le mode et niveau choisis
+        bots.append(bot)
+
     while running:
         current_time = time.time()
         if not is_terminal_only:
@@ -564,14 +572,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
                 update_counter = 0
                 update_minimap_elements(game_state)
             update_counter += dt
-
-        # Simpliste manage battle
-        if selected_player and selected_player.teamID >= len(players_target):
-            # Redimensionner si nécessaire
-            players_target.clear()
-            players_target.extend([None] * len(players))
-            game_state['players_target'] = players_target
-        #Bot.manage_battle(selected_player, players_target, players, game_map, dt)
 
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):
