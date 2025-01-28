@@ -15,12 +15,12 @@ from Settings.setup import BUILDING_ZONE_OFFSET, TILE_SIZE, MAP_WIDTH, MAP_HEIGH
 from Controller.terminal_display_debug import debug_print
 
 class GameMap:
-    def __init__(self, grid_size, center_gold_flag, players, generate=True):
-        self.grid_size = grid_size
+    def __init__(self, grid_width, grid_height, center_gold_flag, players, generate=True):
+        self.grid_size = (grid_width, grid_height)  # Optionally store as tuple if needed
+        self.num_tiles_x = grid_width
+        self.num_tiles_y = grid_height
         self.center_gold_flag = center_gold_flag
         self.players = players
-        self.num_tiles_x = grid_size
-        self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
         self.resources = {}
@@ -324,7 +324,8 @@ class GameMap:
         try:
             data = {
                 'grid': self.grid,
-                'grid_size': self.grid_size,
+                'grid_width': self.num_tiles_x,
+                'grid_height': self.num_tiles_y,
                 'center_gold_flag': self.center_gold_flag,
                 'players': self.players,
                 'game_state': self.game_state
@@ -358,10 +359,10 @@ class GameMap:
 
             # Load the data
             self.grid = data['grid']
-            self.grid_size = data['grid_size']
+            self.num_tiles_x = data['grid_width']
+            self.num_tiles_y = data['grid_height']
             self.center_gold_flag = data['center_gold_flag']
             self.players = data['players']
-            self.num_tiles_x = self.num_tiles_y = self.grid_size
             self.game_state = data.get('game_state', {})
 
             # Restore GUI state if it existed
