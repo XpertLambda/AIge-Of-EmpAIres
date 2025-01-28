@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST\Projet_python\Controller\game_loop.py
 import time
 import pygame
 import sys
@@ -41,10 +42,15 @@ from Settings.setup import (
     PANEL_RATIO,
     BG_RATIO,
     ONE_SECOND,
-    FPS_DRAW_LIMITER
+    FPS_DRAW_LIMITER,
+    SAVE_DIRECTORY  # Import SAVE_DIRECTORY
 )
 
 from Controller.Bot import manage_battle
+import os # Import os for path operations
+
+TEMP_SAVE_FILENAME = "temp_save.pkl" # Define temporary save file name
+TEMP_SAVE_PATH = os.path.join(SAVE_DIRECTORY, TEMP_SAVE_FILENAME) # Define the full path to the temp save
 
 def is_player_dead(player):
     if not player.units and not player.buildings:
@@ -202,6 +208,21 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     last_time = time.time()  # Ajout pour le mode terminal
 
+    # Check if temp save exists and load if so, only on initial game_loop start, not after mode switch
+    if os.path.exists(TEMP_SAVE_PATH) and not game_state.get('switch_display'): # Check switch_display to prevent loading after switch
+        debug_print("Loading game state from temp save...")
+        game_map.load_map(TEMP_SAVE_PATH)
+        players = game_map.players # Reload players from loaded map
+        game_state['players'] = players
+        if players:
+            game_state['selected_player'] = players[0]
+        else:
+            game_state['selected_player'] = None
+        team_colors = generate_team_colors(len(players)) # Regenerate team colors based on loaded players
+        game_state['team_colors'] = team_colors
+        os.remove(TEMP_SAVE_PATH) # Clean up temp save after loading
+
+
     while running:
         current_time = time.time()
         if not is_terminal_only:
@@ -242,6 +263,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
         # SI on a reçu le signal "switch_display" => on arrête la boucle
         if game_state.get('switch_display'):
+            debug_print("Saving game state before display switch...")
+            game_map.save_map(TEMP_SAVE_PATH) # Save to temp file before switching
             running = False
             user_choices["menu_result"] = "switch_display"
             break
