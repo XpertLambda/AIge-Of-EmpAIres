@@ -28,59 +28,61 @@ class Bot:
         }
         self.ATTACK_RADIUS = TILE_SIZE * 5  # Rayon d'attaque pour détecter les ennemis
 
-    def get_resource_shortage(self, current_resources, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
-        """
-        Détermine quelle ressource est en pénurie.
-        :param current_resources: Les ressources actuelles de l'équipe.
-        :param RESOURCE_THRESHOLDS: Les seuils de ressources.
-        :return: Le type de ressource en pénurie (food, wood, gold) ou None si tout va bien.
-        """
-        if current_resources.food < RESOURCE_THRESHOLDS['food']:
-            return 'food'
-        if current_resources.wood < RESOURCE_THRESHOLDS['wood']:
-            return 'wood'
-        if current_resources.gold < RESOURCE_THRESHOLDS['gold']:
-            return 'gold'
-        return None
+    def get_resource_shortage(self):
+        RESOURCE_MAPPING ={
+        "food": Farm,
+        "wood": Tree,
+        "gold": Gold,
+        }
+        # Assume `self.player_team.resources.get()` returns a tuple of resource quantities
+        resource_quantities = self.player_team.resources.get()  # Fetch the tuple
+        resource_keys = list(RESOURCE_THRESHOLDS.keys())  # Get the order of resources
+        
+        shortages = {}
+        for i, key in enumerate(resource_keys):
+            # Ensure the index does not exceed the length of resource_quantities
+            resource_amount = resource_quantities[i] if i < len(resource_quantities) else 0
+            shortages[key] = RESOURCE_THRESHOLDS[key] - resource_amount
 
-    def find_resource_location(self, game_map, resource_acronym):
-        """
-        Trouve l'emplacement d'une ressource spécifique sur la carte.
-        :param game_map: La carte du jeu.
-        :param resource_acronym: L'acronyme de la ressource (par exemple, 'W' pour le bois).
-        :return: Les coordonnées (x, y) de la ressource, ou None si non trouvée.
-        """
-        for (x, y), cell_content in game_map.grid.items():
-            if resource_acronym in cell_content:
-                return (x, y)
-        return None
+        critical_shortage = RESOURCE_MAPPING.key(min(shortages, key=shortages.get))
+        return critical_shortage if shortages[critical_shortage] > 0 else None
 
-    def reallocate_villagers(self, resource_in_shortage, villagers, game_map):
-        """
-        Réaffecte les villageois disponibles pour collecter une ressource en pénurie.
-        :param resource_in_shortage: Le type de ressource en pénurie (food, wood, gold).
-        :param villagers: La liste des villageois de l'équipe.
-        :param game_map: La carte du jeu.
-        """
-        for villager in villagers:
-            if villager.isAvailable() and not villager.task:
-                for x, y in game_map.grid:
-                    resource_nodes = game_map.grid[(x, y)]
-                    for resource_node in resource_nodes:
-                        if resource_node.acronym.lower() == resource_in_shortage[0].lower():
-                            villager.set_target(resource_node)
-                            return
+    
 
-    def check_and_address_resources(self, team, game_map, thresholds):
+    def reallocate_villagers(self, resource_type):
         """
-        Vérifie les ressources et réaffecte les villageois si nécessaire.
-        :param team: L'équipe du joueur.
-        :param game_map: La carte du jeu.
-        :param thresholds: Les seuils de ressources.
+        Reallocates Villagers to address resource shortages.
         """
-        resource_shortage = self.get_resource_shortage(team.resources, thresholds)
-        if resource_shortage:
-            self.reallocate_villagers(resource_shortage, team.units, game_map)
+        for villager in self.player_team.units:
+            if isinstance(villager, Villager) and villager.isAvailable():
+                nearest_drop_point = min(
+                    (b for b in self.player_team.buildings if hasattr(b, " resourceDropPoint=True")),
+                    key=lambda dp: math.dist((villager.x, villager.y), (dp.x, dp.y)),
+                    default=None
+                )
+                if nearest_drop_point:
+                    resource_positions = [
+                        pos for pos, set in self.game_map.resources.items()
+                        if isinstance(set, resource_type)
+                    ]
+                    if resource_positions:
+                        nearest_resource = min(
+                            resource_positions,
+                            key=lambda pos: math.dist(
+                                (nearest_drop_point.x, nearest_drop_point.y), pos
+                            )
+                        )
+                        l=self.game_map.grid.get(nearest_resource,None)
+                        if l:
+                         resource_target = next((entity for entity in l if isinstance(entity, resource_type)), None)
+                        villager.set_target(resource_target)
+                        return
+
+    def priorty7(self, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
+     resource_shortage = self.get_resource_shortage( RESOURCE_THRESHOLDS)
+     if resource_shortage:
+        self.reallocate_villagers(resource_shortage)
+
 
     def search_for_target(self, unit, enemy_team, attack_mode=True):
         """
@@ -166,7 +168,7 @@ class Bot:
             self.modify_target(selected_player, target, players_target)
         return target != None
 
-    def manage_battle(self, selected_player, players_target, players, game_map, dt):
+    def manage_battle(self, selected_player, players_target, players, game_map,dt):
         """
         Réassigne une target à chaque unité d'un player lorsqu'il n'en a plus lors d'un combat attaque ou défense.
         Arrête les combats si nécessaire.
@@ -175,7 +177,7 @@ class Bot:
         attack_mode = True
         # Defense
         # if any([is_under_attack(selected_player, enemy_team) for enemy_team in players]):
-        if True:
+        if self.is_under_attack(enemy):
             # On cherche la team qui est en train de nous attaquer si les frontières ont été violées
             for i in range(0, len(players_target)):
                 if players_target[i] == selected_player:
@@ -383,15 +385,16 @@ class Bot:
      zone=self.player_team.zone.get_zone()
 
      for z in zone:
-      entities = self.game_map.get(z)  # Get the list of entities in the zone
-     for entity in entities:
+      entities = self.game_map.grid.get(z,None)  
+      if entities:
+      
+       for entity in entities:
         if entity in enemy_team.units:
             return True
      return False
     
     def get_critical_points(self):
-       
-       
+    
         if not self.player_team.buildings:
             return []
         critical_points = [building for building in self.player_team.buildings if building.hp / building.max_hp < 0.3]
@@ -418,19 +421,19 @@ class Bot:
     
     def defend_under_attack(self, enemy_team, players_target,  dt):
      if self.is_under_attack( enemy_team):
-        critical_points = sorted(self.get_damaged_buildings(critical_threshold=0.7))
+        
         self.modify_target( None, players_target)
         self.gather_units_for_defense(  enemy_team)
         
         self.balance_units()
         
         self.build_defensive_structure( "Keep", 3)
-        self.manage_battle(self.player_team,None,enemy_team,self.game_map,dt)
+        self.manage_battle(self.player_team,None,enemy_team,self.game_map, dt)
     
-    def manage_battle(self, enemy_team, game_map, dt):
+    def priorty1(self, enemy_team, players_target, dt):
        
         if self.is_under_attack(enemy_team):
-            self.defend_under_attack(enemy_team, game_map, dt)
+            self.defend_under_attack(enemy_team, players_target, dt)
     
     def search_for_target(self, unit, enemy_team, attack_mode=True):
         """
