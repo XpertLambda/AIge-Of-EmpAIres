@@ -442,8 +442,8 @@ def handle_events(event, game_state):
                 if selected_player and 'selected_units' in game_state and len(game_state['selected_units']) > 0:
                     entity_target = closest_entity(game_state, mouse_x, mouse_y)
                     for unit_selected in game_state['selected_units']:
-                        unit_selected.set_target(entity_target)
                         unit_selected.path = None
+                        unit_selected.set_target(entity_target)
                     mouse_x, mouse_y = screen_to_2_5d(
                         mouse_x, mouse_y, screen_width, screen_height,
                         camera, HALF_TILE_SIZE, HALF_TILE_SIZE / 2
@@ -649,6 +649,7 @@ def closest_entity(game_state, mouse_x, mouse_y, search_radius=2):
         HALF_TILE_SIZE / 4
     )
     entity_set = game_map.grid.get((tile_x, tile_y), [])
+    print(f'found : {entity_set}')
     shortest_distance = 999999
     closest_ent = None
     for entity in entity_set:

@@ -98,7 +98,7 @@ difficulty_config = {
             'Barracks' : 1,
             'Stable' : 0, 
             'ArcheryRange' : 1,
-            'Farm' : 0,
+            'Farm' : 5,
             'Keep' : 5,
             'Camp' : 0,
         }
