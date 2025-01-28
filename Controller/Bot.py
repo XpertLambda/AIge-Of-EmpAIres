@@ -11,7 +11,6 @@ from Entity.Entity import *
 from Entity.Unit import *
 from Entity.Resource import Resource
 from Models.Map import GameMap
-from Controller.terminal_display_debug import debug_print
 from random import *
 from AiUtils.aStar import a_star
 
@@ -212,13 +211,9 @@ class Bot:
         return len(self.get_military_units(player))
     
     def update(self, game_map, dt):
-        debug_print("Updating bot...")
         enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
         
         # Log des ressources et des unités
-        debug_print(f"Resources: {self.player_team.resources}")
-        debug_print(f"Villagers: {sum(1 for unit in self.player_team.units if isinstance(unit, Villager))}")
-        debug_print(f"Military units: {len(self.get_military_units())}")
         
         # Appliquer la stratégie en fonction de la difficulté
         if self.difficulty == 'easy':
@@ -244,7 +239,6 @@ class Bot:
         # Trouver la position du TownCentre
         town_centre = next((building for building in self.player_team.buildings if isinstance(building, TownCentre)), None)
         if not town_centre:
-            debug_print("No TownCentre found. Cannot scout map.")
             return
 
         # Convertir les coordonnées en entiers
@@ -264,7 +258,6 @@ class Bot:
                 for resource in resources_at_tile:
                     # Utiliser le nom de la classe comme type de ressource
                     resource_type = resource.__class__.__name__.lower()  # "Gold" -> "gold", "Wood" -> "wood"
-                    debug_print(f"Found {resource_type} at ({x}, {y}).")
                     if resource_type in ['wood', 'gold']:
                         self.reallocate_villagers(resource_type)
 
@@ -273,7 +266,6 @@ class Bot:
                 if enemy_team.teamID != self.player_team.teamID:
                     for enemy in enemy_team.units:
                         if enemy.x == x and enemy.y == y:
-                            debug_print(f"Found enemy {enemy.__class__.__name__} at ({x}, {y}).")
                             # Adapter la stratégie en fonction des unités ennemies trouvées
                             if isinstance(enemy, Horseman):
                                 self.PRIORITY_UNITS['archer'] = 4  # Augmenter la priorité des archers
@@ -282,10 +274,8 @@ class Bot:
 
         # Si des ressources ou des ennemis sont trouvés, ajuster la stratégie
         if self.player_team.resources.wood < 100:
-            debug_print("Low on wood. Prioritizing wood collection.")
             self.balance_units()
         if self.player_team.resources.gold < 50:
-            debug_print("Low on gold. Prioritizing gold collection.")
             self.balance_units()
 
     def easy_strategy(self, enemy_teams, game_map, dt):
@@ -381,14 +371,7 @@ class Bot:
                     if hasattr(building, 'add_to_training_queue'):
                         # Entraîner l'unité dans ce bâtiment
                         success = building.add_to_training_queue(self.player_team)
-                        if success:
-                            debug_print(f"Added {unit_type.__name__} to training queue in {building.acronym}.")
-                        else:
-                            debug_print(f"Failed to add {unit_type.__name__} to training queue in {building.acronym}.")
                         return
-            debug_print(f"No available {building_type} found to train {unit_type.__name__}.")
-        else:
-            debug_print(f"No building mapping found for unit type: {unit_type.__name__}.")
 
     def is_under_attack(self, enemy_team, ):
      zone=self.player_team.zone.get_zone()
@@ -482,7 +465,6 @@ class Bot:
                 if building.acronym == 'T':  # TownCentre entraîne des villageois
                     if len(building.training_queue) < MAX_QUEUE_SIZE:
                         self.train_units(Villager)
-                        debug_print(f"Added Villager to training queue in {building.acronym}.")
                         break  # On entraîne un seul villageois à la fois
 
         # Priorité 2 : Entraîner des unités militaires si nécessaire
@@ -504,7 +486,6 @@ class Bot:
                 unit_type = Building.UNIT_TRAINING_MAP.get(best_building.acronym)
                 if unit_type:
                     self.train_units(best_building, unit_type)
-                    debug_print(f"Added {unit_type} to training queue in {best_building.acronym}.")
 
     def adjust_priorities(self, enemy_teams):
         """
@@ -535,15 +516,12 @@ class Bot:
         # Ajuster les priorités en fonction des unités ennemies
         if enemy_horsemen > HORSEMEN_THRESHOLD:
             self.PRIORITY_UNITS['a'] = 4  # Augmenter la priorité des archers
-            debug_print(f"Enemy has many horsemen ({enemy_horsemen}). Increasing archer priority.")
 
         if enemy_archers > ARCHERS_THRESHOLD:
             self.PRIORITY_UNITS['s'] = 3  # Augmenter la priorité des épéistes
-            debug_print(f"Enemy has many archers ({enemy_archers}). Increasing swordsman priority.")
 
         if enemy_swordsmen > SWORDSMEN_THRESHOLD:
             self.PRIORITY_UNITS['h'] = 2  # Augmenter la priorité des cavaliers
-            debug_print(f"Enemy has many swordsmen ({enemy_swordsmen}). Increasing horseman priority.")
     
     def choose_attack_composition(self):
         """
@@ -594,7 +572,6 @@ class Bot:
                         target = self.find_target_for_unit(unit)
                         if target:
                             unit.set_target(target)  # Définir la cible de l'unité
-                            debug_print(f"Unit {unit.__class__.__name__} targeting {target.__class__.__name__}.")
                     elif unit.target:
                         # Si l'unité a déjà une cible, on lui ordonne d'attaquer
                         unit.attack()
@@ -642,13 +619,11 @@ class Bot:
     def build_structure(self, clock):
         needed_buildings = self.check_building_needs()
         if not needed_buildings:
-            debug_print("No buildings needed.")
             return False
         for building_type in needed_buildings:
             if building_type in building_class_map:
                 building_class = building_class_map[building_type]
                 if not hasattr(building_class, 'cost'):
-                    debug_print(f"Building class {building_type} has no attribute 'cost'.")
                     continue
                 building_cost = building_class.cost
                 if (self.player_team.resources["wood"] >= building_cost.wood and
@@ -659,6 +634,5 @@ class Bot:
                         x, y = location
                         building = building_class(team=self.player_team.teamID, x=x, y=y)
                         if self.player_team.buildBuilding(building, clock, nb=3, game_map=self.game_map):
-                            debug_print(f"Started building {building_type} at ({x}, {y}).")
                             return True
         return False
