@@ -1,3 +1,4 @@
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Settings\setup.py
 # Path: Settings/setup.py
 from collections import namedtuple
 from Models.Resources import Resources
@@ -167,7 +168,7 @@ gui_config = {
 
     'wood':{
         'directory' : 'assets/UI/Resources/wood',
-    },
+        },
 
     'food':{
         'directory' : 'assets/UI/Resources/food',
@@ -180,7 +181,7 @@ gui_config = {
 }
 
 MAX_VISIBLE_ITEMS = 5
-ITEM_HEIGHT = 20
+ITEM_HEIGHT = 25
 
 BAR_HEIGHT = 30
 BAR_BORDER_RADIUS = 30
@@ -399,21 +400,24 @@ user_choices = {
     "load_game":      False,
     "chosen_save":    None,
     "validated":      False,
-    "index_terminal_display" : 0 # 0: GUI, 1: Terminal, 2: Both
+    "index_terminal_display" : 0, # 0: GUI, 1: Terminal, 2: Both
+    "bot_mode": "economique" # Default bot mode, added here
 }
 
-# Update combo scroll positions to include both dimensions
+# Update combo scroll positions to include bot_mode
 combo_scroll_positions = {
     "width": 0,  # width scroll position
     "height": 0, # height scroll position
     "nbot": 0,
-    "lvl":  0
+    "lvl":  0,
+    "bot_mode": 0 # bot_mode scroll position - AJOUTÉ
 }
 
 # Define valid grid sizes
 VALID_GRID_SIZES = [i for i in range(100, 1000, 10)]
 VALID_BOTS_COUNT = [i for i in range(1, 56)]
 VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
+VALID_BOT_MODES = ["economique", "defensif", "offensif"] # Added valid bot modes - AJOUTÉ
 
 RESOURCE_THRESHOLDS = {
     'food': 300,

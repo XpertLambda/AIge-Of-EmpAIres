@@ -344,10 +344,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
 
     draw_timer = 0
     bots = []
-    for player in players:
-        bot = Bot(player, game_map, clock)  # Crée un bot pour chaque joueur
-        bots.append(bot)
-
     frame_count = 0
     decision_timer = 0
     players_target = [None for _ in range(len(players))]
@@ -358,7 +354,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
     # Initialisation des bots
     bots = []
     for player in players:
-        bot = Bot(player, game_map, clock, difficulty='medium')  # Crée un bot pour chaque joueur AI
+        bot = Bot(player, game_map, difficulty='medium')  # Crée un bot pour chaque joueur AI
         bots.append(bot)
 
     bot_update_timer = 0  # Timer pour les mises à jour des bots

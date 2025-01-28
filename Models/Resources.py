@@ -69,8 +69,6 @@ class Resources:
             (wood > 0 and self.wood < wood)
         )
 
-
-
     def get(self):
         return (self.food, self.gold, self.wood)
 
