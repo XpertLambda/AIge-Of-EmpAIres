@@ -63,7 +63,7 @@ class Villager(Unit):
         self.stock_target = None
         self.set_task(None)
         self.set_destination(None, None)
-
+        print(f'target set : {target}')
         if target and target.isAlive() and target.entity_id != self.entity_id:
             if target.hasResources:
                 self.set_task('collect', target)

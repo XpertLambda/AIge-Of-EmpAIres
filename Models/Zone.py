@@ -32,16 +32,13 @@ class Zone:
         x1, y1 = start
         x2, y2 = end
         to_remove = []
-        print(f'zone before removal : {self.get_zone()}')
         for x in range(int(min(x1, x2)), int(max(x1, x2) + 1)):
             for y in range(int(min(y1, y2)), int(max(y1, y2) + 1)):
                 tile = (x, y)
                 if tile in self.zone:
                     to_remove.append(tile)
-        print(f'zone to remove : {to_remove}')
         for tile in to_remove:
             self.zone.remove(tile)
-        print(f'zone after remove : {self.get_zone()}')
         return to_remove
 
     def add_tile(self, position):

@@ -15,18 +15,18 @@ from Settings.setup import BUILDING_ZONE_OFFSET, TILE_SIZE, MAP_WIDTH, MAP_HEIGH
 from Controller.terminal_display_debug import debug_print
 
 class GameMap:
-    def __init__(self, grid_size, center_gold_flag, players, generate=True):
-        self.grid_size = grid_size
+    def __init__(self, grid_width, grid_height, center_gold_flag, players, generate=True):
+        self.grid_size = (grid_width, grid_height)  # Optionally store as tuple if needed
+        self.num_tiles_x = grid_width
+        self.num_tiles_y = grid_height
         self.center_gold_flag = center_gold_flag
         self.players = players
-        self.num_tiles_x = grid_size
-        self.num_tiles_y = grid_size
         self.num_tiles = self.num_tiles_x * self.num_tiles_y
         self.grid = {}
         self.resources = {}
         self.inactive_matrix = {}
         self.projectiles = {}
-        self.game_state = None  
+        self.game_state = None
 
         self.terminal_view_x = 0
         self.terminal_view_y = 0
@@ -40,7 +40,7 @@ class GameMap:
             or rounded_x + entity.size - 1 >= self.num_tiles_x
             or rounded_y + entity.size - 1 >= self.num_tiles_y):
             return False
-            
+
         for i in range(entity.size):
             for j in range(entity.size):
                 pos = (rounded_x + i, rounded_y + j)
@@ -70,6 +70,9 @@ class GameMap:
         return True
 
     def remove_entity(self, entity):
+        if not entity or entity.team is None:
+            return False
+            
         remove_counter = 0
         for pos, matrix_entities in list(self.grid.items()):
             for matrix_entity in list(matrix_entities):
@@ -81,6 +84,11 @@ class GameMap:
                     if remove_counter >= entity.size * entity.size:
                         if entity.team != None:
                             self.players[entity.team].remove_member(entity)
+                            # Mise à jour de old_resources quand une entité est supprimée
+                            if self.game_state and 'old_resources' in self.game_state:
+                                if entity.team in self.game_state['old_resources']:
+                                    self.game_state['old_resources'][entity.team] = self.players[entity.team].resources.copy()
+                            
                             if isinstance(entity, Building):
                                 x, y = entity.x , entity.y
                                 starting_point = (x - entity.size/2 + 0.5  - BUILDING_ZONE_OFFSET, y - entity.size/2 + 0.5 - BUILDING_ZONE_OFFSET)
@@ -93,7 +101,7 @@ class GameMap:
         x, y = round(position[0]), round(position[1])
         if x < 0 or y < 0 or x >= self.num_tiles_x or y >= self.num_tiles_y:
             return False
-        
+
         entities = self.grid.get((x, y), None)
         if entities:
             for entity in entities:
@@ -135,8 +143,6 @@ class GameMap:
                     y = random.randint(y_min, max(y_min, y_max - building.size + 1))
                     placed = self.add_entity(building, x, y)
                     if placed:
-                        if isinstance(building, (TownCentre, House)):
-                            player.maximum_population += building.population
                         break
                     attempts += 1
                 if not placed:
@@ -145,8 +151,6 @@ class GameMap:
                         for tile_x in range(self.num_tiles_x - building.size):
                             placed = self.add_entity(building, tile_x, tile_y)
                             if placed:
-                                if isinstance(building, (TownCentre, House)):
-                                    player.maximum_population += building.population
                                 break
                         if placed:
                             break
@@ -202,11 +206,11 @@ class GameMap:
         if x + 1 < self.num_tiles_x and y + 1 < self.num_tiles_y:
             return all((x + dx, y + dy) not in grid for dx in range(2) for dy in range(2))
         return False
-    
+
     def generate_map(self):
         self.generate_resources()
         self.place_gold_near_town_centers()
-        
+
         self.generate_zones()
         self.generate_buildings()
         self.generate_units()
@@ -294,7 +298,7 @@ class GameMap:
                 else:
                     row_display.append(' ')
             debug_print(''.join(row_display))
-    
+
     def save_map(self, filename=None):
         if filename is None:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -303,28 +307,80 @@ class GameMap:
             if not filename.endswith('.pkl'):
                 filename += '.pkl'
         full_path = os.path.join(SAVE_DIRECTORY, filename)
-        data = {
-            'grid': self.grid,
-            'grid_size': self.grid_size,
-            'center_gold_flag': self.center_gold_flag,
-            'players': self.players
-        }
-        with open(full_path, 'wb') as f:
-            pickle.dump(data, f)
-        debug_print(f"Game map saved successfully to {full_path}.")
+
+        # Temporarily store and remove unpicklable objects
+        gui_state = {}
+        if self.game_state:
+            gui_state = {
+                'screen': self.game_state.pop('screen', None),
+                'minimap_panel_sprite': self.game_state.pop('minimap_panel_sprite', None),
+                'minimap_background': self.game_state.pop('minimap_background', None),
+                'minimap_entities_surface': self.game_state.pop('minimap_entities_surface', None),
+                'player_selection_surface': self.game_state.pop('player_selection_surface', None),
+                'train_button_rects': self.game_state.pop('train_button_rects', {}),
+                'pause_menu_button_rects': self.game_state.pop('pause_menu_button_rects', {})
+            }
+
+        try:
+            data = {
+                'grid': self.grid,
+                'grid_width': self.num_tiles_x,
+                'grid_height': self.num_tiles_y,
+                'center_gold_flag': self.center_gold_flag,
+                'players': self.players,
+                'game_state': self.game_state
+            }
+            with open(full_path, 'wb') as f:
+                pickle.dump(data, f)
+            debug_print(f"Game map saved successfully to {full_path}.")
+        finally:
+            # Restore unpicklable objects
+            if self.game_state:
+                self.game_state.update(gui_state)
 
     def load_map(self, filename):
         try:
             with open(filename, 'rb') as f:
                 data = pickle.load(f)
+            
+            # Store any existing GUI state before loading
+            old_gui_state = None
+            if self.game_state:
+                old_gui_state = {
+                    'screen': self.game_state.get('screen'),
+                    'screen_width': self.game_state.get('screen_width'),
+                    'screen_height': self.game_state.get('screen_height'),
+                    'camera': self.game_state.get('camera'),
+                    'minimap_panel_sprite': self.game_state.get('minimap_panel_sprite'),
+                    'minimap_background': self.game_state.get('minimap_background'),
+                    'minimap_entities_surface': self.game_state.get('minimap_entities_surface'),
+                    'player_selection_surface': self.game_state.get('player_selection_surface')
+                }
+
+            # Load the data
             self.grid = data['grid']
-            self.grid_size = data['grid_size']
+            self.num_tiles_x = data['grid_width']
+            self.num_tiles_y = data['grid_height']
             self.center_gold_flag = data['center_gold_flag']
             self.players = data['players']
-            self.num_tiles_x = self.num_tiles_y = self.grid_size
+            self.game_state = data.get('game_state', {})
+
+            # Restore GUI state if it existed
+            if old_gui_state:
+                for key, value in old_gui_state.items():
+                    if value is not None:
+                        self.game_state[key] = value
+
+            # Initialize old_resources if needed
+            if self.game_state:
+                self.game_state['old_resources'] = {
+                    p.teamID: p.resources.copy() for p in self.players
+                }
+
             debug_print(f"Game map loaded successfully from {filename}.")
         except Exception as e:
             debug_print(f"Error loading game map: {e}")
+            raise
 
     def move_to_inactive(self, entity):
         self.remove_entity(entity)
@@ -355,7 +411,7 @@ class GameMap:
             entity.update(self, dt)
             if not entity.isAlive():
                 self.move_to_inactive(entity)
-        
+
         inactive_entities = set()
         for entities in self.inactive_matrix.values():
             inactive_entities.update(entities)
