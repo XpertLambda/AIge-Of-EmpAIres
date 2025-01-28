@@ -197,7 +197,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     draw_timer = 0
     bots = []
     for player in players:
-        bot = Bot(player, game_map)  # Crée un bot pour chaque joueur
+        bot = Bot(player, game_map, clock)  # Crée un bot pour chaque joueur
         bots.append(bot)
 
     frame_count = 0
@@ -207,10 +207,19 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
 
     players_target=[None for _ in range(0,len(players))]
 
+    # Initialisation des bots
+    bots = []
+    for player in players:
+        bot = Bot(player, game_map, clock, difficulty='medium')  # Crée un bot pour chaque joueur AI
+        bots.append(bot)
+
     while running:
         raw_dt = clock.tick(400) / ONE_SECOND
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
+
+        for bot in bots:
+            bot.update(game_map, dt)
 
         # On ne gère la caméra que si on n'est pas en mode terminal
         if not is_terminal_only:
@@ -263,7 +272,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
             update_counter += dt
 
         # Simpliste manage battle
-        manage_battle(selected_player, players_target, players, game_map, dt)
+        #Bot.manage_battle(selected_player, players_target, players, game_map, dt)
 
         if not game_state.get('paused', False):
             if game_state.get('player_selection_updated', False):

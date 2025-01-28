@@ -1,8 +1,10 @@
 import math
+import time
 from Models.Team import *
 from Settings.setup import RESOURCE_THRESHOLDS, TILE_SIZE
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
-from Entity.Building import Building, Keep
+from Entity.Building import Building, Keep, Barracks, TownCentre, Camp, House, Farm, Stable, ArcheryRange
+from Entity.Building.Barracks import Barracks
 from Settings.setup import *
 from Settings.entity_mapping import *
 from Entity.Entity import *
@@ -10,11 +12,15 @@ from Entity.Unit import *
 from Entity.Resource import Resource
 from Models.Map import GameMap
 from Controller.terminal_display_debug import debug_print
+from random import *
+from AiUtils.aStar import a_star
 
 class Bot:
-    def __init__(self, player_team, game_map):
+    def __init__(self, player_team, game_map, clock, difficulty = 'medium'):
+        self.clock= clock
         self.player_team = player_team
         self.game_map = game_map
+        self.difficulty = difficulty
         self.PRIORITY_UNITS = {
             'a': 3,  # Archers
             's': 2,  # Swordsmen
@@ -22,6 +28,143 @@ class Bot:
         }
         self.ATTACK_RADIUS = TILE_SIZE * 5  # Rayon d'attaque pour détecter les ennemis
     
+    def update(self, game_map, dt):
+        debug_print("Updating bot...")
+        enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
+        
+        # Log des ressources et des unités
+        debug_print(f"Resources: {self.player_team.resources}")
+        debug_print(f"Villagers: {sum(1 for unit in self.player_team.units if isinstance(unit, Villager))}")
+        debug_print(f"Military units: {len(self.get_military_units())}")
+        
+        # Appliquer la stratégie en fonction de la difficulté
+        if self.difficulty == 'easy':
+            self.easy_strategy(enemy_teams, game_map, dt)
+        elif self.difficulty == 'medium':
+            self.medium_strategy(enemy_teams, game_map, dt)
+        elif self.difficulty == 'hard':
+            self.hard_strategy(enemy_teams, game_map, dt)
+        
+        # Scouter la carte pour trouver des ressources ou des ennemis
+        self.scout_map(game_map)
+        
+        # Équilibrer les unités
+        self.balance_units()
+        
+        # Construire des structures si nécessaire
+        self.build_structure(self.clock)
+    def scout_map(self, game_map):
+        """
+        Explore la carte pour localiser les ressources et les unités ennemies.
+        :param game_map: La carte du jeu.
+        """
+        # Trouver la position du TownCentre
+        town_centre = next((building for building in self.player_team.buildings if isinstance(building, TownCentre)), None)
+        if not town_centre:
+            debug_print("No TownCentre found. Cannot scout map.")
+            return
+
+        # Convertir les coordonnées en entiers
+        base_x, base_y = int(town_centre.x), int(town_centre.y)
+
+        # Définir une zone à explorer (par exemple, un carré de 10x10 tuiles autour de la base)
+        scout_radius = 10
+        scout_area = [(x, y) for x in range(base_x - scout_radius, base_x + scout_radius)
+                    for y in range(base_y - scout_radius, base_y + scout_radius)]
+
+        # Parcourir la zone pour trouver des ressources ou des ennemis
+        for (x, y) in scout_area:
+            tile = game_map.grid.get((x, y))  # Accéder directement à la grille
+
+            if tile and tile.has_resource() :  # Vérifier si la tuile existe et a une ressource
+                resource_type = tile.resource.type
+                debug_print(f"Found {resource_type} at ({x}, {y}).")
+                # Adapter la stratégie en fonction des ressources trouvées
+                if resource_type == "wood":
+                    self.player_team.assign_villager_to_resource(x, y, "wood")
+                elif resource_type == "gold":
+                    self.player_team.assign_villager_to_resource(x, y, "gold")
+
+            # Vérifier si la tuile contient des unités ennemies
+            for enemy_team in game_map.players:
+                if enemy_team.teamID != self.player_team.teamID:
+                    for enemy in enemy_team.units:
+                        if enemy.x == x and enemy.y == y:
+                            debug_print(f"Found enemy {enemy.__class__.__name__} at ({x}, {y}).")
+                            # Adapter la stratégie en fonction des unités ennemies trouvées
+                            if isinstance(enemy, Horseman):
+                                self.PRIORITY_UNITS['archer'] = 4  # Augmenter la priorité des archers
+                            elif isinstance(enemy, Archer):
+                                self.PRIORITY_UNITS['swordsman'] = 3  # Augmenter la priorité des épéistes
+
+        # Si des ressources ou des ennemis sont trouvés, ajuster la stratégie
+        if self.player_team.resources["wood"] < 100:
+            debug_print("Low on wood. Prioritizing wood collection.")
+            self.balance_units()
+        if self.player_team.resources["gold"] < 50:
+            debug_print("Low on gold. Prioritizing gold collection.")
+            self.balance_units()
+    def easy_strategy(self, enemy_teams, game_map, dt):
+        for enemy_team in enemy_teams:
+            # Collecte des ressources de manière aléatoire
+            if random.random() < 0.5:
+                self.balance_units()
+
+            # Construit des bâtiments de manière aléatoire
+            if random.random() < 0.3:
+                self.build_structure()
+
+            # Réagit aux attaques ennemies
+            if self.is_under_attack(enemy_team):
+                critical_points = self.get_critical_points()
+                self.gather_units_for_defense(critical_points, enemy_team, game_map, dt)
+
+    def medium_strategy(self, enemy_teams, game_map, dt):
+        for enemy_team in enemy_teams:
+            # Gestion des ressources et des unités
+            self.balance_units()
+            self.adjust_priorities(enemy_team)
+
+            # Construction de bâtiments en fonction des besoins
+            if self.check_building_needs():
+                self.build_structure(self.clock)
+
+            # Construit des tours défensives près des points critiques
+            if self.is_under_attack(enemy_team):
+                critical_points = self.get_critical_points()
+                if critical_points and self.can_build_building(Keep):
+                    critical_location = (critical_points[0].x, critical_points[0].y)
+                    self.build_defensive_structure(Keep, critical_location, 3, game_map)
+
+            # Attaque avec une composition d'unités équilibrée
+            if len(self.get_military_units()) > 10:
+                self.manage_battle(enemy_team, game_map, dt)
+
+    def hard_strategy(self, enemy_teams, game_map, dt):
+        for enemy_team in enemy_teams:
+            # Gestion optimisée des ressources et des unités
+            self.balance_units()
+            self.adjust_priorities(enemy_team)
+
+            # Construction de bâtiments stratégiques
+            if self.check_building_needs():
+                self.build_structure(self.clock)
+
+            # Scoute la carte pour trouver des ressources ou des unités ennemies
+            self.scout_map(game_map)
+
+            # Attaque avec une composition d'unités adaptée
+            if len(self.get_military_units()) > 15:
+                attack_composition = self.choose_attack_composition()
+                for unit in attack_composition:
+                    if unit.idle:
+                        target = self.find_target_for_unit(unit)
+                        if target:
+                            unit.set_target(target)
+
+            # Défense proactive
+            if self.is_under_attack(enemy_team):
+                self.defend_under_attack(enemy_team, game_map, dt)
     def get_military_units(self):
         """
         Retourne une liste des unités militaires (non villageois) de l'équipe.
@@ -184,11 +327,11 @@ class Bot:
         }
 
         # Priorité 1 : Entraîner des villageois si nécessaire
-        if self.player_team.resources["food"] < 100 and villager_count < 10:
+        if self.player_team.resources.food < 100 and villager_count < 10:
             for building in self.player_team.buildings:
                 if building.acronym == 'T':  # TownCentre entraîne des villageois
                     if len(building.training_queue) < MAX_QUEUE_SIZE:
-                        self.train_units(building, Villager)
+                        self.train_units(Villager)
                         debug_print(f"Added Villager to training queue in {building.acronym}.")
                         break  # On entraîne un seul villageois à la fois
 
@@ -213,14 +356,26 @@ class Bot:
                     self.train_units(best_building, unit_type)
                     debug_print(f"Added {unit_type} to training queue in {best_building.acronym}.")
 
-    def adjust_priorities(self, enemy_team):
+    def adjust_priorities(self, enemy_teams):
         """
         Ajuste les priorités des unités en fonction des unités ennemies.
+        :param enemy_teams: Une équipe ennemie ou une liste d'équipes ennemies.
         """
-        # Compter les unités ennemies
-        enemy_horsemen = sum(1 for unit in enemy_team.units if isinstance(unit, Horseman))
-        enemy_archers = sum(1 for unit in enemy_team.units if isinstance(unit, Archer))
-        enemy_swordsmen = sum(1 for unit in enemy_team.units if isinstance(unit, Swordsman))
+        # Si enemy_teams n'est pas une liste, on le transforme en liste
+        if not isinstance(enemy_teams, list):
+            enemy_teams = [enemy_teams]
+
+        # Initialiser les compteurs pour les unités ennemies
+        enemy_horsemen = 0
+        enemy_archers = 0
+        enemy_swordsmen = 0
+
+        # Parcourir chaque équipe ennemie
+        for enemy_team in enemy_teams:
+            # Compter les unités ennemies pour chaque type
+            enemy_horsemen += sum(1 for unit in enemy_team.units if isinstance(unit, Horseman))
+            enemy_archers += sum(1 for unit in enemy_team.units if isinstance(unit, Archer))
+            enemy_swordsmen += sum(1 for unit in enemy_team.units if isinstance(unit, Swordsman))
 
         # Seuils configurables pour ajuster les priorités
         HORSEMEN_THRESHOLD = 5  # Nombre de cavaliers ennemis pour augmenter la priorité des archers
@@ -229,17 +384,16 @@ class Bot:
 
         # Ajuster les priorités en fonction des unités ennemies
         if enemy_horsemen > HORSEMEN_THRESHOLD:
-            self.PRIORITY_UNITS['archer'] = 4  # Augmenter la priorité des archers
+            self.PRIORITY_UNITS['a'] = 4  # Augmenter la priorité des archers
             debug_print(f"Enemy has many horsemen ({enemy_horsemen}). Increasing archer priority.")
 
         if enemy_archers > ARCHERS_THRESHOLD:
-            self.PRIORITY_UNITS['swordsman'] = 3  # Augmenter la priorité des épéistes
+            self.PRIORITY_UNITS['s'] = 3  # Augmenter la priorité des épéistes
             debug_print(f"Enemy has many archers ({enemy_archers}). Increasing swordsman priority.")
 
         if enemy_swordsmen > SWORDSMEN_THRESHOLD:
-            self.PRIORITY_UNITS['horseman'] = 2  # Augmenter la priorité des cavaliers
+            self.PRIORITY_UNITS['h'] = 2  # Augmenter la priorité des cavaliers
             debug_print(f"Enemy has many swordsmen ({enemy_swordsmen}). Increasing horseman priority.")
-
     
     def choose_attack_composition(self):
         """
@@ -343,6 +497,9 @@ class Bot:
         for building_type in needed_buildings:
             if building_type in building_class_map:
                 building_class = building_class_map[building_type]
+                if not hasattr(building_class, 'cost'):
+                    debug_print(f"Building class {building_type} has no attribute 'cost'.")
+                    continue
                 building_cost = building_class.cost
                 if (self.player_team.resources["wood"] >= building_cost.wood and
                     self.player_team.resources["gold"] >= building_cost.gold and
