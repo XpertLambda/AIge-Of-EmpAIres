@@ -64,70 +64,77 @@ def clean_and_reset_display(game_state):
 
 def handle_load_game(game_state, chosen_path):
     try:
+        print("[GUI] Starting load game process...")
         from Controller.drawing import create_minimap_background, compute_map_bounds, generate_team_colors
         from Models.Map import GameMap
         from Controller.sync_manager import save_for_sync
         
-        camera = game_state['camera']
-        
-        # Clean display before loading
-        clean_and_reset_display(game_state)
-        
-        # Backup GUI state
+        # Backup current GUI state
         old_gui_state = {
             'screen': game_state.get('screen'),
             'screen_width': game_state.get('screen_width'),
             'screen_height': game_state.get('screen_height'),
-            'camera': camera
+            'camera': game_state.get('camera'),
+            'minimap_panel_sprite': game_state.get('minimap_panel_sprite'),
+            'minimap_background': game_state.get('minimap_background'),
+            'minimap_entities_surface': game_state.get('minimap_entities_surface'),
+            'player_selection_surface': game_state.get('player_selection_surface')
         }
+
+        # Clean display before loading
+        clean_and_reset_display(game_state)
         
-        # Load the new map
-        game_state['game_map'] = GameMap(0, False, [], generate=False)
+        # Load the new map state
         game_state['game_map'].load_map(chosen_path)
         
-        # Update player related state
-        game_state['players'].clear()
-        game_state['players'].extend(game_state['game_map'].players)
-        
-        # Initialize player selection and colors
-        if game_state['players']:
-            game_state['selected_player'] = game_state['players'][0]
-            game_state['old_resources'] = {
-                p.teamID: p.resources.copy() for p in game_state['players']
-            }
-        else:
-            game_state['selected_player'] = None
-        
+        # Update all game state components
+        game_state['players'] = game_state['game_map'].players
+        game_state['selected_player'] = game_state['players'][0] if game_state['players'] else None
         game_state['team_colors'] = generate_team_colors(len(game_state['players']))
+        game_state['old_resources'] = {p.teamID: p.resources.copy() for p in game_state['players']}
+        game_state['players_target'] = [None for _ in range(len(game_state['players']))]
         
-        # Restore and update GUI state
+        # Restore GUI components
         for key, value in old_gui_state.items():
             if value is not None:
                 game_state[key] = value
-        
-        # Reset camera position and bounds
-        camera.offset_x = 0
-        camera.offset_y = 0
-        camera.zoom = 1.0
-        min_x, max_x, min_y, max_y = compute_map_bounds(game_state['game_map'])
-        camera.set_bounds(min_x, max_x, min_y, max_y)
-        
-        # Synchronize with terminal
-        save_for_sync(game_state['game_map'])
-        
-        # Final GUI refresh
-        clean_and_reset_display(game_state)
-        
-        game_state['notification_message'] = "Partie chargée."
-        game_state['notification_start_time'] = time.time()
-        
-        debug_print("[GUI] Save loaded and sync triggered")
-        
-    except Exception as e:
-        debug_print(f"[GUI] Error loading: {e}")
-        game_state['notification_message'] = f"Erreur: {str(e)}"
+
+        # Reset camera and bounds
+        min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_state['game_map'])
+        game_state['camera'].set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
+        game_state['camera'].zoom_out_to_global()
+
+        # Force GUI refresh
+        game_state['force_full_redraw'] = True
+        game_state['player_selection_updated'] = True
+        game_state['player_info_updated'] = True
+
+        # Update notification
+        game_state['notification_message'] = "Partie chargée avec succès"
         game_state['notification_start_time'] = time.time()
 
+        # Sync with terminal if needed
+        save_for_sync(game_state['game_map'])
+        print("[GUI] Game loaded successfully")
+        
+    except Exception as e:
+        print(f"[GUI] Error loading game: {e}")
+        game_state['notification_message'] = f"Erreur de chargement: {str(e)}"
+        game_state['notification_start_time'] = time.time()
+
+def handle_save_game(game_state):
+    try:
+        print("[GUI] Starting save game process...")
+        game_state['game_map'].save_map()
+        game_state['notification_message'] = "Partie sauvegardée"
+        game_state['notification_start_time'] = time.time()
+        print("[GUI] Game saved successfully")
+        return True
+    except Exception as e:
+        print(f"[GUI] Error saving game: {e}")
+        game_state['notification_message'] = f"Erreur de sauvegarde: {str(e)}"
+        game_state['notification_start_time'] = time.time()
+        return False
 
 def handle_events(event, game_state):
     """
@@ -226,10 +233,7 @@ def handle_events(event, game_state):
             debug_print(f"[GUI] F3 => show_all_health_bars={game_state['show_all_health_bars']}")
 
         elif event.key in [pygame.K_k, pygame.K_F11]:
-            game_state['game_map'].save_map()
-            debug_print("[GUI] L => Sauvegarde effectuée.")
-            game_state['notification_message'] = "Partie sauvegardée."
-            game_state['notification_start_time'] = time.time()
+            handle_save_game(game_state)
 
         elif event.key in [pygame.K_l, pygame.K_F12]:
             try:

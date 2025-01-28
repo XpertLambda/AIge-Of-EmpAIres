@@ -33,9 +33,36 @@ def _curses_main(stdscr, game_map):
     pour scroller sur la map, etc.
     """
     print("DEBUG: _curses_main started") # DEBUG PRINT
+    
+    # Reset the terminal completely
+    os.system('cls' if os.name == 'nt' else 'clear')
+    curses.start_color()
+    curses.use_default_colors()
+    
+    # Initialize curses
     curses.curs_set(0)
     stdscr.nodelay(True)
-    stdscr.keypad(True)  # Important pour les touches F1-F12
+    stdscr.keypad(True)
+    stdscr.clear()
+    stdscr.refresh()
+
+    # Force initial position and redraw
+    if not hasattr(game_map, 'terminal_view_x'):
+        game_map.terminal_view_x = 0
+        game_map.terminal_view_y = 0
+
+    # Force immediate redraw
+    total_h, total_w = stdscr.getmaxyx()
+    debug_h = 5
+    map_h = total_h - debug_h
+    win_map = curses.newwin(map_h, total_w, 0, 0)
+    win_debug = curses.newwin(debug_h, total_w, map_h, 0)
+    
+    # Clear both windows explicitly
+    win_map.clear()
+    win_debug.clear()
+    win_map.refresh()
+    win_debug.refresh()
 
     # Définition des codes des touches de fonction
     F9_KEY = 273  # Code standard pour F9 dans curses

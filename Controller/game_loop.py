@@ -1,7 +1,9 @@
+# Path: Controller/game_loop.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
+from Settings.setup import user_choices  # Move this import to top
 import time
 import pygame
 import sys
@@ -86,27 +88,59 @@ def draw_game_over_overlay(screen, game_state):
     game_state['main_menu_button_rect'] = main_menu_rect
 
 def game_loop(screen, game_map, screen_width, screen_height, players): # game_map is passed here
+    """Main game loop function"""
+    try:
+        current_mode = user_choices.get("index_terminal_display", 2)  # Use get() with default
+        print(f"DEBUG: game_loop started. Current display mode: {current_mode}")
+    except Exception as e:
+        print(f"DEBUG: Error accessing user_choices: {e}")
+        current_mode = 2  # Default to "both" mode if there's an error
+    
     # Protection contre les dimensions nulles
     if screen_width <= 0 or screen_height <= 0:
         screen_width = 800
         screen_height = 600
 
     # Si on est en mode terminal only, on n'initialise pas pygame
-    from Settings.setup import user_choices
-    is_terminal_only = user_choices["index_terminal_display"] == 1
+    is_terminal_only = current_mode == 1
+    is_switching = user_choices.get("menu_result") == "switch_display"
 
-    if not is_terminal_only:  # Si pas en mode Terminal only
+    # If switching from Terminal to GUI, ensure proper pygame initialization
+    if is_switching and not is_terminal_only:
+        print("DEBUG: Reinitializing pygame for Terminal->GUI switch inside game_loop") # DEBUG # DEBUG PRINT - Reinit pygame for GUI switch
+        if not pygame.display.get_init():
+            pygame.init()
+            screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
+        pygame.mouse.set_visible(False)
+        pygame.font.init()
+
+        # Force load assets if needed
+        from Controller.init_assets import load_sprites, is_assets_loaded
+        if not is_assets_loaded():
+            print("DEBUG: Loading sprites for GUI mode inside game_loop") # DEBUG # DEBUG PRINT - Load sprites for GUI mode
+            load_sprites(screen, screen_width, screen_height, show_progress=True)
+
+    if screen is not None: # Add this check to avoid errors in terminal mode
+        # TEST DRAW - Simple rectangle to check if anything is drawn
+        pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(50, 50, 100, 50)) # Red rectangle
+        pygame.display.flip() # Flip the display to make it visible
+
+
+    # Initialize clock and font only for GUI modes
+    clock = None
+    font = None
+    if not is_terminal_only:
         clock = pygame.time.Clock()
         pygame.key.set_repeat(0, 0)
         pygame.mouse.set_visible(False)
+        pygame.font.init()  # Initialize font module
+        font = pygame.font.SysFont(None, 24)
         fullscreen = pygame.display.get_surface().get_flags() & pygame.FULLSCREEN
     else:
-        clock = None
         fullscreen = False
 
     camera = Camera(screen_width, screen_height)
     team_colors = generate_team_colors(len(players))
-    font = pygame.font.SysFont(None, 24)
 
     min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
     camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
@@ -151,50 +185,152 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
     selected_player = players[0] if players else None
     fullscreen = False
 
-    game_state = {
-        'camera': camera,
-        'players': players,
-        'selected_player': selected_player,
-        'team_colors': team_colors,
-        'game_map': game_map, # Pass the game_map object to game_state
-        'minimap_panel_sprite': minimap_panel_sprite,
-        'minimap_panel_rect': minimap_panel_rect,
-        'minimap_background': minimap_background_surface,
-        'minimap_background_rect': minimap_background_rect,
-        'minimap_entities_surface': minimap_entities_surface,
-        'minimap_scale': minimap_scale,
-        'minimap_offset_x': minimap_offset_x,
-        'minimap_offset_y': minimap_offset_y,
-        'minimap_min_iso_x': minimap_min_iso_x,
-        'minimap_min_iso_y': minimap_min_iso_y,
-        'screen_width': screen_width,
-        'screen_height': screen_height,
-        'screen': screen,
-        'fullscreen': fullscreen,  # On utilise la variable locale
-        'minimap_dragging': False,
-        'player_selection_updated': True,
-        'player_info_updated': True,
-        'selected_entities': [],
-        'selecting_entities': False,
-        'selection_start': None,
-        'selection_end': None,
-        'rectangle_additive': False,
-        'paused': False,
-        'force_full_redraw': False,
-        'show_all_health_bars': False,
-        'show_player_info': True,
-        'show_gui_elements': True,
-        'return_to_menu': False,
-        'pause_menu_active': False,
-        'notification_message': "",
-        'notification_start_time': 0.0,
-        'players_target': [None for _ in range(len(players))],
-        'old_resources': {p.teamID: p.resources.copy() for p in players},  # Initialize for all players
+    # Check if we're switching display modes or starting fresh - safely get menu_result
+    is_switching = user_choices.get("menu_result") == "switch_display"
 
-        # Nouveau bool pour déclencher un switch F9
-        'switch_display': False,
-        'force_sync': False,  # Add force_sync to game_state
-    }
+    # Initialize basic game_state with loaded data if temp save exists
+    if os.path.exists(TEMP_SAVE_PATH):
+        try:
+            print("[GAME_LOOP] Loading game state from temp save...")
+            game_map.load_map(TEMP_SAVE_PATH)
+            players = game_map.players
+
+            camera = Camera(screen_width, screen_height)
+            min_iso_x, max_iso_x, min_iso_y, max_iso_y = compute_map_bounds(game_map)
+            camera.set_bounds(min_iso_x, max_iso_x, min_iso_y, max_iso_y)
+            camera.zoom_out_to_global()
+
+            # Initialize GUI elements
+            panel_width = int(screen_width * PANEL_RATIO)
+            panel_height = int(screen_height * PANEL_RATIO)
+            minimap_panel_sprite = get_scaled_gui('minimapPanel', 0, target_width=panel_width)
+            minimap_panel_rect = get_centered_rect_in_bottom_right(
+                panel_width, panel_height, screen_width, screen_height, MINIMAP_MARGIN
+            )
+
+            bg_width = int(screen_width * BG_RATIO)
+            bg_height = int(screen_height * BG_RATIO)
+            (
+                minimap_background_surface,
+                minimap_scale,
+                minimap_offset_x,
+                minimap_offset_y,
+                minimap_min_iso_x,
+                minimap_min_iso_y
+            ) = create_minimap_background(game_map, bg_width, bg_height)
+
+            minimap_background_rect = minimap_background_surface.get_rect()
+            minimap_background_rect.center = minimap_panel_rect.center
+            minimap_background_rect.y -= panel_height / 50
+            minimap_background_rect.x += panel_width / 18
+
+            minimap_entities_surface = pygame.Surface(
+                (minimap_background_rect.width, minimap_background_rect.height),
+                pygame.SRCALPHA
+            )
+            minimap_entities_surface.fill((0, 0, 0, 0))
+
+            # Create complete game_state
+            game_state = {
+                'camera': camera,
+                'players': players,
+                'selected_player': players[0] if players else None,
+                'team_colors': generate_team_colors(len(players)),
+                'game_map': game_map,
+                'minimap_panel_sprite': minimap_panel_sprite,
+                'minimap_panel_rect': minimap_panel_rect,
+                'minimap_background': minimap_background_surface,
+                'minimap_background_rect': minimap_background_rect,
+                'minimap_entities_surface': minimap_entities_surface,
+                'minimap_scale': minimap_scale,
+                'minimap_offset_x': minimap_offset_x,
+                'minimap_offset_y': minimap_offset_y,
+                'minimap_min_iso_x': minimap_min_iso_x,
+                'minimap_min_iso_y': minimap_min_iso_y,
+                'screen_width': screen_width,
+                'screen_height': screen_height,
+                'screen': screen,
+                'fullscreen': False,
+                'minimap_dragging': False,
+                'player_selection_updated': True,
+                'player_info_updated': True,
+                'selected_entities': [],
+                'selecting_entities': False,
+                'selection_start': None,
+                'selection_end': None,
+                'rectangle_additive': False,
+                'paused': False,
+                'force_full_redraw': True,
+                'show_all_health_bars': False,
+                'show_player_info': True,
+                'show_gui_elements': True,
+                'return_to_menu': False,
+                'pause_menu_active': False,
+                'notification_message': "",
+                'notification_start_time': 0.0,
+                'players_target': [None for _ in range(len(players))],
+                'old_resources': {p.teamID: p.resources.copy() for p in players},
+                'switch_display': False,
+                'force_sync': False,
+            }
+
+            # Update game_map with new state
+            game_map.set_game_state(game_state)
+
+            if not is_switching:
+                os.remove(TEMP_SAVE_PATH)
+                print("[GAME_LOOP] Deleted temp save after successful load")
+
+        except Exception as e:
+            print(f"[GAME_LOOP] Error loading temp save: {e}")
+            if os.path.exists(TEMP_SAVE_PATH):
+                os.remove(TEMP_SAVE_PATH)
+    else:
+        # Create normal game_state if no temp save exists
+        game_state = {
+            'camera': camera,
+            'players': players,
+            'selected_player': selected_player,
+            'team_colors': team_colors,
+            'game_map': game_map, # Pass the game_map object to game_state
+            'minimap_panel_sprite': minimap_panel_sprite,
+            'minimap_panel_rect': minimap_panel_rect,
+            'minimap_background': minimap_background_surface,
+            'minimap_background_rect': minimap_background_rect,
+            'minimap_entities_surface': minimap_entities_surface,
+            'minimap_scale': minimap_scale,
+            'minimap_offset_x': minimap_offset_x,
+            'minimap_offset_y': minimap_offset_y,
+            'minimap_min_iso_x': minimap_min_iso_x,
+            'minimap_min_iso_y': minimap_min_iso_y,
+            'screen_width': screen_width,
+            'screen_height': screen_height,
+            'screen': screen,
+            'fullscreen': fullscreen,  # On utilise la variable locale
+            'minimap_dragging': False,
+            'player_selection_updated': True,
+            'player_info_updated': True,
+            'selected_entities': [],
+            'selecting_entities': False,
+            'selection_start': None,
+            'selection_end': None,
+            'rectangle_additive': False,
+            'paused': False,
+            'force_full_redraw': False,
+            'show_all_health_bars': False,
+            'show_player_info': True,
+            'show_gui_elements': True,
+            'return_to_menu': False,
+            'pause_menu_active': False,
+            'notification_message': "",
+            'notification_start_time': 0.0,
+            'players_target': [None for _ in range(len(players))],
+            'old_resources': {p.teamID: p.resources.copy() for p in players},  # Initialize for all players
+
+            # Nouveau bool pour déclencher un switch F9
+            'switch_display': False,
+            'force_sync': False,  # Add force_sync to game_state
+        }
 
     game_map.set_game_state(game_state)
 
@@ -240,8 +376,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
             print(f"Error loading from temp save: {e}") # DEBUG
             if os.path.exists(TEMP_SAVE_PATH): # Ensure temp save is deleted even if loading fails
                 os.remove(TEMP_SAVE_PATH)
-                print("Deleted temp save file due to load error.") # DEBUG
-
 
     # Check for temp save at startup (this part is likely redundant now and can be removed or kept for initial load from save files)
     if os.path.exists(TEMP_SAVE_PATH):
@@ -323,6 +457,21 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
                 if os.path.exists(TEMP_SAVE_PATH):
                     os.remove(TEMP_SAVE_PATH)
 
+    # After switching display modes, ensure GUI components are properly initialized
+    if is_switching and not is_terminal_only:
+        # Force GUI reinitialization
+        from Controller.init_assets import load_sprites, is_assets_loaded
+        if not is_assets_loaded():
+            load_sprites(screen, screen_width, screen_height, show_progress=True)
+
+        # Ensure game_state has proper GUI components after switch
+        game_state['screen'] = screen
+        game_state['screen_width'] = screen_width
+        game_state['screen_height'] = screen_height
+        game_state['force_full_redraw'] = True
+        game_state['player_selection_updated'] = True
+        game_state['player_info_updated'] = True
+
     while running:
         current_time = time.time()
         if not is_terminal_only:
@@ -363,10 +512,15 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
 
         # SI on a reçu le signal "switch_display" => on arrête la boucle
         if game_state.get('switch_display'):
-            debug_print("Saving game state before display switch...")
+            debug_print("[GAME_LOOP] Saving game state before display switch...")
             game_map.save_map(TEMP_SAVE_PATH) # Save to temp file before switching
+            # Force proper cleanup before switching
+            if screen and pygame.display.get_init():
+                pygame.display.quit()
+                pygame.quit()
             running = False
             user_choices["menu_result"] = "switch_display"
+            debug_print("[GAME_LOOP] Display switch cleanup completed")
             break
 
         screen = game_state['screen']
@@ -375,7 +529,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
         selected_player = game_state['selected_player']
         players = game_state['players']
         team_colors = game_state['team_colors']
-        game_map = game_state['game_map'] # Use the game_map from game_state
+        game_map = game_state['game_map'] # Use the game_map object from game_state
         camera = game_state['camera']
 
         if user_choices["index_terminal_display"] == 1:
@@ -447,7 +601,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
             previous_res = game_state['old_resources'][selected_player.teamID] # UTILISER game_state['old_resources']
             if current_res != previous_res:
                 game_state['player_info_updated'] = True
-                game_state['old_resources'][selected_player.teamID] = current_res.copy() # METTRE A JOUR game_state['old_resources']
+                game_state['old_resources']['selected_player.teamID'] = current_res.copy() # METTRE A JOUR game_state['old_resources']
 
 
         # N'effectuer le rendu que si on a un écran
@@ -501,7 +655,8 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
                             game_state['screen_height'],
                             game_state['camera']
                         )
-            display_fps(screen,screen_width, clock, font)
+            if font:  # Only display FPS if font is available
+                display_fps(screen,screen_width, clock, font)
 
             if game_state['notification_message']:
                 if time.time() - game_state['notification_start_time'] < 3:

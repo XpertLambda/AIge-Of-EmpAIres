@@ -1,5 +1,4 @@
-# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
-# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
+# Path: main.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
 import pygame
 import os
@@ -247,7 +246,7 @@ def show_loading_screen_until_done(screen, sw, sh):
     """
      Tant que tous les assets ne sont pas chargés,
      on affiche la barre de progression.
-     """
+    """
     from Controller.init_assets import draw_progress_bar
     clock = pygame.time.Clock()
 
@@ -285,6 +284,7 @@ def main():
     - Sur quit, on sort du while True.
     """
     game_map = None  # Initialize game_map outside the loop
+    screen = None
 
     # -- Boucle globale --
     while True:
@@ -325,11 +325,9 @@ def main():
                 # index_terminal_display == 1 => Terminal only
                 print("DEBUG: Running Terminal menu only") # DEBUG
                 # On peut directement lancer la lecture terminal
-                # (Bloquante ou non-bloquante selon vos préférences)
                 ask_terminal_inputs_non_blocking()
 
             # A ce stade, user_choices["validated"] = True => fin de la phase de menu
-            # (soit dans le menu GUI, soit dans le menu Terminal).
 
         # 2) On a forcément sw, sh si on est passé par GUI, sinon on pose un fallback :
         mode_index = user_choices["index_terminal_display"] # Get mode_index here for clarity
@@ -340,18 +338,16 @@ def main():
             print("DEBUG: GUI only mode: Initializing Pygame") # DEBUG
         elif mode_index == 1: # Terminal only
             # Terminal only => no pygame initialization, fallback resolution
-            sw, sh = (800, 600)  # Valeurs de secours
-            screen = None # Ensure screen is None for terminal mode
+            sw, sh = (800, 600)
+            screen = None
             print("DEBUG: Terminal only mode: No Pygame initialization, screen=None") # DEBUG
         elif mode_index == 2: # Both
             # Both => initialise pygame
             screen, sw, sh = init_pygame()
             print("DEBUG: Both mode: Initializing Pygame") # DEBUG
-        else: # Fallback/Error case
+        else: # Fallback
             screen = None
             sw, sh = (800, 600)
-
-
 
         mode_index  = user_choices["index_terminal_display"]
         load_game   = user_choices["load_game"]
@@ -367,16 +363,15 @@ def main():
         if load_game and chosen_save:
             if game_map is None: # Only create GameMap instance if it's None
                 game_map = GameMap(0, False, [], generate=False)
-            game_map.load_map(chosen_save) # Load into the existing game_map instance
+            game_map.load_map(chosen_save)
             if game_state:
-               game_state['game_map'] = game_map # update game_map in game_state as well
-
+               game_state['game_map'] = game_map
             players = game_map.players
         else:
             players = init_players(nb_bots, bot_level)
-            game_map = GameMap(grid_size, gold_c, players) # Create a new GameMap instance if not loading
+            game_map = GameMap(grid_size, gold_c, players)
 
-        # 4) Lancement *éventuel* de curses si mode_index in [1, 2]
+        # 4) Lancement éventuel de curses si mode_index in [1, 2]
         t_curses_started = False
         if mode_index in [1, 2]:
             t_curses_started = True
@@ -391,56 +386,57 @@ def main():
             t_curses = None
             print("DEBUG: Curses not started for GUI only mode") # DEBUG
 
-        # 5) Lancement éventuel du rendu Pygame si mode_index in [0, 2], sinon game_loop fait un "terminal" update
-        if mode_index == 0: # Changed to elif and corrected condition
-            if screen is None: # Check if screen is None (meaning not initialized yet)
-                screen, sw, sh = init_pygame() # Initialize Pygame only if screen is None
+        # 5) Lancement éventuel du rendu Pygame
+        if mode_index == 0:
+            if screen is None:
+                screen, sw, sh = init_pygame()
+            # AJOUT => forcer l’écran de chargement si pas déjà chargé,
+            # même si la validation est venue du terminal :
             if validated_by == "terminal":
-                print("Loading des assets...") # Simple print for terminal validation
-            elif validated_by != "terminal" and not is_assets_loaded(): # Loading screen only if not terminal validated and assets not loaded
+                print("Loading des assets...")
+                if not is_assets_loaded():
+                    show_loading_screen_until_done(screen, sw, sh)
+            elif validated_by != "terminal" and not is_assets_loaded():
                 show_loading_screen_until_done(screen, sw, sh)
             print("DEBUG: GUI only mode, Pygame rendering will be used in game_loop") # DEBUG
-        elif mode_index == 2: # Explicitly handle 'Both' mode
-            if screen is None: # Check if screen is None (meaning not initialized yet)
-                screen, sw, sh = init_pygame() # Initialize Pygame only if screen is None
+
+        elif mode_index == 2: # Both
+            if screen is None:
+                screen, sw, sh = init_pygame()
             if validated_by == "terminal":
-                print("Loading des assets...") # Simple print for terminal validation
-            elif validated_by != "terminal" and not is_assets_loaded(): # Loading screen only if not terminal validated and assets not loaded
+                print("Loading des assets...")
+                if not is_assets_loaded():
+                    show_loading_screen_until_done(screen, sw, sh)
+            elif validated_by != "terminal" and not is_assets_loaded():
                 show_loading_screen_until_done(screen, sw, sh)
             print("DEBUG: Both mode, Pygame rendering AND Curses will be used") # DEBUG
-        else: # mode_index == 1, Terminal only
-            screen = None # Ensure screen is None for terminal only mode
-            sw, sh = (800, 600) # Add fallback sw, sh for terminal mode
+
+        else: # Terminal only
+            screen = None
+            sw, sh = (800, 600)
             print("DEBUG: Terminal only mode, Pygame rendering will be skipped") # DEBUG
 
+        print("DEBUG: Calling game_loop now...") # DEBUG
 
-        print("DEBUG: Calling game_loop now...") # DEBUG PRINT
-
-        # 6) Boucle de jeu
-        #    On utilise la fonction game_loop(...) qui peut (ou non) dessiner,
-        #    en fonction de screen != None.  Elle écoute F9 => switch_display,
-        #    ESC => quitte, etc.
         from Controller.game_loop import game_loop
-        game_loop_result = game_loop(screen, game_map, sw, sh, players) # Pass the game_map object
+        game_loop_result = game_loop(screen, game_map, sw, sh, players)
 
-        # 7) Regarder la sortie
+        # 6) On regarde comment la game_loop s’est terminée
         menu_result = user_choices.get("menu_result")
 
-        # a) Menu principal => on y retourne
+        # a) Retour au menu principal
         if menu_result == "main_menu":
-            # Fermer curses si lancé
             if t_curses_started:
                 stop_curses()
                 if t_curses.is_alive():
                     t_curses.join()
-            # Fermer la fenêtre Pygame
             pygame.quit()
-            game_map = None # Reset game_map when returning to main menu
+            game_map = None
 
-            # On efface user_choices pour relancer la config complète
+            # Reset user_choices
             user_choices.clear()
             user_choices.update({
-                "index_terminal_display": 2,  # Par défaut on peut choisir "both"
+                "index_terminal_display": 2,
                 "load_game": False,
                 "chosen_save": "",
                 "grid_size": 120,
@@ -448,13 +444,12 @@ def main():
                 "bot_level": "lean",
                 "gold_at_center": False,
                 "validated": False,
-                "validated_by": None, # Reset validation source
+                "validated_by": None,
                 "menu_result": None
             })
-            # On relance la boucle => le menu sera rouvert
             continue
 
-        # b) Quit => on sort du while True => fin du programme
+        # b) Quit => on sort
         elif menu_result == "quit":
             if t_curses_started:
                 stop_curses()
@@ -463,66 +458,62 @@ def main():
             pygame.quit()
             break
 
-        # c) Switch display => on bascule index 0 <-> 1, ou 2 -> 1, etc.
+        # c) Switch display
         elif menu_result == "switch_display":
-            print("DEBUG: Switch display mode requested.") # DEBUG
-            # 1. Save the game state
-            game_map.save_map(TEMP_SAVE_PATH)
-            print(f"DEBUG: Game saved to {TEMP_SAVE_PATH} before display switch.") # DEBUG
+            print("[MAIN] Starting display switch process...")
+            
+            # Sauvegarde de l'état actuel si pas déjà fait
+            if not os.path.exists(TEMP_SAVE_PATH):
+                game_map.save_map(TEMP_SAVE_PATH)
+                print(f"[MAIN] Game state saved to {TEMP_SAVE_PATH}")
 
-            # 2. Fermer curses si lancé
+            # Nettoyage propre de l'interface actuelle
             if t_curses_started:
                 stop_curses()
                 if t_curses.is_alive():
                     t_curses.join()
-                print("DEBUG: Curses stopped.") # DEBUG
+                os.system('cls' if os.name == 'nt' else 'clear')
+                t_curses_started = False
+                print("[MAIN] Curses interface cleaned up")
 
-            # 3. Fermer la fenêtre pygame
-            pygame.display.quit()
-            print("DEBUG: Pygame display quit.") # DEBUG
+            # Nettoyage complet de Pygame
+            if pygame.display.get_init():
+                pygame.display.quit()
+            pygame.quit()
+            print("[MAIN] Pygame display cleaned up")
 
-            # 4. Basculer l'index d'affichage
-            if user_choices["index_terminal_display"] == 0:
-                user_choices["index_terminal_display"] = 1  # passe GUI->Terminal
-                print("DEBUG: Switched to Terminal only mode.") # DEBUG
-            elif user_choices["index_terminal_display"] == 1:
-                user_choices["index_terminal_display"] = 0  # Terminal->GUI
-                print("DEBUG: Switched to GUI only mode.") # DEBUG
-            else:
-                # Si on était en both, on décide de passer en Terminal only (exemple)
+            # Changement de mode
+            old_mode = user_choices["index_terminal_display"]
+            if old_mode == 0:  # GUI->Terminal
                 user_choices["index_terminal_display"] = 1
-                print("DEBUG: Switched from Both to Terminal only mode.") # DEBUG
+                screen = None
+            elif old_mode == 1:  # Terminal->GUI
+                user_choices["index_terminal_display"] = 0
+                # La réinitialisation complète de Pygame sera faite dans game_loop
+            else:  # Both->Terminal
+                user_choices["index_terminal_display"] = 1
+                screen = None
 
-            # On retire "menu_result"
             user_choices["menu_result"] = None
+            user_choices["validated"] = True  # Évite de repasser par le menu
 
-            # 5. Delete the temporary save file
-            try:
-                os.remove(TEMP_SAVE_PATH)
-                print(f"DEBUG: Temporary save file {TEMP_SAVE_PATH} deleted.") # DEBUG
-            except FileNotFoundError:
-                print(f"DEBUG: Temporary save file {TEMP_SAVE_PATH} not found, no deletion needed.") # DEBUG
-            except Exception as e:
-                print(f"DEBUG: Error deleting temporary save file: {e}") # DEBUG
-
-
-            # ATTENTION : on ne remet pas validated = False => on ne relance PAS le menu
-            # On se contente de redémarrer la partie avec la nouvelle config
+            # Petit délai pour assurer le nettoyage complet
+            time.sleep(0.2)
+            print("[MAIN] Display switch preparation complete")
             continue
 
-        # d) Si le game_map signale un return_to_menu
+        # d) Si game_map signale un return_to_menu
         if game_map.game_state.get('return_to_menu'):
             if t_curses_started:
                 stop_curses()
                 if t_curses.is_alive():
                     t_curses.join()
             pygame.quit()
-            game_map = None # Reset game_map when returning to menu
+            game_map = None
 
-            # On ré-initialise user_choices => ce qui relancera le menu
             user_choices.clear()
             user_choices.update({
-                #"index_terminal_display": 2,
+                # "index_terminal_display": 2,  # si vous voulez par défaut 'both'
                 "load_game": False,
                 "chosen_save": "",
                 "grid_size": 120,
@@ -530,14 +521,13 @@ def main():
                 "bot_level": "lean",
                 "gold_at_center": False,
                 "validated": False,
-                "validated_by": None, # Reset validation source
+                "validated_by": None,
                 "menu_result": None
             })
             continue
 
-        # e) Sinon => fin
+        # e) Sinon => on sort
         else:
-            # Ni switch_display, ni main_menu, ni quit => on sort
             if t_curses_started:
                 stop_curses()
                 if t_curses.is_alive():
