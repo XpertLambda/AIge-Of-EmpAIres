@@ -33,16 +33,7 @@ class GameMap:
 
         if generate:
             self.generate_map()
-
-    def get_tile(self, x, y):
-        """
-        Retourne la tuile aux coordonnées (x, y).
-        :param x: Coordonnée x de la tuile.
-        :param y: Coordonnée y de la tuile.
-        :return: Un objet Tile ou None si la tuile n'existe pas.
-        """
-        return self.grid.get((x, y))
-    
+            
     def add_entity(self, entity, x, y):
         rounded_x, rounded_y = round(x), round(y)
         if (rounded_x < 0 or rounded_y < 0

@@ -16,8 +16,8 @@ from random import *
 from AiUtils.aStar import a_star
 
 class Bot:
-    def __init__(self, player_team, game_map, clock, difficulty = 'medium'):
-        self.clock= clock
+    def __init__(self, player_team, game_map, clock, difficulty='medium'):
+        self.clock = clock
         self.player_team = player_team
         self.game_map = game_map
         self.difficulty = difficulty
@@ -27,16 +27,72 @@ class Bot:
             'h': 1   # Horsemen
         }
         self.ATTACK_RADIUS = TILE_SIZE * 5  # Rayon d'attaque pour détecter les ennemis
+
+    def get_resource_shortage(self, current_resources, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
+        """
+        Détermine quelle ressource est en pénurie.
+        :param current_resources: Les ressources actuelles de l'équipe.
+        :param RESOURCE_THRESHOLDS: Les seuils de ressources.
+        :return: Le type de ressource en pénurie (food, wood, gold) ou None si tout va bien.
+        """
+        if current_resources.food < RESOURCE_THRESHOLDS['food']:
+            return 'food'
+        if current_resources.wood < RESOURCE_THRESHOLDS['wood']:
+            return 'wood'
+        if current_resources.gold < RESOURCE_THRESHOLDS['gold']:
+            return 'gold'
+        return None
+
+    def find_resource_location(self, game_map, resource_acronym):
+        """
+        Trouve l'emplacement d'une ressource spécifique sur la carte.
+        :param game_map: La carte du jeu.
+        :param resource_acronym: L'acronyme de la ressource (par exemple, 'W' pour le bois).
+        :return: Les coordonnées (x, y) de la ressource, ou None si non trouvée.
+        """
+        for (x, y), cell_content in game_map.grid.items():
+            if resource_acronym in cell_content:
+                return (x, y)
+        return None
+
+    def reallocate_villagers(self, resource_in_shortage, villagers, game_map):
+        """
+        Réaffecte les villageois disponibles pour collecter une ressource en pénurie.
+        :param resource_in_shortage: Le type de ressource en pénurie (food, wood, gold).
+        :param villagers: La liste des villageois de l'équipe.
+        :param game_map: La carte du jeu.
+        """
+        for villager in villagers:
+            if villager.isAvailable() and not villager.task:
+                for x, y in game_map.grid:
+                    resource_nodes = game_map.grid[(x, y)]
+                    for resource_node in resource_nodes:
+                        if resource_node.acronym.lower() == resource_in_shortage[0].lower():
+                            villager.set_target(resource_node)
+                            return
+
+    def check_and_address_resources(self, team, game_map, thresholds):
+        """
+        Vérifie les ressources et réaffecte les villageois si nécessaire.
+        :param team: L'équipe du joueur.
+        :param game_map: La carte du jeu.
+        :param thresholds: Les seuils de ressources.
+        """
+        resource_shortage = self.get_resource_shortage(team.resources, thresholds)
+        if resource_shortage:
+            self.reallocate_villagers(resource_shortage, team.units, game_map)
+
+    # ... (le reste de votre classe Bot)
     
     def update(self, game_map, dt):
         debug_print("Updating bot...")
         enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
-        
+
         # Log des ressources et des unités
         debug_print(f"Resources: {self.player_team.resources}")
         debug_print(f"Villagers: {sum(1 for unit in self.player_team.units if isinstance(unit, Villager))}")
         debug_print(f"Military units: {len(self.get_military_units())}")
-        
+
         # Appliquer la stratégie en fonction de la difficulté
         if self.difficulty == 'easy':
             self.easy_strategy(enemy_teams, game_map, dt)
@@ -44,15 +100,19 @@ class Bot:
             self.medium_strategy(enemy_teams, game_map, dt)
         elif self.difficulty == 'hard':
             self.hard_strategy(enemy_teams, game_map, dt)
-        
+
         # Scouter la carte pour trouver des ressources ou des ennemis
         self.scout_map(game_map)
-        
+
+        # Vérifier et gérer les ressources
+        self.check_and_address_resources(self.player_team, game_map, RESOURCE_THRESHOLDS)
+
         # Équilibrer les unités
         self.balance_units()
-        
+
         # Construire des structures si nécessaire
         self.build_structure(self.clock)
+
     def scout_map(self, game_map):
         """
         Explore la carte pour localiser les ressources et les unités ennemies.
@@ -74,16 +134,18 @@ class Bot:
 
         # Parcourir la zone pour trouver des ressources ou des ennemis
         for (x, y) in scout_area:
-            tile = game_map.grid.get((x, y))  # Accéder directement à la grille
+            # Vérifier si la tuile contient des ressources en utilisant le dictionnaire resources
+            resources_at_tile = game_map.resources.get((x, y))  # Accéder aux ressources à la position (x, y)
 
-            if tile and tile.has_resource() :  # Vérifier si la tuile existe et a une ressource
-                resource_type = tile.resource.type
-                debug_print(f"Found {resource_type} at ({x}, {y}).")
-                # Adapter la stratégie en fonction des ressources trouvées
-                if resource_type == "wood":
-                    self.player_team.assign_villager_to_resource(x, y, "wood")
-                elif resource_type == "gold":
-                    self.player_team.assign_villager_to_resource(x, y, "gold")
+            if resources_at_tile:
+                for resource in resources_at_tile:
+                    # Utiliser le nom de la classe comme type de ressource
+                    resource_type = resource.__class__.__name__.lower()  # "Gold" -> "gold", "Wood" -> "wood"
+                    debug_print(f"Found {resource_type} at ({x}, {y}).")
+                    if resource_type == "wood":
+                        self.reallocate_villagers('wood', [unit for unit in self.player_team.units if isinstance(unit, Villager)], game_map)
+                    elif resource_type == "gold":
+                        self.reallocate_villagers('gold', [unit for unit in self.player_team.units if isinstance(unit, Villager)], game_map)
 
             # Vérifier si la tuile contient des unités ennemies
             for enemy_team in game_map.players:
@@ -98,10 +160,10 @@ class Bot:
                                 self.PRIORITY_UNITS['swordsman'] = 3  # Augmenter la priorité des épéistes
 
         # Si des ressources ou des ennemis sont trouvés, ajuster la stratégie
-        if self.player_team.resources["wood"] < 100:
+        if self.player_team.resources.wood < 100:
             debug_print("Low on wood. Prioritizing wood collection.")
             self.balance_units()
-        if self.player_team.resources["gold"] < 50:
+        if self.player_team.resources.gold < 50:
             debug_print("Low on gold. Prioritizing gold collection.")
             self.balance_units()
     def easy_strategy(self, enemy_teams, game_map, dt):
