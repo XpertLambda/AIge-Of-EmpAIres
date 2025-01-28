@@ -1,6 +1,7 @@
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\game_loop.py
 import time
 import pygame
 import sys
@@ -50,11 +51,11 @@ from Settings.setup import (
 
 from Controller.Bot import manage_battle
 import os # Import os for path operations
-from Settings.sync import TEMP_SAVE_PATH
+from Settings.sync import TEMP_SAVE_PATH, TEMP_SAVE_FILENAME
 from Controller.sync_manager import check_and_load_sync
 
-TEMP_SAVE_FILENAME = "temp_save.pkl" # Define temporary save file name
-TEMP_SAVE_PATH = os.path.join(SAVE_DIRECTORY, TEMP_SAVE_FILENAME) # Define the full path to the temp save
+# TEMP_SAVE_FILENAME = "temp_save.pkl" # Define temporary save file name # Moved to sync.py
+# TEMP_SAVE_PATH = os.path.join(SAVE_DIRECTORY, TEMP_SAVE_FILENAME) # Define the full path to the temp save # Moved to sync.py
 
 def is_player_dead(player):
     if not player.units and not player.buildings:
@@ -84,7 +85,7 @@ def draw_game_over_overlay(screen, game_state):
     screen.blit(main_menu_text, main_menu_rect)
     game_state['main_menu_button_rect'] = main_menu_rect
 
-def game_loop(screen, game_map, screen_width, screen_height, players):
+def game_loop(screen, game_map, screen_width, screen_height, players): # game_map is passed here
     # Protection contre les dimensions nulles
     if screen_width <= 0 or screen_height <= 0:
         screen_width = 800
@@ -155,7 +156,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         'players': players,
         'selected_player': selected_player,
         'team_colors': team_colors,
-        'game_map': game_map,
+        'game_map': game_map, # Pass the game_map object to game_state
         'minimap_panel_sprite': minimap_panel_sprite,
         'minimap_panel_rect': minimap_panel_rect,
         'minimap_background': minimap_background_surface,
@@ -220,53 +221,63 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
     # Check if temp save exists and load if so, only on initial game_loop start, not after mode switch
     if os.path.exists(TEMP_SAVE_PATH) and not game_state.get('switch_display'): # Check switch_display to prevent loading after switch
         print("Loading game state from temp save...") # MODIFIED DEBUG PRINT
-        game_map.load_map(TEMP_SAVE_PATH)
-        players = game_map.players # Reload players from loaded map
-        game_state['players'] = players
-        if players:
-            game_state['selected_player'] = players[0]
-        else:
-            game_state['selected_player'] = None
-        team_colors = generate_team_colors(len(players)) # Regenerate team colors based on loaded players
-        game_state['team_colors'] = team_colors
-        players_target = players_target[:len(players)]  # Update players_target length to match loaded players
-        os.remove(TEMP_SAVE_PATH) # Clean up temp save after loading
-
-    # Check for temp save at startup
-    if os.path.exists(TEMP_SAVE_PATH):
         try:
-            print("[GUI] Loading game state from temp save...") # MODIFIED DEBUG PRINT
-            # Store current game_state
-            old_game_state = game_map.game_state
-
-            # Load the map
             game_map.load_map(TEMP_SAVE_PATH)
-
-            # Restore and update game_state
-            game_map.game_state = old_game_state
-
-            # Update players and other state
-            players = game_map.players
+            players = game_map.players # Reload players from loaded map
             game_state['players'] = players
             if players:
                 game_state['selected_player'] = players[0]
             else:
                 game_state['selected_player'] = None
+            team_colors = generate_team_colors(len(players)) # Regenerate team colors based on loaded players
+            game_state['team_colors'] = team_colors
+            game_state['players_target'] = [None for _ in range(len(players))] # Reinitialize players_target
+            game_state['old_resources'] = {p.teamID: p.resources.copy() for p in players} # Reinitialize old_resources
 
-            game_state['players_target'] = [None for _ in range(len(players))]
-            game_state['team_colors'] = generate_team_colors(len(players))
-
-            os.remove(TEMP_SAVE_PATH)
-            print("[GUI] Successfully loaded temp save") # MODIFIED DEBUG PRINT
-
-            # Force a redraw
-            game_state['force_full_redraw'] = True
-            game_state['player_selection_updated'] = True
-
+            os.remove(TEMP_SAVE_PATH) # Clean up temp save after loading
+            print("Successfully loaded game state from temp save and deleted it.") # DEBUG
         except Exception as e:
-            debug_print(f"[GUI] Error loading temp save: {e}")
-            if os.path.exists(TEMP_SAVE_PATH):
+            print(f"Error loading from temp save: {e}") # DEBUG
+            if os.path.exists(TEMP_SAVE_PATH): # Ensure temp save is deleted even if loading fails
                 os.remove(TEMP_SAVE_PATH)
+                print("Deleted temp save file due to load error.") # DEBUG
+
+
+    # Check for temp save at startup (this part is likely redundant now and can be removed or kept for initial load from save files)
+    if os.path.exists(TEMP_SAVE_PATH):
+            try:
+                print("[GUI] Loading game state from temp save...") # MODIFIED DEBUG PRINT
+                # Store current game_state
+                old_game_state = game_map.game_state
+
+                # Load the map
+                game_map.load_map(TEMP_SAVE_PATH)
+
+                # Restore and update game_state
+                game_map.game_state = old_game_state
+
+                # Update players and other state
+                players = game_map.players
+                game_state['players'] = players
+                if players:
+                    game_state['selected_player'] = players[0]
+                else:
+                    game_state['selected_player'] = None
+
+                game_state['players_target'] = [None for _ in range(len(players))]
+                game_state['team_colors'] = generate_team_colors(len(players))
+
+                os.remove(TEMP_SAVE_PATH)
+                print("[GUI] Successfully loaded temp save") # MODIFIED DEBUG PRINT
+
+                # Force a redraw
+                game_state['force_full_redraw'] = True
+                game_state['player_selection_updated'] = True
+
+            except Exception as e:
+                debug_print(f"[GUI] Error loading temp save: {e}")
+                if os.path.exists(TEMP_SAVE_PATH):
+                    os.remove(TEMP_SAVE_PATH)
 
     # Quand on charge une sauvegarde depuis le terminal
     if os.path.exists(TEMP_SAVE_PATH):
@@ -364,7 +375,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
         selected_player = game_state['selected_player']
         players = game_state['players']
         team_colors = game_state['team_colors']
-        game_map = game_state['game_map']
+        game_map = game_state['game_map'] # Use the game_map from game_state
         camera = game_state['camera']
 
         if user_choices["index_terminal_display"] == 1:
@@ -447,7 +458,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players):
                 screen,
                 screen_width,
                 screen_height,
-                game_map,
+                game_map, # Use the game_map object from game_state
                 camera,
                 players,
                 team_colors,

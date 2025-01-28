@@ -1,5 +1,6 @@
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
+# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
 import pygame
 import os
 import sys
@@ -29,6 +30,8 @@ from Controller.Bot import *
 
 # Import du curses terminal display
 from Controller.terminal_display import start_terminal_interface, stop_curses
+
+from Settings.sync import TEMP_SAVE_PATH, TEMP_SAVE_FILENAME # Import TEMP_SAVE_PATH
 
 
 def get_input_non_blocking():
@@ -281,6 +284,7 @@ def main():
     - Sur return_to_menu, on efface user_choices et on 'continue' pour relancer le menu.
     - Sur quit, on sort du while True.
     """
+    game_map = None  # Initialize game_map outside the loop
 
     # -- Boucle globale --
     while True:
@@ -361,15 +365,16 @@ def main():
 
         # 3) Création ou chargement de la map + players
         if load_game and chosen_save:
-            game_map = GameMap(0, False, [], generate=False)
-            game_map.load_map(chosen_save)
+            if game_map is None: # Only create GameMap instance if it's None
+                game_map = GameMap(0, False, [], generate=False)
+            game_map.load_map(chosen_save) # Load into the existing game_map instance
             if game_state:
                game_state['game_map'] = game_map # update game_map in game_state as well
 
             players = game_map.players
         else:
             players = init_players(nb_bots, bot_level)
-            game_map = GameMap(grid_size, gold_c, players)
+            game_map = GameMap(grid_size, gold_c, players) # Create a new GameMap instance if not loading
 
         # 4) Lancement *éventuel* de curses si mode_index in [1, 2]
         t_curses_started = False
@@ -416,7 +421,7 @@ def main():
         #    en fonction de screen != None.  Elle écoute F9 => switch_display,
         #    ESC => quitte, etc.
         from Controller.game_loop import game_loop
-        game_loop_result = game_loop(screen, game_map, sw, sh, players)
+        game_loop_result = game_loop(screen, game_map, sw, sh, players) # Pass the game_map object
 
         # 7) Regarder la sortie
         menu_result = user_choices.get("menu_result")
@@ -430,6 +435,7 @@ def main():
                     t_curses.join()
             # Fermer la fenêtre Pygame
             pygame.quit()
+            game_map = None # Reset game_map when returning to main menu
 
             # On efface user_choices pour relancer la config complète
             user_choices.clear()
@@ -459,25 +465,46 @@ def main():
 
         # c) Switch display => on bascule index 0 <-> 1, ou 2 -> 1, etc.
         elif menu_result == "switch_display":
-            if user_choices["index_terminal_display"] == 0:
-                user_choices["index_terminal_display"] = 1  # passe GUI->Terminal
-            elif user_choices["index_terminal_display"] == 1:
-                user_choices["index_terminal_display"] = 0  # Terminal->GUI
-            else:
-                # Si on était en both, on décide de passer en Terminal only (exemple)
-                user_choices["index_terminal_display"] = 1
+            print("DEBUG: Switch display mode requested.") # DEBUG
+            # 1. Save the game state
+            game_map.save_map(TEMP_SAVE_PATH)
+            print(f"DEBUG: Game saved to {TEMP_SAVE_PATH} before display switch.") # DEBUG
 
-            # Fermer curses si lancé
+            # 2. Fermer curses si lancé
             if t_curses_started:
                 stop_curses()
                 if t_curses.is_alive():
                     t_curses.join()
+                print("DEBUG: Curses stopped.") # DEBUG
 
-            # Fermer la fenêtre pygame
+            # 3. Fermer la fenêtre pygame
             pygame.display.quit()
+            print("DEBUG: Pygame display quit.") # DEBUG
+
+            # 4. Basculer l'index d'affichage
+            if user_choices["index_terminal_display"] == 0:
+                user_choices["index_terminal_display"] = 1  # passe GUI->Terminal
+                print("DEBUG: Switched to Terminal only mode.") # DEBUG
+            elif user_choices["index_terminal_display"] == 1:
+                user_choices["index_terminal_display"] = 0  # Terminal->GUI
+                print("DEBUG: Switched to GUI only mode.") # DEBUG
+            else:
+                # Si on était en both, on décide de passer en Terminal only (exemple)
+                user_choices["index_terminal_display"] = 1
+                print("DEBUG: Switched from Both to Terminal only mode.") # DEBUG
 
             # On retire "menu_result"
             user_choices["menu_result"] = None
+
+            # 5. Delete the temporary save file
+            try:
+                os.remove(TEMP_SAVE_PATH)
+                print(f"DEBUG: Temporary save file {TEMP_SAVE_PATH} deleted.") # DEBUG
+            except FileNotFoundError:
+                print(f"DEBUG: Temporary save file {TEMP_SAVE_PATH} not found, no deletion needed.") # DEBUG
+            except Exception as e:
+                print(f"DEBUG: Error deleting temporary save file: {e}") # DEBUG
+
 
             # ATTENTION : on ne remet pas validated = False => on ne relance PAS le menu
             # On se contente de redémarrer la partie avec la nouvelle config
@@ -490,6 +517,7 @@ def main():
                 if t_curses.is_alive():
                     t_curses.join()
             pygame.quit()
+            game_map = None # Reset game_map when returning to menu
 
             # On ré-initialise user_choices => ce qui relancera le menu
             user_choices.clear()
