@@ -16,11 +16,12 @@ from Entity.Resource import Resource
 from Models.Map import GameMap
 from random import *
 from AiUtils.aStar import a_star
-
+from Controller.Decisonnode import Decision
 class Bot:
     def __init__(self, player_team, game_map, clock, difficulty = 'medium'):
         self.clock= clock
         self.player_team = player_team
+        self.decsion=Decision(self)
         self.game_map = game_map
         self.difficulty = difficulty
         self.PRIORITY_UNITS = {
@@ -639,3 +640,7 @@ class Bot:
                         if self.player_team.buildBuilding(building, clock, nb=3, game_map=self.game_map):
                             return True
         return False
+    
+    def update(self ):
+         self.decision.execute()
+
