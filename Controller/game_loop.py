@@ -51,7 +51,6 @@ from Settings.setup import (
     SAVE_DIRECTORY  # Import SAVE_DIRECTORY
 )
 
-from Controller.Bot import manage_battle
 import os # Import os for path operations
 from Settings.sync import TEMP_SAVE_PATH, TEMP_SAVE_FILENAME
 from Controller.sync_manager import check_and_load_sync
@@ -485,6 +484,10 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
         game_state['player_selection_updated'] = True
         game_state['player_info_updated'] = True
 
+    # Initialisation du timer pour les bots
+    bot_update_timer = 0
+    bot_update_interval = 1.0 / DPS  # 0.5 secondes pour DPS = 2
+
     while running:
         current_time = time.time()
         if not is_terminal_only:
@@ -497,11 +500,13 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
         dt = 0 if game_state['paused'] else raw_dt
         dt = dt * GAME_SPEED
 
-        bot_update_timer += dt
-        if bot_update_timer >= bot_update_interval:
-            for bot in bots:
-                bot.update(game_map, dt)
-            bot_update_timer = 0  
+        # Mise à jour des bots selon le DPS
+        if not game_state['paused']:
+            bot_update_timer += dt
+            if bot_update_timer >= bot_update_interval:
+                for bot in bots:
+                    bot.update(game_map, bot_update_interval)  # Passe l'intervalle fixe
+                bot_update_timer = 0  # Reset du timer
 
         # On ne gère la caméra que si on n'est pas en mode terminal
         if not is_terminal_only:
@@ -561,6 +566,11 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
             update_counter += dt
 
         # Simpliste manage battle
+        if selected_player and selected_player.teamID >= len(players_target):
+            # Redimensionner si nécessaire
+            players_target.clear()
+            players_target.extend([None] * len(players))
+            game_state['players_target'] = players_target
         #Bot.manage_battle(selected_player, players_target, players, game_map, dt)
 
         if not game_state.get('paused', False):
