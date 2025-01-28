@@ -23,33 +23,33 @@ class DecisionNode:
 
 # Priority Actions (Using Logic from Bot.py)
 def priorty1(player_team, enemy_team, players_target, game_map, dt):
-    print("Defending against attack.")
+    debug_print("Defending against attack.")
     priorty1(player_team, enemy_team, players_target, game_map, dt)
 
 def priority_2(player_team, enemy_teams, game_map):
-    print("Attacking the enemy.")
+    debug_print("Attacking the enemy.")
     priority_2(players,selected_player,players_target)
 
 def priority_6(player_team):
-    print("Repairing critical buildings.")
+    debug_print("Repairing critical buildings.")
     priority_6(player_team)
 
 def priorty_5(player_team):
-    print("Maintaining military units.")
+    debug_print("Maintaining military units.")
     priorite_5(player_team)
 
 def priorty7(player_team, game_map, ):
-    print("Managing resource shortages.")
+    debug_print("Managing resource shortages.")
     resource_shortage = get_resource_shortage(player_team.resources, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS)
     if resource_shortage:
         reallocate_villagers(resource_shortage, player_team, game_map)
 
 def check_building_needs():
-    print("Checking building needs.")
+    debug_print("Checking building needs.")
     return check_building_needs()
 
 def build_structure(player_team):
-    print("Building structures.")
+    debug_print("Building structures.")
     if check_building_needs():
         build_structure(player_team)
 
@@ -89,7 +89,7 @@ def create_decision_tree(player_team, enemy_team, enemy_teams, game_map, dt, res
             false_branch=DecisionNode(
                 condition=lambda: building_needs(player_team),
                 true_branch=DecisionNode(
-                    condition=lambda: army_below_threshold(player_team),
+                    condition=lambda: army_below_threshold(player_team), 
                     true_branch=DecisionNode(
                         action=lambda: priorite_5(player_team)
                     ),
