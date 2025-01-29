@@ -27,7 +27,8 @@ class GameMap:
         self.inactive_matrix = {}
         self.projectiles = {}
         self.game_state = None
-
+        self.width = grid_width
+        self.height = grid_height
         self.terminal_view_x = 0
         self.terminal_view_y = 0
 
