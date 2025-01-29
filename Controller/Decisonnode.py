@@ -31,13 +31,13 @@ def are_buildings_needed_condition(bot):
     return bot.check_building_needs()
 
 def is_army_below_threshold_condition(bot):
-    return bot.get_military_unit_count(bot.player_team) < 15 # Reduced threshold for example
+    return bot.get_military_unit_count(bot.team) < 15 # Reduced threshold for example
 
 def are_damaged_buildings_condition(bot):
     return len(bot.get_critical_points()) > 0
 
 def is_military_count_low_condition(bot):
-    return bot.get_military_unit_count(bot.player_team) < 10 # Example threshold
+    return bot.get_military_unit_count(bot.team) < 10 # Example threshold
 
 # --- Actions ---
 def defend_action(bot):
