@@ -50,10 +50,18 @@ class Bot:
             "wood": Tree,
             "gold": Gold,
         }
-        resources = self.team.resources.copy()
-        debug_print(f'team resources: {resources}')
-        resources.decrease_resources(RESOURCE_THRESHOLDS.get())
-        return RESOURCE_MAPPING[resources.min_resource()]
+        
+        resources = self.team.resources  # Utilisation directe des ressources actuelles de l'équipe
+        debug_print(f'Team resources: {resources}')
+        
+        # Vérifier s'il y a une pénurie en comparant avec RESOURCE_THRESHOLDS
+        for resource in ["food", "wood", "gold"]:
+            if getattr(resources, resource) < getattr(RESOURCE_THRESHOLDS, resource):
+                return RESOURCE_MAPPING[resource]
+        
+        return None  # Aucune pénurie détectée
+
+
 
     def reallocate_villagers(self, Resource):
         available_villagers = [unit for unit in self.team.units
@@ -131,10 +139,10 @@ class Bot:
 
     def priority7(self):
         resource_shortage = self.get_resource_shortage()
-        #print(f'shortage: {resource_shortage}')
-        if resource_shortage:
-            debug_print(f'Reallocating villagers to {resource_shortage.__name__}')
-            self.reallocate_villagers(resource_shortage)
+                
+        debug_print(f'Reallocating villagers to {resource_shortage.__name__}')
+        self.reallocate_villagers(resource_shortage)
+
 
     def search_for_target(self, unit, enemy_team, attack_mode=True):
         if enemy_team==None:

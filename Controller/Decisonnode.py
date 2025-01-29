@@ -25,7 +25,7 @@ def is_under_attack_condition(bot):
     return bot.is_under_attack()
 
 def is_resource_shortage_condition(bot):
-    return bot.get_resource_shortage() is not None
+    return bot.get_resource_shortage() 
 
 def are_buildings_needed_condition(bot):
     return bot.check_building_needs()
