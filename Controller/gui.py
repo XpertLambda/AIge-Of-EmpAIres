@@ -325,7 +325,9 @@ def run_gui_menu(screen, sw, sh):
                         user_choices["index_terminal_display"] = toggle_button["index"]
 
                     # Bouton Valider (validation_rect est défini avant la boucle)
-                    if valid_rect.collidepoint(mx,my): # validation_rect from draw_config_menu
+                    if valid_rect.collidepoint(mx,my):
+                        # Créer une liste de niveaux identiques pour tous les bots
+                        user_choices["bot_modes"] = [user_choices.get("bot_mode", "economique")] * user_choices["num_bots"]
                         user_choices["validated_by"] = "gui"
                         user_choices["validated"] = True
                         running = False
