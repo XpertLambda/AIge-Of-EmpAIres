@@ -33,7 +33,7 @@ MAXIMUM_CARRY = 20
 # -------------------
 # BOT constants
 # -------------------
-DPS = 2 # 2 decisions per second
+DPS = 1 # 2 decisions per second
 
 # -------------------
 # Unit constants
