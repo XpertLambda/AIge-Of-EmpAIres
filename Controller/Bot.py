@@ -52,7 +52,6 @@ class Bot:
         }
         resources = self.team.resources.copy()
         resources.decrease_resources(RESOURCE_THRESHOLDS.get())
-        print(f'short on {resources.min_resource()}')
         return RESOURCE_MAPPING[resources.min_resource()]
 
     def reallocate_villagers(self, Resource):
@@ -131,7 +130,6 @@ class Bot:
 
     def priority7(self):
         resource_shortage = self.get_resource_shortage()
-        print(f'shortage: {resource_shortage}')
         if resource_shortage:
             self.reallocate_villagers(resource_shortage)
 

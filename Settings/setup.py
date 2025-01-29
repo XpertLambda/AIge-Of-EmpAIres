@@ -90,7 +90,7 @@ difficulty_config = {
     },
 
     'DEBUG' : {
-        'Resources' : Resources(food=100, gold=80, wood=80),
+        'Resources' : Resources(food=0, gold=900, wood=900),
         'Units' : {
             'Villager' : 5,
             'Archer' : 0,
@@ -419,4 +419,4 @@ VALID_BOTS_COUNT = [i for i in range(1, 56)]
 VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
 VALID_BOT_MODES = ["economique", "defensif", "offensif"] # Added valid bot modes - AJOUTÉ
 
-RESOURCE_THRESHOLDS = Resources(food = 150, gold=150, wood = 100)
+RESOURCE_THRESHOLDS = Resources(food = 1000, gold=100, wood = 100)
