@@ -69,6 +69,17 @@ class Resources:
             (wood > 0 and self.wood < wood)
         )
 
+    def min_resource(self):
+        min_value = min(self.food, self.gold, self.wood)
+        
+        if min_value == self.wood:
+            return "wood"
+        elif min_value == self.gold:
+            return "gold"
+        else:
+            return "food"
+
+
     def get(self):
         return (self.food, self.gold, self.wood)
 

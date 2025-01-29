@@ -64,17 +64,18 @@ class Villager(Unit):
         self.set_task(None)
         self.set_destination(None, None)
         if target and target.isAlive() and target.entity_id != self.entity_id:
-            if target.hasResources:
-                self.set_task('collect', target)
-
-            elif target.team == self.team and hasattr(target, 'buildTime'):
-                
+            if target.team == self.team and hasattr(target, 'buildTime'):
                 if target.processTime < target.dynamicBuildTime:
                     self.set_task('build', target)
                 
                 elif hasattr(target, 'resourceDropPoint') and target.resourceDropPoint and target.state == 'idle':
                     self.set_task('stock', target)
             
+            elif target.hasResources:
+                if type(target).__name__ == "Farm" and not target.isBuilt():
+                    return
+                self.set_task('collect', target)
+
             elif target.team != self.team:
                 self.attack_target = target
 

@@ -70,7 +70,7 @@ class GameMap:
         return True
 
     def remove_entity(self, entity):
-        if not entity or entity.team is None:
+        if not entity:
             return False
             
         remove_counter = 0
@@ -106,6 +106,19 @@ class GameMap:
         if entities:
             for entity in entities:
                 if not entity.walkable:
+                    return False
+        return True
+    def buildable_position(self, x, y , size=1):
+        rounded_x, rounded_y = round(x), round(y)
+        if (rounded_x < 0 or rounded_y < 0
+            or rounded_x + size - 1 >= self.num_tiles_x
+            or rounded_y + size - 1 >= self.num_tiles_y):
+            return False
+
+        for i in range(size):
+            for j in range(size):
+                pos = (rounded_x + i, rounded_y + j)
+                if pos in self.grid:
                     return False
         return True
 

@@ -9,7 +9,7 @@ from Settings.setup import *
 from Settings.entity_mapping import *
 from Entity.Entity import *
 from Entity.Unit import *
-from Entity.Resource import Resource
+from Entity.Resource import *
 from Models.Map import GameMap
 from random import *
 from AiUtils.aStar import a_star
@@ -41,41 +41,83 @@ class Bot:
         self.decision_tree = self.create_mode_decision_tree()
         self.decision_tree.evaluate()
 
-    def set_priority(priority):
+    def set_priority(self, priority):
         self.priority = priority
 
     def get_resource_shortage(self):
-        shortages = {
-            key: RESOURCE_THRESHOLDS[key] - self.team.resources.get().get(key, 0)
-            for key in RESOURCE_THRESHOLDS
+        RESOURCE_MAPPING = {
+            "food": Farm,
+            "wood": Tree,
+            "gold": Gold,
         }
-        critical_shortages = {key: value for key, value in shortages.items() if value > 0}
-        
-        if critical_shortages:
-            return min(critical_shortages, key=critical_shortages.get)
-        return None
+        resources = self.team.resources.copy()
+        resources.decrease_resources(RESOURCE_THRESHOLDS.get())
+        print(f'short on {resources.min_resource()}')
+        return RESOURCE_MAPPING[resources.min_resource()]
 
-    def reallocate_villagers(self, resource_type):
+    def reallocate_villagers(self, Resource):
         available_villagers = [unit for unit in self.team.units
-                             if isinstance(unit, Villager) and unit.isAvailable()]
-
+                               if isinstance(unit, Villager) and unit.isAvailable()]
+        available_farms = [farm for farm in self.team.buildings
+                           if isinstance(farm, Farm)]
+        
         for villager in available_villagers:
             drop_points = [b for b in self.team.buildings if b.resourceDropPoint]
             if not drop_points:
                 return
-
             nearest_drop_point = min(
                 drop_points,
                 key=lambda dp: math.dist((villager.x, villager.y), (dp.x, dp.y))
             )
 
-            resource_locations = []
-            for pos, entities in self.game_map.grid.items():
-                if isinstance(entities, set):
-                    for entity in entities:
-                        if isinstance(entity, Resource) and entity.__class__.__name__.lower() == resource_type:
-                            resource_locations.append((pos, entity))
+            if issubclass(Resource, Farm):
+                if not available_farms:
+                    if not available_villagers:
+                        closest_buildable_position = None
+                        min_distance = float('inf')
+                        # Try to find a 2x2 area for a farm
+                        nx, ny = int(nearest_drop_point.x), int(nearest_drop_point.y)
+                        search_range = 10  # Adjust as needed
+                        closest_buildable_position = None
+                        min_distance = float('inf')
 
+                        for dx in range(-search_range, search_range + 1):
+                            for dy in range(-search_range, search_range + 1):
+                                x = nx + dx
+                                y = ny + dy
+                                # Check 2x2 area is buildable
+                                if (self.game_map.buildable_position(x, y, size = 4)):
+                                    distance = math.dist((nx, ny), (x, y))
+                                    if distance < min_distance:
+                                        min_distance = distance
+                                        closest_buildable_position = (x, y)
+
+                        if closest_buildable_position:
+                            x, y = closest_buildable_position
+                            # Attempt building at the discovered position
+                            if self.team.build('Farm', x, y, 1, self.game_map, True):
+                                return
+                    else:
+                        closest_buildable_position = None
+                        min_distance = float('inf')
+                        for x, y in self.team.zone.get_zone():
+                            if (self.game_map.buildable_position(x, y, size = 4)):
+                                distance = math.dist((nearest_drop_point.x, nearest_drop_point.y), (x, y))
+                                if distance < min_distance:
+                                    min_distance = distance
+                                    closest_buildable_position = (x, y)
+                        if closest_buildable_position:
+                            x, y = closest_buildable_position
+                            if self.team.build('Farm', x, y, 1, self.game_map):
+                                return
+
+            resource_locations = []
+            for pos, entities in self.game_map.resources.items():
+                if entities:
+                    for entity in entities:
+                        if isinstance(entity, Resource):
+                            resource_locations.append((pos, entity))
+            
             if resource_locations:
                 closest_resource = min(
                     resource_locations,
@@ -87,8 +129,9 @@ class Bot:
                 villager.set_target(closest_resource[1])
                 break
 
-    def priorty7(self, RESOURCE_THRESHOLDS=RESOURCE_THRESHOLDS):
-        resource_shortage = self.get_resource_shortage( RESOURCE_THRESHOLDS)
+    def priority7(self):
+        resource_shortage = self.get_resource_shortage()
+        print(f'shortage: {resource_shortage}')
         if resource_shortage:
             self.reallocate_villagers(resource_shortage)
 

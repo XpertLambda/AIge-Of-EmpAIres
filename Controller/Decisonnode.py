@@ -2,14 +2,14 @@
 from Controller.terminal_display_debug import debug_print
 
 class DecisionNode:
-    def __init__(self, condition=True, true_branch=None, false_branch=None, action=None):
+    def __init__(self, condition=None, true_branch=None, false_branch=None, action=None):
         self.condition = condition
         self.true_branch = true_branch
         self.false_branch = false_branch
         self.action = action
 
     def evaluate(self):
-        if self.condition():
+        if self.condition and self.condition():
             if self.true_branch:
                 return self.true_branch.evaluate()
             elif self.action:
@@ -46,7 +46,7 @@ def defend_action(bot):
 
 def address_resource_shortage_action(bot):
     debug_print("Decision Node Action: Addressing resource shortage.")
-    bot.priorty7() # Using priority 7 for resource management
+    bot.priority7() # Using priority 7 for resource management
 
 def build_needed_structure_action(bot):
     debug_print("Decision Node Action: Building needed structures.")
@@ -71,23 +71,22 @@ def manage_offense_action(bot, players, selected_player, players_target, game_ma
 def create_economic_decision_tree(bot):
     """Decision tree for Economic mode - focuses on economy, defends if attacked."""
     return DecisionNode(
-        condition=lambda: is_under_attack_condition(bot),
-        true_branch=DecisionNode(
-            condition=True,
-            action=lambda: defend_action(bot)
+        condition = lambda: is_under_attack_condition(bot),
+        true_branch = DecisionNode(
+            action = lambda: defend_action(bot)
         ),
-        false_branch=DecisionNode(
-            condition=lambda: is_resource_shortage_condition(bot),
-            true_branch=DecisionNode(
-                action=lambda: address_resource_shortage_action(bot) # Fix resource shortage
+        false_branch = DecisionNode(
+            condition = lambda: is_resource_shortage_condition(bot),
+            true_branch = DecisionNode(
+                action = lambda: address_resource_shortage_action(bot)
             ),
-            false_branch=DecisionNode(
-                condition=lambda: are_buildings_needed_condition(bot),
-                true_branch=DecisionNode(
-                    action=lambda: build_needed_structure_action(bot) # Build economic buildings
+            false_branch = DecisionNode(
+                condition = lambda: are_buildings_needed_condition(bot),
+                true_branch = DecisionNode(
+                    action = lambda: build_needed_structure_action(bot)
                 ),
-                false_branch=DecisionNode( 
-                    action=lambda: balance_army_action(bot)
+                false_branch = DecisionNode(
+                    action = lambda: balance_army_action(bot)
                 )
             )
         )
@@ -140,7 +139,7 @@ def create_default_decision_tree(bot):
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot),
         true_branch=DecisionNode(
-            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt)
+            action=lambda: defend_action(bot)
         ),
         false_branch=DecisionNode(
             condition=lambda: is_resource_shortage_condition(bot),
@@ -158,7 +157,7 @@ def create_default_decision_tree(bot):
                         action=lambda: balance_army_action(bot)
                     ),
                     false_branch=DecisionNode(
-                        action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt) # Balanced approach: manage offense if nothing else needed
+                        action=lambda: manage_offense_action(bot) # Balanced approach: manage offense if nothing else needed
                     )
                 )
             )

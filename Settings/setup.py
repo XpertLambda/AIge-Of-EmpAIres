@@ -22,7 +22,7 @@ os.makedirs(ASSETS_DIRECTORY, exist_ok=True)
 # Global Constants
 # Classe Villager
 # -------------------
-GAME_SPEED = 10
+GAME_SPEED = 5
 FPS_DRAW_LIMITER = 50
 
 BUILDING_TIME_REDUCTION = 0.75
@@ -55,7 +55,7 @@ MAXIMUM_POPULATION = 200
 
 difficulty_config = {
     'lean' : {
-        'Resources' : Resources(food=50, gold=200, wood=50),
+        'Resources' : Resources(food=50, gold=150, wood=50),
         'Units' : {
             'Villager' : 3
         },
@@ -90,21 +90,21 @@ difficulty_config = {
     },
 
     'DEBUG' : {
-        'Resources' : Resources(food=99999, gold=99999, wood=99999),
+        'Resources' : Resources(food=100, gold=80, wood=80),
         'Units' : {
             'Villager' : 5,
-            'Archer' : 5,
-            'Horseman' : 5,
-            'Swordsman' : 3
+            'Archer' : 0,
+            'Horseman' : 0,
+            'Swordsman' : 0
         },
         'Buildings' : {
-            'TownCenter' : 5,
-            'House' : 1,
-            'Barracks' : 1,
+            'TownCenter' : 1,
+            'House' : 0,
+            'Barracks' : 0,
             'Stable' : 0,
-            'ArcheryRange' : 1,
-            'Farm' : 5,
-            'Keep' : 5,
+            'ArcheryRange' : 0,
+            'Farm' : 0,
+            'Keep' : 0,
             'Camp' : 0,
         }
     }
@@ -419,8 +419,4 @@ VALID_BOTS_COUNT = [i for i in range(1, 56)]
 VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
 VALID_BOT_MODES = ["economique", "defensif", "offensif"] # Added valid bot modes - AJOUTÉ
 
-RESOURCE_THRESHOLDS = {
-    'food': 300,
-    'wood': 350,
-    'gold': 350
-}
+RESOURCE_THRESHOLDS = Resources(food = 150, gold=150, wood = 100)
