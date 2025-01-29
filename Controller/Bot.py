@@ -506,20 +506,27 @@ class Bot:
         return needed_buildings
 
     def find_building_location(self, building_type):
-        for x in range(10, self.game_map.width - 10):
-            for y in range(10, self.game_map.height - 10):
-                if self.game_map.walkable_position((x, y)): # Changed to walkable_position
-                    enemy_nearby = False
-                    for enemy_team in self.game_map.players:
-                        if enemy_team.teamID != self.team.teamID:
-                            for unit in enemy_team.units:
-                                if abs(unit.x - x) < 10 and abs(unit.y - y) < 10:
-                                    enemy_nearby = True
-                                    break
-                        if enemy_nearby:
-                            break
-                    if not enemy_nearby:
-                        return (x, y)
+        # Get the building size
+        building_class = building_class_map[building_type]
+        building_instance = building_class(team=self.team.teamID)
+        building_size = building_instance.size
+        del building_instance
+
+        # Get list of coordinates in team's zone
+        zone_coords = list(self.team.zone.get_zone())
+        if not zone_coords:
+            return None
+
+        # Try 10 random positions
+        for _ in range(10):
+            # Pick a random position in the zone
+            pos = choice(zone_coords)
+            x, y = pos
+
+            # Check if area is buildable
+            if self.game_map.buildable_position(x, y, building_size):
+                return (x, y)
+
         return None
 
     def can_build_building(self, building_class):
