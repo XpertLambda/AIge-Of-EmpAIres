@@ -110,6 +110,7 @@ def run_gui_menu(screen, sw, sh):
     show_main_menu   = True
     show_config_menu = False
     show_load_menu   = False
+    item_height = ITEM_HEIGHT  # Définir item_height au début de la fonction
 
     main_buttons = [
         {"text": "Nouvelle Partie", "rect": pygame.Rect(0,0,200,50)},
@@ -201,7 +202,6 @@ def run_gui_menu(screen, sw, sh):
                 if combo_open == "width": # Width combo box
                     start_idx = combo_scroll_positions["width"]
                     visible_items = VALID_GRID_SIZES[start_idx:start_idx + MAX_VISIBLE_ITEMS]
-                    item_height = ITEM_HEIGHT
                     expanded_rect = pygame.Rect(sw//2 - 100, 100 + item_height, 200, item_height * len(visible_items))
                     if expanded_rect.collidepoint(mx,my):
                         relative_y = my - (100 + item_height)
@@ -325,7 +325,9 @@ def run_gui_menu(screen, sw, sh):
                         user_choices["index_terminal_display"] = toggle_button["index"]
 
                     # Bouton Valider (validation_rect est défini avant la boucle)
-                    if valid_rect.collidepoint(mx,my): # validation_rect from draw_config_menu
+                    if valid_rect.collidepoint(mx,my):
+                        # Créer une liste de niveaux identiques pour tous les bots
+                        user_choices["bot_modes"] = [user_choices.get("bot_mode", "economique")] * user_choices["num_bots"]
                         user_choices["validated_by"] = "gui"
                         user_choices["validated"] = True
                         running = False

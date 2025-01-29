@@ -69,12 +69,12 @@ def _curses_main(stdscr, game_map):
 
     # On divise l'écran en 2 : zone map + zone debug
     total_h, total_w = stdscr.getmaxyx()
-    debug_h = 5
+    debug_h = 8  # Augmenté de 5 à 8 pour plus de hauteur
     map_h = total_h - debug_h
 
     # Sous-fenêtres
     win_map = curses.newwin(map_h, total_w, 0, 0)
-    win_debug = curses.newwin(debug_h, total_w, map_h, 0)
+    win_debug = curses.newwin(debug_h, total_w, map_h, 0)  # Utilise toute la largeur (total_w)
     win_debug.scrollok(True)
 
     # Move color initialization to a function we can call again when needed
