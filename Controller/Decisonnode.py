@@ -45,7 +45,7 @@ def defend_action(bot):
     bot.priorty1() # Using priority 1 for defense
 
 def address_resource_shortage_action(bot):
-    print("Decision Node Action: Addressing resource shortage.")
+    #print("Decision Node Action: Addressing resource shortage.")
     bot.priority7() # Using priority 7 for resource management
 
 def build_needed_structure_action(bot):
@@ -70,6 +70,7 @@ def manage_offense_action(bot, players, selected_player, players_target, game_ma
 
 def create_economic_decision_tree(bot):
     """Decision tree for Economic mode - focuses on economy, defends if attacked."""
+    debug_print("Creating economic decision tree")
     return DecisionNode(
         condition = lambda: is_under_attack_condition(bot),
         true_branch = DecisionNode(
@@ -92,8 +93,9 @@ def create_economic_decision_tree(bot):
         )
     )
 
-def create_defensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
+def create_defensive_decision_tree(bot, enemy_team):
     """Decision tree for Defensive mode - focuses on defense and strong economy."""
+    debug_print("Creating defensive decision tree")
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot, enemy_team),
         true_branch=DecisionNode(
@@ -116,8 +118,9 @@ def create_defensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, p
         )
     )
 
-def create_offensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
+def create_offensive_decision_tree(bot, enemy_team, game_map, dt, players, selected_player, players_target):
     """Decision tree for Offensive mode - focuses on aggressive military actions."""
+    debug_print("Creating offensive decision tree")
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot, enemy_team),
         true_branch=DecisionNode(

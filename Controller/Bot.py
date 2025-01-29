@@ -16,7 +16,7 @@ from AiUtils.aStar import a_star
 from Controller.Decisonnode import * # Import DecisionNode and trees
 
 class Bot:
-    def __init__(self, team, game_map, players, difficulty='medium', mode='economic'):
+    def __init__(self, team, game_map, players, mode, difficulty='medium'):
         self.team = team
         self.game_map = game_map
         self.difficulty = difficulty
@@ -51,8 +51,8 @@ class Bot:
             "gold": Gold,
         }
         resources = self.team.resources.copy()
+        debug_print(f'team resources: {resources}')
         resources.decrease_resources(RESOURCE_THRESHOLDS.get())
-        print(f'short on {resources.min_resource()}')
         return RESOURCE_MAPPING[resources.min_resource()]
 
     def reallocate_villagers(self, Resource):
@@ -131,8 +131,9 @@ class Bot:
 
     def priority7(self):
         resource_shortage = self.get_resource_shortage()
-        print(f'shortage: {resource_shortage}')
+        #print(f'shortage: {resource_shortage}')
         if resource_shortage:
+            debug_print(f'Reallocating villagers to {resource_shortage.__name__}')
             self.reallocate_villagers(resource_shortage)
 
     def search_for_target(self, unit, enemy_team, attack_mode=True):
@@ -231,9 +232,11 @@ class Bot:
 
     def create_mode_decision_tree(self): 
         if self.mode == 'offensif':
-            return create_offensive_decision_tree(self)
+            return create_economic_decision_tree(self)
+            #return create_offensive_decision_tree(self, enemy_team, game_map, dt, players, players_target)
         elif self.mode == 'defensif':
-            return create_defensive_decision_tree(self)
+            return create_economic_decision_tree(self)
+            #return create_defensive_decision_tree(self, enemy_team)
         elif self.mode == 'economic':
             return create_economic_decision_tree(self)
         else:
