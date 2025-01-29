@@ -35,6 +35,12 @@ class GameMap:
             self.generate_map()
             
     def add_entity(self, entity, x, y):
+        # Add safety check for team ID
+        if hasattr(entity, 'team') and entity.team is not None:
+            if entity.team >= len(self.players):
+                print(f"Warning: Entity team ID {entity.team} out of range for {len(self.players)} players")
+                return False
+
         rounded_x, rounded_y = round(x), round(y)
         if (rounded_x < 0 or rounded_y < 0
             or rounded_x + entity.size - 1 >= self.num_tiles_x
@@ -324,6 +330,9 @@ class GameMap:
         # Temporarily store and remove unpicklable objects
         gui_state = {}
         if self.game_state:
+            # Store current bot modes before saving
+            self.game_state['bot_modes'] = self.game_state.get('bot_modes', ['economique'] * len(self.players))
+            
             gui_state = {
                 'screen': self.game_state.pop('screen', None),
                 'minimap_panel_sprite': self.game_state.pop('minimap_panel_sprite', None),
@@ -389,6 +398,25 @@ class GameMap:
                 self.game_state['old_resources'] = {
                     p.teamID: p.resources.copy() for p in self.players
                 }
+
+            # Reassign team IDs to match player positions
+            for i, player in enumerate(self.players):
+                player.teamID = i
+                # Update team IDs for all entities belonging to this player
+                for unit in player.units:
+                    unit.team = i
+                for building in player.buildings:
+                    building.team = i
+
+            # Update grid entities with new team IDs
+            for entities in self.grid.values():
+                for entity in entities:
+                    if hasattr(entity, 'team') and entity.team is not None:
+                        # Update entity's team ID to match its owner's new ID
+                        for i, player in enumerate(self.players):
+                            if entity in player.units or entity in player.buildings:
+                                entity.team = i
+                                break
 
             debug_print(f"Game map loaded successfully from {filename}.")
         except Exception as e:

@@ -19,6 +19,10 @@ def handle_camera(camera, dt, is_terminal_only=None):
     import pygame
     keys = pygame.key.get_pressed()
     move_speed = 500 * dt
+    
+    # Appliquer un multiplicateur de vitesse si Shift est pressé
+    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+        move_speed *= 2
 
     # Déplacements caméra
     if keys[pygame.K_LEFT] or keys[pygame.K_q]:
