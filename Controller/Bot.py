@@ -539,31 +539,41 @@ class Bot:
     #         building.x, building.y = x, y # Set building position before adding to game map
     #         return self.team.buildBuilding(building, clock, nb, game_map) # Delegate to team's buildBuilding
 
-    def build_structure(self):
+    def build_structure(self, num_builders=1):
         needed_buildings = self.check_building_needs()
         if not needed_buildings:
             return False
-        
+
         for building_type in needed_buildings:
             if building_type in building_class_map:
                 print(f"Building type: {building_type}")
                 building_class = building_class_map[building_type]
-                
+
                 # Créer une instance temporaire pour accéder à `cost`
                 building_instance = building_class(team=self.team.teamID)
                 building_cost = building_instance.cost
-                
+
                 print(f"Cout building: {building_cost}")
-                
+
                 # Accès aux ressources via les attributs de l'instance `cost`
                 if (self.team.resources.food >= building_cost.food and
                     self.team.resources.wood >= building_cost.wood and
                     self.team.resources.gold >= building_cost.gold):
-                    
+
                     location = self.find_building_location(building_type)
                     if location:
                         x, y = location
+
+                        # Vérifier que self.game_map est un objet de type GameMap
+                        if not isinstance(self.game_map, GameMap):
+                            print(f"Erreur: self.game_map n'est pas un objet GameMap. Type actuel: {type(self.game_map)}")
+                            return False
+
+                        # Construire le bâtiment
                         building = building_class(team=self.team.teamID, x=x, y=y)
-                        if self.team.build(building, x, y, self.game_map, num_builders=1):
+                        if self.team.build(building_type, x, y, self.game_map, num_builders):  # Passez le nom du type de bâtiment ici
                             return True
         return False
+
+
+

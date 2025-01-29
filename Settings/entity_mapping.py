@@ -12,15 +12,16 @@ unit_class_map = {
     }
 
 building_class_map = {
-        'TownCenter': TownCentre,
-        'Barracks': Barracks,
-        'Stable': Stable,
-        'ArcheryRange': ArcheryRange,
-        'Farm': Farm,
-        'Keep': Keep,
-        'House': House,
-        'Camp': Camp
-    }
+    'TownCenter': TownCentre,
+    'Barracks': Barracks,
+    'Stable': Stable,
+    'ArcheryRange': ArcheryRange,
+    'Farm': Farm,
+    'Keep': Keep,
+    'House': House,
+    'Camp': Camp
+}
+
 
 resources_class_map = {
         'Gold': Gold,
