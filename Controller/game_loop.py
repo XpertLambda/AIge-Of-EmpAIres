@@ -354,7 +354,7 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
     # Initialisation des bots
     bots = []
     for player in players:
-        bot = Bot(player, game_map, players, user_choices["bot_mode"], difficulty='medium')  # Pass the 'players' argument as well
+        bot = Bot(player, game_map, players, user_choices["bot_modes"], difficulty='medium')  # Pass the 'players' argument as well
         bots.append(bot)
 
     bot_update_timer = 0  # Timer pour les mises à jour des bots
