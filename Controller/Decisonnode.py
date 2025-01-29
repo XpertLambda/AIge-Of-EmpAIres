@@ -62,9 +62,16 @@ def repair_buildings_action(bot):
     # if priority_6 action is not defined in Bot.py please check and adapt or replace with relevant repair logic
     pass # bot.priority_6() # Repair buildings action - adapt if needed
 
-def manage_offense_action(bot, players, selected_player, players_target, game_map, dt):
-    print("Decision Node Action: Managing battle offensively.")
-    bot.manage_battle(selected_player, players_target, players, game_map, dt) # Offensive battle management
+def manage_offense_action(bot):
+    """Version simplifiée de manage_offense pour l'arbre de décision économique"""
+    # On cible simplement le premier ennemi trouvé
+    if bot.enemies:
+        enemy_team = bot.enemies[0]
+        military_units = bot.get_military_units()
+        for unit in military_units:
+            if not unit.attack_target or not unit.attack_target.isAlive():
+                bot.search_for_target(unit, enemy_team, True)
+    return True
 
 # --- Decision Trees ---
 
@@ -92,7 +99,7 @@ def create_economic_decision_tree(bot):
                         action=lambda: balance_army_action(bot)
                     ),
                     false_branch=DecisionNode(
-                        action=lambda: manage_offense_action(bot) # Balanced approach: manage offense if nothing else needed
+                        action=lambda: manage_offense_action(bot)  # Version simplifiée qui ne nécessite que bot
                     )
                 )
             )
