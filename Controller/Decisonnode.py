@@ -50,7 +50,7 @@ def address_resource_shortage_action(bot):
 
 def build_needed_structure_action(bot):
     print("Decision Node Action: Building needed structures.")
-    bot.build_structure(bot.clock) # Build structure action
+    bot.build_structure() # Build structure action
 
 def balance_army_action(bot):
     print("Decision Node Action: Balancing army units.")

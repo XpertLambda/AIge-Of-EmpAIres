@@ -528,18 +528,18 @@ class Bot:
                 self.team.resources["gold"] >= building_cost.gold and
                 self.team.resources["food"] >= building_cost.food)
 
-    def buildBuilding(self, building, clock, nb, game_map):
-        """Build a building if resources are sufficient."""
-        if not self.can_build_building(building.__class__):
-            return False
+    # def buildBuilding(self, building, clock, nb, game_map):
+    #     """Build a building if resources are sufficient."""
+    #     if not self.can_build_building(building.__class__):
+    #         return False
 
-        location = self.find_building_location(building.__class__.__name__)  # Find location based on building type name
-        if location:
-            x, y = location
-            building.x, building.y = x, y # Set building position before adding to game map
-            return self.team.buildBuilding(building, clock, nb, game_map) # Delegate to team's buildBuilding
+    #     location = self.find_building_location(building.__class__.__name__)  # Find location based on building type name
+    #     if location:
+    #         x, y = location
+    #         building.x, building.y = x, y # Set building position before adding to game map
+    #         return self.team.buildBuilding(building, clock, nb, game_map) # Delegate to team's buildBuilding
 
-    def build_structure(self, clock):
+    def build_structure(self):
         needed_buildings = self.check_building_needs()
         if not needed_buildings:
             return False
@@ -556,6 +556,6 @@ class Bot:
                     if location:
                         x, y = location
                         building = building_class(team=self.team.teamID, x=x, y=y)
-                        if self.team.buildBuilding(building, clock, nb=3, game_map=self.game_map):
+                        if self.team.build(self.team, building, x, y, self.game_map, num_builders=1):
                             return True
         return False
