@@ -543,19 +543,27 @@ class Bot:
         needed_buildings = self.check_building_needs()
         if not needed_buildings:
             return False
+        
         for building_type in needed_buildings:
             if building_type in building_class_map:
+                print(f"Building type: {building_type}")
                 building_class = building_class_map[building_type]
-                if not hasattr(building_class, 'cost'):
-                    continue
-                building_cost = building_class.cost
-                if (self.team.resources["wood"] >= building_cost.wood and
-                    self.team.resources["gold"] >= building_cost.gold and
-                    self.team.resources["food"] >= building_cost.food):
+                
+                # Créer une instance temporaire pour accéder à `cost`
+                building_instance = building_class(team=self.team.teamID)
+                building_cost = building_instance.cost
+                
+                print(f"Cout building: {building_cost}")
+                
+                # Accès aux ressources via les attributs de l'instance `cost`
+                if (self.team.resources.food >= building_cost.food and
+                    self.team.resources.wood >= building_cost.wood and
+                    self.team.resources.gold >= building_cost.gold):
+                    
                     location = self.find_building_location(building_type)
                     if location:
                         x, y = location
                         building = building_class(team=self.team.teamID, x=x, y=y)
-                        if self.team.build(self.team, building, x, y, self.game_map, num_builders=1):
+                        if self.team.build(building, x, y, self.game_map, num_builders=1):
                             return True
         return False
