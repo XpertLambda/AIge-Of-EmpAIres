@@ -247,7 +247,22 @@ def ask_terminal_inputs_non_blocking():
                             print(f"Niveau bots : {line}")
                         else:
                             print(f"Valeur invalide => niveau bots par défaut {user_choices['bot_level']}")
-                    step = 12 # Always move to step 12 after bot level
+                    print("\nMode IA possibles: economique, defensif, offensif")
+                    print(f"Mode IA (défaut={user_choices.get('bot_mode', 'economique')}) : ")
+                    step = 12
+
+                elif step == 12: # Bot mode input
+                    if line == "":
+                        user_choices["bot_mode"] = "economique"
+                        print("Pas de saisie => Mode IA = economique (défaut)")
+                    elif line in ["economique", "defensif", "offensif"]:
+                        user_choices["bot_mode"] = line
+                        print(f"Mode IA = {line}")
+                    else:
+                        user_choices["bot_mode"] = "economique"
+                        print("Choix invalide => Mode IA = economique (défaut)")
+                    print("\nOr au centre ? (oui/non, défaut=non) : ")
+                    step = 13
 
                 elif step == 13: # Gold at center (was 11, corrected to 13)
                     if line == "":
@@ -491,7 +506,8 @@ def main():
                 "gold_at_center": False,
                 "validated": False,
                 "validated_by": None,
-                "menu_result": None
+                "menu_result": None,
+                "bot_mode": "economique"  # Ajout de la valeur par défaut
             })
             continue
 
