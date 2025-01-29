@@ -41,29 +41,29 @@ def is_military_count_low_condition(bot):
 
 # --- Actions ---
 def defend_action(bot):
-    debug_print("Decision Node Action: Defend under attack.")
+    print("Decision Node Action: Defend under attack.")
     bot.priorty1() # Using priority 1 for defense
 
 def address_resource_shortage_action(bot):
-    debug_print("Decision Node Action: Addressing resource shortage.")
+    print("Decision Node Action: Addressing resource shortage.")
     bot.priority7() # Using priority 7 for resource management
 
 def build_needed_structure_action(bot):
-    debug_print("Decision Node Action: Building needed structures.")
+    print("Decision Node Action: Building needed structures.")
     bot.build_structure(bot.clock) # Build structure action
 
 def balance_army_action(bot):
-    debug_print("Decision Node Action: Balancing army units.")
+    print("Decision Node Action: Balancing army units.")
     bot.balance_units() # Balance units action
 
 def repair_buildings_action(bot):
-    debug_print("Decision Node Action: Repairing damaged buildings.")
+    print("Decision Node Action: Repairing damaged buildings.")
     # Assuming priority_6 is for repair as per your initial request
     # if priority_6 action is not defined in Bot.py please check and adapt or replace with relevant repair logic
     pass # bot.priority_6() # Repair buildings action - adapt if needed
 
 def manage_offense_action(bot, players, selected_player, players_target, game_map, dt):
-    debug_print("Decision Node Action: Managing battle offensively.")
+    print("Decision Node Action: Managing battle offensively.")
     bot.manage_battle(selected_player, players_target, players, game_map, dt) # Offensive battle management
 
 # --- Decision Trees ---

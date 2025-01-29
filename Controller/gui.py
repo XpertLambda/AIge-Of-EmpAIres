@@ -119,7 +119,7 @@ def run_gui_menu(screen, sw, sh):
 
     back_button = {"text": "Retour", "rect": pygame.Rect(20, 20, 100, 40)}
     toggle_button = {
-        "rect": pygame.Rect(sw // 2 - 200, 400, 400, 50),
+        "rect": pygame.Rect(sw // 2 - 200, 430, 400, 50),
         "texts": ["Gui ONLY", "Terminal Display ONLY", "Terminal and Gui Display"],
         "index": 2
     }
@@ -314,7 +314,7 @@ def run_gui_menu(screen, sw, sh):
                         combo_open = ("bot_mode" if combo_open != "bot_mode" else None)
 
 
-                    chk_rect = pygame.Rect(sw//2 - 100, 400, 30, 30) # Checkbox rect moved down
+                    chk_rect = pygame.Rect(sw//2 - 100, 380, 30, 30) # Checkbox rect moved up
                     if chk_rect.collidepoint(mx,my):
                         gold_checked = not gold_checked
                         user_choices["gold_at_center"] = gold_checked
@@ -349,12 +349,14 @@ def run_gui_menu(screen, sw, sh):
         if show_main_menu:
             draw_main_menu(screen, sw, sh, main_buttons)
         elif show_config_menu:
-            valid_rect = draw_config_menu(screen, sw, sh, idx_width, idx_height, idx_nbot, idx_lvl, gold_checked, combo_open, idx_bot_mode) # Passez idx_bot_mode
+            # Draw toggle button and back button first
             draw_choose_display(screen, toggle_button)
             pygame.draw.rect(screen, (100, 100, 200), back_button["rect"])
             txt = font.render(back_button["text"], True, (255,255,255))
             screen.blit(txt, txt.get_rect(center=back_button["rect"].center))
-
+            # Finally draw config menu so expanded combo appears on top
+            valid_rect, expanded_rect = draw_config_menu(screen, sw, sh,
+                idx_width, idx_height, idx_nbot, idx_lvl, gold_checked, combo_open, idx_bot_mode)
         elif show_load_menu:
             draw_load_menu(screen, sw, sh, save_files)
             pygame.draw.rect(screen, (100, 100, 200), back_button["rect"])
@@ -387,7 +389,7 @@ def draw_main_menu(screen, sw, sh, buttons):
 VALID_BOT_MODES = ["economique", "defensif", "offensif"] # Added valid bot modes
 
 def draw_config_menu(screen, sw, sh, idx_width, idx_height, idx_nbot, idx_lvl, gold_checked, combo_open, idx_mode): # Added idx_bot_mode
-    # Draw all combo boxes
+    # Dessiner d'abord tous les éléments de base
     if combo_open != "width":
         draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Largeur: {VALID_GRID_SIZES[idx_width]}", None, idx_width, combo_type="width")
     if combo_open != "height":
@@ -396,41 +398,41 @@ def draw_config_menu(screen, sw, sh, idx_width, idx_height, idx_nbot, idx_lvl, g
         draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}", None, idx_nbot, combo_type="nbot")
     if combo_open != "lvl":
         draw_combo_box(screen, sw//2 - 100, 280, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}", None, idx_lvl, combo_type="lvl")
-    if combo_open != "mode":
-        draw_combo_box(screen, sw//2 - 100, 340, 200, 30, f"Mode IA: {VALID_BOT_MODES[idx_mode]}", None, idx_mode, combo_type="mode")
+    if combo_open != "bot_mode":
+        draw_combo_box(screen, sw//2 - 100, 340, 200, 30, f"Mode IA: {VALID_BOT_MODES[idx_mode]}", None, idx_mode, combo_type="bot_mode")
 
-    # Draw checkbox
-    chk_rect = pygame.Rect(sw//2 - 100, 400, 30, 30)
+    # Dessiner la checkbox et le bouton de validation
+    chk_rect = pygame.Rect(sw//2 - 100, 380, 30, 30)  # Moved up to avoid overlap
     pygame.draw.rect(screen, (200,200,200), chk_rect)
     if gold_checked:
         pygame.draw.line(screen, (0,0,0), (chk_rect.x+5, chk_rect.centery), (chk_rect.right-5, chk_rect.centery), 3)
     txt = font.render("Or au centre ?", True, (255,255,255))
     screen.blit(txt, (chk_rect.right+10, chk_rect.y))
 
-    # Create and draw validation button
-    valid_rect = pygame.Rect(sw//2 - 50, 460, 100, 40)
+    valid_rect = pygame.Rect(sw//2 - 50, 500, 100, 40)  # Adjusted to keep spacing
     pygame.draw.rect(screen, (80,200,80), valid_rect)
     vtxt = font.render("Valider", True, (255,255,255))
     screen.blit(vtxt, vtxt.get_rect(center=valid_rect.center))
 
-    # Draw expanded combo boxes if needed
+    # Dessiner le menu déroulant actif EN DERNIER pour qu'il soit au-dessus
+    expanded_rect = None
     if combo_open == "width":
-        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Largeur: {VALID_GRID_SIZES[idx_width]}",
-                       VALID_GRID_SIZES, idx_width, combo_type="width")
+        draw_combo_box(screen, sw//2 - 100, 100, 200, 30, f"Largeur: {VALID_GRID_SIZES[idx_width]}", VALID_GRID_SIZES, idx_width, combo_type="width")
+        expanded_rect = pygame.Rect(sw//2 - 100, 100 + 30, 200, ITEM_HEIGHT * min(len(VALID_GRID_SIZES), MAX_VISIBLE_ITEMS))
     elif combo_open == "height":
-        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Hauteur: {VALID_GRID_SIZES[idx_height]}",
-                       VALID_GRID_SIZES, idx_height, combo_type="height")
+        draw_combo_box(screen, sw//2 - 100, 160, 200, 30, f"Hauteur: {VALID_GRID_SIZES[idx_height]}", VALID_GRID_SIZES, idx_height, combo_type="height")
+        expanded_rect = pygame.Rect(sw//2 - 100, 160 + 30, 200, ITEM_HEIGHT * min(len(VALID_GRID_SIZES), MAX_VISIBLE_ITEMS))
     elif combo_open == "nbot":
-        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}",
-                       VALID_BOTS_COUNT, idx_nbot, combo_type="nbot")
+        draw_combo_box(screen, sw//2 - 100, 220, 200, 30, f"Bots: {VALID_BOTS_COUNT[idx_nbot]}", VALID_BOTS_COUNT, idx_nbot, combo_type="nbot")
+        expanded_rect = pygame.Rect(sw//2 - 100, 220 + 30, 200, ITEM_HEIGHT * min(len(VALID_BOTS_COUNT), MAX_VISIBLE_ITEMS))
     elif combo_open == "lvl":
-        draw_combo_box(screen, sw//2 - 100, 280, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}",
-                       VALID_LEVELS, idx_lvl, combo_type="lvl")
-    elif combo_open == "mode":
-        draw_combo_box(screen, sw//2 - 100, 340, 200, 30, f"Mode IA: {VALID_BOT_MODES[idx_mode]}",
-                       VALID_BOT_MODES, idx_mode, combo_type="mode")
+        draw_combo_box(screen, sw//2 - 100, 280, 200, 30, f"Niveau: {VALID_LEVELS[idx_lvl]}", VALID_LEVELS, idx_lvl, combo_type="lvl")
+        expanded_rect = pygame.Rect(sw//2 - 100, 280 + 30, 200, ITEM_HEIGHT * min(len(VALID_LEVELS), MAX_VISIBLE_ITEMS))
+    elif combo_open == "bot_mode":
+        draw_combo_box(screen, sw//2 - 100, 340, 200, 30, f"Mode IA: {VALID_BOT_MODES[idx_mode]}", VALID_BOT_MODES, idx_mode, combo_type="bot_mode")
+        expanded_rect = pygame.Rect(sw//2 - 100, 340 + 30, 200, ITEM_HEIGHT * min(len(VALID_BOT_MODES), MAX_VISIBLE_ITEMS))
 
-    return valid_rect  # Always return the validation rectangle
+    return valid_rect, expanded_rect
 
 def draw_load_menu(screen, sw, sh, save_files):
     start_y = 100
@@ -445,27 +447,37 @@ def draw_load_menu(screen, sw, sh, save_files):
         screen.blit(txt2, txt2.get_rect(center=rect.center))
 
 def draw_combo_box(screen, x, y, w, h, text, items_list, selected_idx, combo_type=None):
+    # Dessiner d'abord le bouton du combo box
     box_rect = pygame.Rect(x, y, w, h)
     pygame.draw.rect(screen, (60,60,160), box_rect)
     screen.blit(font.render(text, True, (255,255,255)), (x+5, y+3))
 
+    # Si on a une liste d'éléments, dessiner le menu déroulant
     if items_list:
         start_idx = combo_scroll_positions[combo_type]
         visible_items = items_list[start_idx:start_idx + MAX_VISIBLE_ITEMS]
 
-        total_height = len(visible_items) * ITEM_HEIGHT
-        shadow_surf = pygame.Surface((w, total_height))
-        shadow_surf.set_alpha(160)
-        shadow_surf.fill((0,0,0))
-        screen.blit(shadow_surf, (x, y + h))
+        # Créer une surface distincte pour le menu déroulant
+        dropdown_height = len(visible_items) * ITEM_HEIGHT
+        dropdown_surf = pygame.Surface((w, dropdown_height), pygame.SRCALPHA)
 
+        # Remplir avec un fond semi-transparent
+        dropdown_surf.fill((0, 0, 0, 160))
+
+        # Dessiner chaque élément de la liste
         for i, val in enumerate(visible_items):
-            rect = pygame.Rect(x, y + h + i*ITEM_HEIGHT, w, ITEM_HEIGHT)
-            pygame.draw.rect(screen, (60,60,120), rect)
+            item_rect = pygame.Rect(0, i*ITEM_HEIGHT, w, ITEM_HEIGHT)
+            if i % 2 == 0:  # Alterner les couleurs de fond
+                pygame.draw.rect(dropdown_surf, (60,60,120), item_rect)
+            else:
+                pygame.draw.rect(dropdown_surf, (70,70,130), item_rect)
             txt = font.render(str(val), True, (255,255,255))
-            screen.blit(txt, txt.get_rect(center=rect.center))
+            txt_rect = txt.get_rect(center=item_rect.center)
+            dropdown_surf.blit(txt, txt_rect)
 
-            
+        # Dessiner le menu déroulant sur l'écran
+        screen.blit(dropdown_surf, (x, y + h))
+
 def create_player_selection_surface(players, selected_player, minimap_rect, team_colors):
     from Settings.setup import user_choices
     if user_choices["index_terminal_display"] == 1:  # Terminal only mode

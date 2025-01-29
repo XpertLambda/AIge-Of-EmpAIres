@@ -16,7 +16,7 @@ from AiUtils.aStar import a_star
 from Controller.Decisonnode import * # Import DecisionNode and trees
 
 class Bot:
-    def __init__(self, team, game_map, difficulty='medium', mode='economic'):
+    def __init__(self, team, game_map, players, difficulty='medium', mode='economic'):
         self.team = team
         self.game_map = game_map
         self.difficulty = difficulty
@@ -231,13 +231,13 @@ class Bot:
 
     def create_mode_decision_tree(self): 
         if self.mode == 'offensif':
-            return create_offensive_decision_tree(self, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target)
+            return create_offensive_decision_tree(self)
         elif self.mode == 'defensif':
-            return create_defensive_decision_tree(self, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target)
+            return create_defensive_decision_tree(self)
         elif self.mode == 'economic':
             return create_economic_decision_tree(self)
         else:
-            return create_default_decision_tree(self, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target)
+            return create_default_decision_tree(self)
 
     def scout_map(self, game_map):
         town_centre = next((building for building in self.team.buildings if isinstance(building, TownCentre)), None)
