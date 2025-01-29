@@ -1,5 +1,3 @@
-# Path: main.py
-# Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\main.py
 import pygame
 import os
 import sys
