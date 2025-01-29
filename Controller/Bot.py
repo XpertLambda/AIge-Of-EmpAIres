@@ -328,15 +328,16 @@ class Bot:
                         return
 
     def is_under_attack(self):
+        attacking_enemies = []  # Initialize an empty list to store attacking enemies
         zone = self.team.zone.get_zone()
         for tile in zone:
             entities = self.game_map.grid.get(tile, None)
-            if entities:
+            if entities:  # Check if entities is not None before iterating
                 for entity in entities:
                     if isinstance(entity, Unit) and entity.team != self.team.teamID:
-                        self.attacking_enemies.append(entity)
-        return self.attacking_enemies
-  
+                        attacking_enemies.append(entity)
+        return attacking_enemies
+        
     def get_critical_points(self):
         if not self.team.buildings:
             return []
