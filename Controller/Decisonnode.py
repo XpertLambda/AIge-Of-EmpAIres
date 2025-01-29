@@ -3,7 +3,8 @@
 from Controller.Bot import *
 from Controller.terminal_display_debug import debug_print
 from Entity.Building import Farm, Barracks, ArcheryRange, Stable, House, Camp, Keep
-
+from Entity.Unit import Unit  # Import your Unit class
+from Controller import Bot
 class DecisionNode:
     def __init__(self, condition, true_branch=None, false_branch=None, action=None):
         self.condition = condition
@@ -23,6 +24,133 @@ class DecisionNode:
             elif self.action:
                 return self.action()
 
+# --- Conditions ---
+def is_enemy_in_range_condition(bot, unit):
+    """Checks if an enemy is within attack range of the unit."""
+    if unit.attack_target and unit.attack_target.isAlive():
+        distance = math.dist((unit.x, unit.y), (unit.attack_target.x, unit.attack_target.y))
+        # Consider adding unit size to the range calculation for more accuracy
+        return distance <= unit.attack_range
+    return False
+
+def can_attack_condition(unit):
+    """Checks if the unit's attack is off cooldown."""
+    return unit.attack_timer == 0
+
+def has_target_condition(unit):
+    """Checks if the unit has a target."""
+    return unit.attack_target is not None and unit.attack_target.isAlive()
+
+def is_enemy_building_in_range_condition(bot, unit):
+    """Vérifie si un bâtiment ennemi est à portée de l'unité."""
+    if unit.attack_target and isinstance(unit.attack_target, Building) and unit.attack_target.team != unit.team and unit.attack_target.isAlive():
+        distance = math.dist((unit.x, unit.y), (unit.attack_target.x, unit.attack_target.y))
+        return distance <= unit.attack_range
+    return False
+
+def is_unit_idle_condition(unit):
+    """Checks if the unit is idle (no path and no target)."""
+    return not unit.path and not unit.attack_target
+
+def is_under_attack_condition(bot, enemy_team):
+    return bot.is_under_attack(enemy_team)
+
+# --- Actions ---
+
+def find_enemy_target_action(bot, unit, enemy_teams, game_map):
+    """Trouve une cible ennemie (unité ou bâtiment) pour l'unité."""
+    debug_print(f"Unité {unit.entity_id}: Recherche de cible")
+    if enemy_teams:
+        enemy_team = enemy_teams[0]  # Focus sur la première équipe ennemie pour l'instant.
+        closest_enemy = None
+        min_distance = float('inf')
+
+        # Chercher les unités ennemies en premier
+        for enemy_unit in enemy_team.units:
+            if enemy_unit.isAlive(): # Vérifier si l'unité ennemie est en vie
+                distance = math.dist((unit.x, unit.y), (enemy_unit.x, enemy_unit.y))
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_enemy = enemy_unit
+
+        # Si aucune unité ennemie, chercher les bâtiments ennemis
+        if closest_enemy is None:
+            for enemy_building in enemy_team.buildings:
+                if enemy_building.isAlive(): # Vérifier si le bâtiment ennemi est en vie
+                    distance = math.dist((unit.x, unit.y), (enemy_building.x, enemy_building.y))
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_enemy = enemy_building
+
+        unit.set_target(closest_enemy)  # Définir la cible.
+        if closest_enemy:
+            debug_print(f"Unité {unit.entity_id}: Cible acquise : {closest_enemy.entity_id}")
+
+def move_to_enemy_action(unit, game_map):
+    """Moves the unit towards its target."""
+    if unit.attack_target:
+        debug_print(f"Unit {unit.entity_id}: Moving to target")
+        unit.set_destination((unit.attack_target.x, unit.attack_target.y), game_map)
+
+def attack_enemy_action(unit):
+    """Attacks the target enemy."""
+    debug_print(f"Unit {unit.entity_id}: Attacking target")
+    unit.attack_timer = 0  # Reset attack timer
+    unit.attack_target.hp -= unit.attack_power
+    if unit.attack_target.hp <= 0:
+        unit.attack_target.kill() # Kill the target if HP drops to 0 or below
+        unit.attack_target = None
+
+def do_nothing_action(unit):
+    """The unit does nothing."""
+    debug_print(f"Unit {unit.entity_id}: Doing nothing")
+
+
+# --- Decision Tree ---
+def create_unit_combat_decision_tree(bot, unit, enemy_teams, game_map):
+    """Decision tree for unit combat."""
+    return DecisionNode(
+        condition=lambda: has_target_condition(unit),
+        true_branch=DecisionNode(
+            condition=lambda: isinstance(unit.attack_target, Unit),  # Check if target is a Unit
+            true_branch=DecisionNode(  # If it's a unit, handle unit attacks
+                condition=lambda: is_enemy_in_range_condition(bot, unit),
+                true_branch=DecisionNode(
+                    condition=lambda: can_attack_condition(unit),
+                    true_branch=DecisionNode(
+                        condition = lambda: True,
+                        action=lambda: attack_enemy_action(unit)
+                    ),
+                    false_branch=DecisionNode(
+                        condition=lambda: True,
+                        action=lambda: do_nothing_action(unit)
+                    )
+                ),
+                false_branch=DecisionNode(
+                    condition=lambda: True,
+                    action=lambda: move_to_enemy_action(unit, game_map)
+                )
+            ),
+            false_branch=DecisionNode(  # If it's NOT a unit (must be a building)
+                condition=lambda: is_enemy_building_in_range_condition(bot, unit),
+                true_branch=DecisionNode(
+                    condition=lambda: can_attack_condition(unit),
+                    true_branch=DecisionNode(
+                        condition = lambda: True,
+                        action=lambda: attack_enemy_action(unit)  # Attack the building
+                    ),
+                    false_branch=DecisionNode(
+                        condition=lambda: True,
+                        action=lambda: do_nothing_action(unit)
+                    )
+                ),
+                false_branch=DecisionNode(
+                    condition=lambda: True,
+                    action=lambda: move_to_enemy_action(unit, game_map)  # Move towards the building
+                )
+            )
+        )
+    )
 # --- Conditions ---
 def is_under_attack_condition(bot, enemy_team):
     return bot.is_under_attack(enemy_team)
@@ -78,9 +206,46 @@ def are_damaged_buildings_condition(bot):
     return len(bot.get_critical_points()) > 0
 
 # --- Actions ---
+def allocate_villagers_to_resource_action(self, resource_type, villager):
+        """Allocates a specific villager to gather a specific resource."""
+        
+
+        resource_locations = self.find_resource(resource_type)  # Use the find_resource method
+        if resource_locations:
+            nearest_drop_point = self.find_nearest_drop_point(villager)
+            closest_resource = min(
+                resource_locations,
+                key=lambda pos_entity: math.dist((nearest_drop_point.x, nearest_drop_point.y), pos_entity[0])
+            )
+            villager.set_target(closest_resource[1])  # Set the target to the Resource object
+            villager.state = 'gather'
+            
+        else:
+            debug_print(f"No {resource_type} resources found!")
+
+def build_economic_structure_action(self):
+    """Attempts to build a necessary economic structure (e.g., Farm)."""
+    if self.can_build_building(Farm):
+        self.buildBuilding(Farm(team=self.player_team.teamID), self.clock, 1, self.game_map)
+        return True
+    return False
+
+def build_military_structure_action(self):
+    """Attempts to build a necessary military structure (e.g., Barracks)."""
+    if self.can_build_building(Barracks):
+        self.buildBuilding(Barracks(team=self.player_team.teamID), self.clock, 3, self.game_map)
+        return True
+    elif self.can_build_building(ArcheryRange):
+        self.buildBuilding(ArcheryRange(team=self.player_team.teamID), self.clock, 3, self.game_map)
+        return True
+    elif self.can_build_building(Stable):
+        self.buildBuilding(Stable(team=self.player_team.teamID), self.clock, 3, self.game_map)
+        return True
+    return False
+
 def defend_action(bot, enemy_team, players_target, game_map, dt):
     debug_print("Decision Node Action: Defend under attack.")
-    bot.priorty1(enemy_team, players_target, dt) # Using priority 1 for defense
+    bot.priorty1(enemy_team, players_target,game_map, dt) # Using priority 1 for defense
 
 def address_resource_shortage_action(bot):
     debug_print("Decision Node Action: Addressing resource shortage.")
@@ -164,46 +329,46 @@ def allocate_villagers_to_food_action(bot):
 # --- Decision Trees ---
 
 def create_economic_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
-    """Decision tree for Economic mode - focuses on economy, defends if attacked."""
+    """Decision tree for Economic mode - prioritizes resource gathering and building."""
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot, enemy_team),
         true_branch=DecisionNode(
-            condition=lambda: True,  # Always execute the defense action if under attack
+            condition=lambda: True,
             action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt)
         ),
         false_branch=DecisionNode(
-            condition=lambda: is_resource_shortage_condition_wood(bot),
+            condition=lambda: is_resource_shortage_condition_gold(bot),
             true_branch=DecisionNode(
                 condition=lambda: True,
-                action=lambda: allocate_villagers_to_wood_action(bot)
+                action=lambda: bot.allocate_villagers_to_resource_action('gold', Villager)
             ),
             false_branch=DecisionNode(
-                condition=lambda: is_resource_shortage_condition_food(bot),
+                condition=lambda: is_resource_shortage_condition_wood(bot),
                 true_branch=DecisionNode(
                     condition=lambda: True,
-                    action=lambda: allocate_villagers_to_food_action(bot)
+                    action=lambda: bot.allocate_villagers_to_resource_action('wood',Villager)
                 ),
                 false_branch=DecisionNode(
-                    condition=lambda: is_resource_shortage_condition_gold(bot),
+                    condition=lambda: are_economic_buildings_needed_condition(bot),
                     true_branch=DecisionNode(
                         condition=lambda: True,
-                        action=lambda: allocate_villagers_to_gold_action(bot)
+                        action=lambda: build_economic_structure_action(bot)  # Build economic structures (e.g., farms)
                     ),
                     false_branch=DecisionNode(
-                        condition=lambda: are_economic_buildings_needed_condition(bot),
+                        condition=lambda: are_military_buildings_needed_condition(bot), 
                         true_branch=DecisionNode(
                             condition=lambda: True,
-                            action=lambda: build_farm_action(bot)
+                            action=lambda: build_military_structure_action(bot)  # Build essential military structures
                         ),
                         false_branch=DecisionNode(
-                            condition=lambda: are_buildings_needed_condition(bot),
+                            condition=lambda: is_military_count_low_condition(bot),
                             true_branch=DecisionNode(
                                 condition=lambda: True,
-                                action=lambda: build_house_action(bot)
+                                action=lambda: balance_army_action(bot)  # Train basic military units for defense
                             ),
                             false_branch=DecisionNode(
                                 condition=lambda: True,
-                                action=lambda: balance_army_action(bot)
+                                action=lambda: do_nothing_action(bot)  # If everything is fine, do nothing
                             )
                         )
                     )
@@ -212,25 +377,24 @@ def create_economic_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, pl
         )
     )
 
-
 def create_defensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
     """Decision tree for Defensive mode - focuses on defense and strong economy, builds defensive structures and army."""
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot, enemy_team),
         true_branch=DecisionNode(
-            condition=lambda: True,  # Always execute defense when under attack
+            condition=lambda: True,
             action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt)
         ),
         false_branch=DecisionNode(
             condition=lambda: are_damaged_buildings_condition(bot),
             true_branch=DecisionNode(
-                condition=lambda: True,  # Always repair if buildings damaged
+                condition=lambda: True,
                 action=lambda: repair_buildings_action(bot)
             ),
             false_branch=DecisionNode(
                 condition=lambda: are_defensive_buildings_needed_condition(bot),
                 true_branch=DecisionNode(
-                    condition=lambda: True,  # Always build defense if needed
+                    condition=lambda: True,
                     action=lambda: build_keep_action(bot)
                 ),
                 false_branch=DecisionNode(
@@ -253,7 +417,7 @@ def create_defensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, p
                             ),
                             false_branch=DecisionNode(
                                 condition=lambda: True,
-                                action=lambda: build_farm_action(bot)
+                                action=lambda: build_economic_structure_action(bot)  # Build economic structures (e.g., Farm)
                             )
                         )
                     )
@@ -261,37 +425,44 @@ def create_defensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, p
             )
         )
     )
+
 def create_offensive_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target):
     """Decision tree for Offensive mode - focuses on aggressive military actions, builds army and attacks frequently."""
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot, enemy_team),
         true_branch=DecisionNode(
-            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt) # Défend si attaqué en premier
+            condition=lambda: True,
+            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt)
         ),
         false_branch=DecisionNode(
-            condition=lambda: is_army_below_threshold_condition(bot), # Priorité à l'armée offensive
+            condition=lambda: is_army_below_threshold_condition(bot),
             true_branch=DecisionNode(
-                condition=lambda: is_resource_shortage_condition_wood(bot), # Assurer bois pour bâtiments militaires
+                condition=lambda: is_resource_shortage_condition_wood(bot),
                 true_branch=DecisionNode(
-                    action=lambda: allocate_villagers_to_wood_action(bot) # Allouer bois
+                    condition=lambda: True,
+                    action=lambda: allocate_villagers_to_wood_action(bot)
                 ),
                 false_branch=DecisionNode(
-                    action=lambda: balance_army_action(bot) # Construire armée si petite
+                    condition=lambda: is_military_count_low_condition(bot),
+                    action=lambda: balance_army_action(bot)
                 )
             ),
-            false_branch=DecisionNode( # Si armée de taille décente, attaquer!
-                condition=lambda: are_military_buildings_needed_condition(bot), # Vérifier bâtiments militaires
+            false_branch=DecisionNode(
+                condition=lambda: are_military_buildings_needed_condition(bot),
                 true_branch=DecisionNode(
-                    condition=lambda: is_resource_shortage_condition_wood(bot), # Assurer bois pour bâtiments militaires
+                    condition=lambda: is_resource_shortage_condition_wood(bot),
                     true_branch=DecisionNode(
-                        action=lambda: allocate_villagers_to_wood_action(bot) # Allouer bois
+                        condition=lambda: True,
+                        action=lambda: allocate_villagers_to_wood_action(bot)
                     ),
                     false_branch=DecisionNode(
-                        action=lambda: build_barracks_action(bot) # Construire casernes si besoin
-                    ),
+                        condition=lambda: True,
+                        action=lambda: build_military_structure_action(bot)
+                    )
                 ),
-                false_branch=DecisionNode( # Si bâtiments militaires OK, attaquer
-                    action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt) # Gérer bataille offensive
+                false_branch=DecisionNode(
+                    condition=lambda: is_resource_shortage_condition_gold(bot),
+                    action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt)
                 )
             )
         )
@@ -302,40 +473,42 @@ def create_default_decision_tree(bot, enemy_team, enemy_teams, game_map, dt, pla
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot, enemy_team),
         true_branch=DecisionNode(
-            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt) # Défendre en cas d'attaque
+            condition=lambda: True,
+            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt)
         ),
         false_branch=DecisionNode(
-            condition=lambda: is_resource_shortage_condition_wood(bot), # Vérifier pénurie de bois en premier
+            condition=lambda: is_resource_shortage_condition_wood(bot),
             true_branch=DecisionNode(
-                action=lambda: allocate_villagers_to_wood_action(bot) # Allouer villageois au bois
+                action=lambda: allocate_villagers_to_wood_action(bot)
             ),
             false_branch=DecisionNode(
-                condition=lambda: is_resource_shortage_condition_food(bot), # Puis nourriture
+                condition=lambda: is_resource_shortage_condition_food(bot),
                 true_branch=DecisionNode(
-                    action=lambda: allocate_villagers_to_food_action(bot) # Allouer villageois nourriture
+                    action=lambda: allocate_villagers_to_food_action(bot)
                 ),
                 false_branch=DecisionNode(
-                    condition=lambda: is_resource_shortage_condition_gold(bot), # Puis or
+                    condition=lambda: is_resource_shortage_condition_gold(bot),
                     true_branch=DecisionNode(
-                        action=lambda: allocate_villagers_to_gold_action(bot) # Allouer villageois or
+                        action=lambda: allocate_villagers_to_gold_action(bot)
                     ),
                     false_branch=DecisionNode(
-                        condition=lambda: are_economic_buildings_needed_condition(bot), # Vérifier bâtiments économiques
+                        condition=lambda: are_economic_buildings_needed_condition(bot),
                         true_branch=DecisionNode(
-                            action=lambda: build_farm_action(bot) # Construire fermes si besoin
+                            action=lambda: build_economic_structure_action(bot)
                         ),
                         false_branch=DecisionNode(
-                            condition=lambda: are_military_buildings_needed_condition(bot), # Vérifier bâtiments militaires ensuite
+                            condition=lambda: are_military_buildings_needed_condition(bot),
                             true_branch=DecisionNode(
-                                action=lambda: build_barracks_action(bot) # Construire casernes si besoin
+                                action=lambda: build_military_structure_action(bot)
                             ),
-                            false_branch=DecisionNode( # Si bâtiments OK, équilibrer armée
+                            false_branch=DecisionNode(
                                 condition=lambda: is_military_count_low_condition(bot),
                                 true_branch=DecisionNode(
-                                    action=lambda: balance_army_action(bot) # Équilibrer armée si faible
+                                    action=lambda: balance_army_action(bot)
                                 ),
-                                false_branch=DecisionNode( # Si tout va bien, gérer offensive
-                                    action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt) # Gérer offensive si rien d'autre
+                                false_branch=DecisionNode(
+                                    condition=lambda: True,
+                                    action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt)
                                 )
                             )
                         )

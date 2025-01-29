@@ -3,6 +3,7 @@
 import math
 import time
 from Models.Team import *
+from Controller.Decisonnode import allocate_villagers_to_resource_action
 from Settings.setup import RESOURCE_THRESHOLDS, TILE_SIZE
 from Entity.Unit import Villager, Archer, Swordsman, Horseman
 from Entity.Building import Building, Keep, Barracks, TownCentre, Camp, House, Farm, Stable, ArcheryRange
@@ -16,13 +17,14 @@ from random import *
 from AiUtils.aStar import a_star
 from Controller.Decisonnode import (DecisionNode, create_offensive_decision_tree,
                                   create_defensive_decision_tree, create_economic_decision_tree,
-                                  create_default_decision_tree)
+                                  create_default_decision_tree, create_unit_combat_decision_tree)
 
 class Bot:
     def __init__(self, player_team, game_map, clock, difficulty='medium', mode='economic'): # Added mode parameter
         self.clock= clock
         self.player_team = player_team
         self.game_map = game_map
+        self.decision = DecisionNode(self)
         self.difficulty = difficulty
         self.mode = mode # Store the mode
         self.PRIORITY_UNITS = {
@@ -32,6 +34,33 @@ class Bot:
         }
         self.ATTACK_RADIUS = TILE_SIZE * 5  # Rayon d'attaque pour détecter les ennemis
 
+    def find_resource(self, resource_type):
+        """
+        Finds all resource locations of a specific type on the map.
+
+        Args:
+            resource_type: The type of resource to search for (e.g., "food", "wood", "gold").
+
+        Returns:
+            A list of tuples, where each tuple contains (x, y) coordinates of a resource location 
+            and the Resource object itself.
+        """
+        resource_locations = []
+        for location, entity in self.game_map.resources.items():  # Assuming resources are stored in self.game_map.resources
+            if isinstance(entity, Resource) and entity.resource_type == resource_type and entity.isAlive():
+                resource_locations.append(((location.x, location.y), entity))  # Access resource type from entity
+        return resource_locations
+    
+    def remove_resource(self, resource):
+        """Removes a resource from the game map."""
+        for pos, entities in list(self.grid.items()): # Iterate over a copy to avoid issues while removing
+            if isinstance(entities, set):
+                if resource in entities:
+                    entities.remove(resource)
+                    if not entities: # If the set is empty, remove the key
+                        del self.grid[pos]
+                    return # Resource is removed, exit the function
+                
     def get_resource_shortage(self):
         RESOURCE_MAPPING ={
         "food": Farm,
@@ -72,21 +101,30 @@ class Bot:
                             resource_locations.append((pos, entity))
 
             if resource_locations:
-                closest_resource = min(
-                    resource_locations,
-                    key=lambda pos_entity: math.dist(
-                        (nearest_drop_point.x, nearest_drop_point.y),
-                        pos_entity[0]
-                    )
-                )
+                closest_resource = min(resource_locations, key=lambda pos_entity: math.dist((nearest_drop_point.x, nearest_drop_point.y), pos_entity[0]))
+                print(f"Closest resource: {closest_resource}")  # Print chosen resource
+
                 villager.set_target(closest_resource[1])
                 break
+            else:
+                print("No resources found!")  # Check if resources are found
+        
 
     def priorty7(self): # Corrected typo in function name from 'priorty7' to 'priority7' and removed unused RESOURCE_THRESHOLDS argument
      resource_shortage = self.get_resource_shortage()
      if resource_shortage:
         self.reallocate_villagers(resource_shortage)
 
+    
+    def find_nearest_drop_point(self, unit):
+        """Finds the nearest drop-off point for the given unit."""
+        drop_points = [
+            building for building in self.player_team.buildings
+            if isinstance(building, TownCentre) or isinstance(building, Camp) # Add other buildings if needed
+        ]
+        if drop_points:
+            return min(drop_points, key=lambda building: math.dist((unit.x, unit.y), (building.x, building.y)))
+        return None # Return None if no drop points are found
 
     def search_for_target(self, unit, enemy_team, attack_mode=True):
         if enemy_team==None:
@@ -185,19 +223,6 @@ class Bot:
 
     def get_military_unit_count(self, player):
         return len(self.get_military_units(player))
-
-    def update(self, game_map, dt):
-        enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
-        players = game_map.players
-        players_target = game_map.game_state.get('players_target') if game_map.game_state else [None] * len(players)
-        selected_player = self.player_team
-
-        decision_tree = self.create_mode_decision_tree(enemy_teams, game_map, dt, players, selected_player, players_target) # Call decision tree
-        decision_tree.evaluate() # Evaluate the decision tree
-
-        self.scout_map(game_map)
-        self.balance_units()
-        self.build_structure(self.clock)
 
     def create_mode_decision_tree(self, enemy_teams, game_map, dt, players, selected_player, players_target): # Modified to pass players, selected_player, players_target
         enemy_team = enemy_teams[0] if enemy_teams else None # Get the first enemy team for simplicity
@@ -570,3 +595,111 @@ class Bot:
                 if self.buildBuilding(new_building, clock, 3, self.game_map):
                     return True
         return False
+    
+    def manage_villagers(self, game_map):
+        """Handles villager allocation to resources and tasks."""
+        resource_shortage = self.get_resource_shortage()
+        if resource_shortage:
+            self.reallocate_villagers(resource_shortage)
+
+        # Build houses if needed
+        if not any(isinstance(b, House) for b in self.player_team.buildings) or len([b for b in self.player_team.buildings if isinstance(b,House)])*10 < len(self.player_team.units):
+            if self.can_build_building(House):
+                self.buildBuilding(House(team=self.player_team.teamID), self.clock, 1, game_map)
+
+        # Build farms if food is low
+        if self.player_team.resources.food < RESOURCE_THRESHOLDS['food'] * 0.5 and self.can_build_building(Farm) and len([b for b in self.player_team.buildings if isinstance(b,Farm)]) < 10:
+            self.buildBuilding(Farm(team=self.player_team.teamID), self.clock, 1, game_map)
+
+        # Build town center if none exists
+        if not any(isinstance(b, TownCentre) for b in self.player_team.buildings):
+            if self.can_build_building(TownCentre):
+                self.buildBuilding(TownCentre(team=self.player_team.teamID), self.clock, 3, game_map)
+
+        # Ensure villagers are gathering resources
+        for villager in self.player_team.units:
+            if isinstance(villager, Villager) and villager.state == 'idle':
+                # Check if resources are low and assign villagers accordingly
+                if self.player_team.resources.food < RESOURCE_THRESHOLDS['food']:
+                    allocate_villagers_to_resource_action('food', villager)
+                elif self.player_team.resources.wood < RESOURCE_THRESHOLDS['wood']:
+                    allocate_villagers_to_resource_action('wood', villager)
+                elif self.player_team.resources.gold < RESOURCE_THRESHOLDS['gold']:
+                    allocate_villagers_to_resource_action('gold', villager)
+
+    def manage_military(self, enemy_teams, game_map, dt, players_target, players):
+       """Manages military unit training and combat."""
+       self.balance_units() # Train units based on priority
+
+       if self.get_military_unit_count(self.player_team) > 10: # Engage in combat
+           self.manage_battle(self.player_team, players_target, players, game_map, dt)
+        
+    def build_structures(self, game_map):
+        """Builds necessary structures."""
+        needed_buildings = self.check_building_needs()
+        if needed_buildings:
+            for building_name in needed_buildings:
+                building_class = building_class_map.get(building_name)
+                if building_class and self.can_build_building(building_class):
+                    new_building = building_class(team=self.player_team.teamID)
+                    if self.buildBuilding(new_building, self.clock, 3, game_map): # 3 builders for most structures
+                        break  # Build one building per update
+
+    def create_mode_decision_tree(self, enemy_teams, game_map, dt, players, selected_player, players_target):
+        enemy_team = enemy_teams[0] if enemy_teams else None
+        if self.mode == 'offensif':
+            return create_offensive_decision_tree(self, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target)
+        elif self.mode == 'defensif':
+            return create_defensive_decision_tree(self, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target)
+        elif self.mode == 'economique':
+            return create_economic_decision_tree(self, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target)
+        else:
+            return create_default_decision_tree(self, enemy_team, enemy_teams, game_map, dt, players, selected_player, players_target)
+        
+    def update(self, game_map, dt):
+        enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
+        players = game_map.players
+        players_target = game_map.game_state.get('players_target') if game_map.game_state else [None] * len(players)
+        selected_player = self.player_team
+
+        # Strategy (choose one based on difficulty)
+        if self.difficulty == 'easy':
+            self.easy_strategy(enemy_teams, game_map, dt)
+        elif self.difficulty == 'medium':
+            self.medium_strategy(enemy_teams, game_map, dt, players_target, players)
+        elif self.difficulty == 'hard':
+            self.hard_strategy(enemy_teams, game_map, dt)
+        else:
+            self.medium_strategy(enemy_teams, game_map, dt, players_target, players)  # Default
+        enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
+
+        for unit in self.player_team.units:
+            tree = create_unit_combat_decision_tree(self, unit, enemy_teams, game_map)
+            if tree:
+                tree.evaluate()
+        # Core AI Logic (runs regardless of strategy)
+        self.manage_villagers(game_map)  # Improved villager management
+        self.manage_military(enemy_teams, game_map, dt, players_target, players) # Military Management
+        self.build_structures(game_map)   # Smarter building
+
+        # Decision Tree (runs after other logic)
+        decision_tree = self.create_mode_decision_tree(enemy_teams, game_map, dt, players, selected_player, players_target)
+        if decision_tree:
+            decision_tree.evaluate()
+
+        self.scout_map(game_map)  # Keep scouting
+        #self.balance_units()  # Consider removing or moving this, as manage_military handles it
+        #self.build_structure(self.clock)
+    '''def update(self, game_map, dt):
+        enemy_teams = [team for team in game_map.players if team.teamID != self.player_team.teamID]
+        players = game_map.players
+        players_target = game_map.game_state.get('players_target') if game_map.game_state else [None] * len(players)
+        selected_player = self.player_team
+
+        decision_tree = self.create_mode_decision_tree(enemy_teams, game_map, dt, players, selected_player, players_target) # Call decision tree
+        decision_tree.evaluate() # Evaluate the decision tree
+
+        self.scout_map(game_map)
+        self.balance_units()
+        self.build_structure(self.clock)'''
+    
