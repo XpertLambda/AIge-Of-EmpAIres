@@ -337,9 +337,26 @@ class Bot:
         
         return has_building, "building"
 
+    def needs_population_buildings(self):
+        """Vérifie si on a besoin d'augmenter la population maximum"""
+        # Si proche de la limite de population
+        if self.team.population >= self.team.maximum_population - 5:
+            # Si on n'a pas atteint la limite absolue
+            if self.team.maximum_population < MAXIMUM_POPULATION:
+                return True
+        return False
+
     def train_units(self, unit_type):
         can_train, reason = self.can_train_unit(unit_type)
         
+        # Vérifier si on est proche de la limite de population
+        if self.needs_population_buildings():
+            # Priorité aux bâtiments qui augmentent la population
+            for building_type in ["House", "TownCentre"]:
+                if building_type in self.check_building_needs():
+                    self.build_structure(1)
+                    return False
+
         if not can_train:
             if reason == "resources":
                 # Allouer des villageois à la récolte des ressources manquantes
@@ -439,7 +456,7 @@ class Bot:
         target_counts = {}
 
         for unit in self.team.units:
-            if not hasattr(unit, 'carry') and not unit.target:
+            if not hasattr(unit, 'carry') and not unit.attack_target:
                 for target in self.targets:
                     if target not in target_counts:
                         target_counts[target] = 0
@@ -526,6 +543,16 @@ class Bot:
 
     def check_building_needs(self):
         needed_buildings = []
+        
+        # Donner la priorité aux bâtiments de population si nécessaire
+        if self.needs_population_buildings():
+            if self.team.maximum_population < MAXIMUM_POPULATION - 10:
+                if not any(isinstance(building, TownCentre) for building in self.team.buildings):
+                    needed_buildings.append("TownCentre")
+                if not any(isinstance(building, House) for building in self.team.buildings):
+                    needed_buildings.append("House")
+        
+        # Ajouter les autres bâtiments nécessaires
         if not any(isinstance(building, Barracks) for building in self.team.buildings):
             needed_buildings.append("Barracks")
         if not any(isinstance(building, TownCentre) for building in self.team.buildings):
@@ -542,6 +569,11 @@ class Bot:
             needed_buildings.append("Stable")
         if not any(isinstance(building, ArcheryRange) for building in self.team.buildings):
             needed_buildings.append("ArcheryRange")
+        
+        # Ajouter des maisons supplémentaires si besoin de population
+        if self.needs_population_buildings() and "House" not in needed_buildings:
+            needed_buildings.append("House")
+            
         return needed_buildings
 
     def find_building_location(self, building_type):

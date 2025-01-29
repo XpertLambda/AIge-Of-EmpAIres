@@ -86,8 +86,14 @@ def create_economic_decision_tree(bot):
                 true_branch = DecisionNode(
                     action = lambda: build_needed_structure_action(bot)
                 ),
-                false_branch = DecisionNode(
-                    action = lambda: balance_army_action(bot)
+                false_branch=DecisionNode(
+                    condition=lambda: is_military_count_low_condition(bot),
+                    true_branch=DecisionNode(
+                        action=lambda: balance_army_action(bot)
+                    ),
+                    false_branch=DecisionNode(
+                        action=lambda: manage_offense_action(bot) # Balanced approach: manage offense if nothing else needed
+                    )
                 )
             )
         )
