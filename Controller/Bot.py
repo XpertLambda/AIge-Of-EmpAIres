@@ -319,24 +319,95 @@ class Bot:
         player_to_check = player if player else self.team
         return [unit for unit in player_to_check.units if not isinstance(unit, Villager)]
 
-    def train_units(self, unit_type):
-        UNIT_TO_BUILDING_MAP = {
-            'v': 'TownCentre',
-            'a': 'ArcheryRange',
-            's': 'Barracks',
-            'h': 'Stable'
+    def can_train_unit(self, unit_type):
+        """Vérifie si on peut former une unité (ressources et bâtiment disponible)"""
+        unit_instance = unit_type(team=self.team.teamID)
+        if not self.team.resources.has_enough(unit_instance.cost.get()):
+            return False, "resources"
+            
+        BUILDING_FOR_UNIT = {
+            Villager: 'T',    # TownCentre
+            Archer: 'A',      # ArcheryRange
+            Swordsman: 'B',   # Barracks
+            Horseman: 'S'     # Stable
         }
+        
+        required_building = BUILDING_FOR_UNIT.get(unit_type)
+        has_building = any(b.acronym == required_building for b in self.team.buildings)
+        
+        return has_building, "building"
 
-        unit_acronym = unit_type.acronym if hasattr(unit_type, 'acronym') else None
+    def train_units(self, unit_type):
+        can_train, reason = self.can_train_unit(unit_type)
+        
+        if not can_train:
+            if reason == "resources":
+                # Allouer des villageois à la récolte des ressources manquantes
+                unit_instance = unit_type(team=self.team.teamID)
+                if unit_instance.cost.wood > self.team.resources.wood:
+                    self.reallocate_villagers(Tree)
+                elif unit_instance.cost.gold > self.team.resources.gold:
+                    self.reallocate_villagers(Gold)
+                elif unit_instance.cost.food > self.team.resources.food:
+                    self.reallocate_villagers(Farm)
+            elif reason == "building":
+                # Ajouter le bâtiment requis aux besoins
+                UNIT_TO_BUILDING = {
+                    Villager: "TownCentre",
+                    Archer: "ArcheryRange",
+                    Swordsman: "Barracks",
+                    Horseman: "Stable"
+                }
+                needed_building = UNIT_TO_BUILDING.get(unit_type)
+                if needed_building:
+                    if needed_building not in self.check_building_needs():
+                        self.build_structure(1)  # Construire le bâtiment nécessaire
+            return False
 
-        if unit_acronym and unit_acronym in UNIT_TO_BUILDING_MAP:
-            building_type = UNIT_TO_BUILDING_MAP[unit_acronym]
-
+        # Si on peut former l'unité, on la forme
+        UNIT_TO_BUILDING_MAP = {
+            Villager: 'T',
+            Archer: 'A', 
+            Swordsman: 'B',
+            Horseman: 'S'
+        }
+        
+        building_acronym = UNIT_TO_BUILDING_MAP.get(unit_type)
+        if building_acronym:
             for building in self.team.buildings:
-                if building.acronym == building_type[0]:
+                if building.acronym == building_acronym:
                     if hasattr(building, 'add_to_training_queue'):
-                        building.add_to_training_queue(self.team)
-                        return
+                        return building.add_to_training_queue(self.team)
+        return False
+
+    def balance_units(self):
+        villager_count = sum(1 for unit in self.team.units if isinstance(unit, Villager))
+        military_units = self.get_military_units()
+        military_count = len(military_units)
+
+        # Priorité à la formation de villageois si peu nombreux
+        if villager_count < 20:
+            success = self.train_units(Villager)
+            if success:
+                return True
+
+        # Formation d'unités militaires si ressources suffisantes
+        if military_count < 30:
+            unit_priorities = [
+                (self.PRIORITY_UNITS.get('a', 0), Archer),
+                (self.PRIORITY_UNITS.get('s', 0), Swordsman),
+                (self.PRIORITY_UNITS.get('h', 0), Horseman)
+            ]
+            
+            # Trier par priorité
+            unit_priorities.sort(reverse=True)
+            
+            # Essayer de former l'unité avec la plus haute priorité
+            for priority, unit_type in unit_priorities:
+                if self.train_units(unit_type):
+                    return True
+
+        return False
 
     def is_under_attack(self):
         attacking_enemies = []  # Initialize an empty list to store attacking enemies
@@ -388,38 +459,6 @@ class Bot:
 
     def priorty1(self):
         self.defend_under_attack()
-
-    def balance_units(self):
-        villager_count = sum(1 for unit in self.team.units if isinstance(unit, Villager))
-        military_units = self.get_military_units()
-        military_count = len(military_units)
-
-        MAX_QUEUE_SIZE = 5
-        PRIORITY_UNITS = self.PRIORITY_UNITS # Use self.PRIORITY_UNITS
-
-        if self.team.resources.food < 100 and villager_count < 20: # Increased villager count condition
-            for building in self.team.buildings:
-                if building.acronym == 'T':
-                    if len(building.training_queue) < MAX_QUEUE_SIZE:
-                        self.train_units(Villager)
-                        break
-
-        elif military_count < 30: # Increased military count condition
-            best_building = None
-            best_priority = -1
-            for building in self.team.buildings:
-                if building.spawnsUnits and len(building.training_queue) < MAX_QUEUE_SIZE:
-                    unit_acronym = building.acronym
-                    if unit_acronym in PRIORITY_UNITS:
-                        priority = PRIORITY_UNITS[unit_acronym]
-                        if priority > best_priority:
-                            best_building = building
-                            best_priority = priority
-
-            if best_building:
-                unit_type = Building.UNIT_TRAINING_MAP.get(best_building.acronym)
-                if unit_type:
-                    self.train_units(unit_type) # train_units now takes unit_type directly
 
     def adjust_priorities(self, enemy_teams):
         if not isinstance(enemy_teams, list):
