@@ -39,6 +39,10 @@ def are_damaged_buildings_condition(bot):
 def is_military_count_low_condition(bot):
     return bot.get_military_unit_count(bot.team) < 10 # Example threshold
 
+def should_expand_condition(bot):
+    """Vérifie si le bot devrait s'étendre"""
+    return bot.is_ready_to_expand()
+
 # --- Actions ---
 def defend_action(bot):
     print("Decision Node Action: Defend under attack.")
@@ -73,10 +77,14 @@ def manage_offense_action(bot):
                 bot.search_for_target(unit, enemy_team, True)
     return True
 
+def expansion_action(bot):
+    """Action d'expansion"""
+    return bot.manage_expansion()
+
 # --- Decision Trees ---
 
 def create_economic_decision_tree(bot):
-    """Decision tree for Economic mode - focuses on economy, defends if attacked."""
+    """Decision tree for Economic mode - now includes expansion"""
     debug_print("Creating economic decision tree")
     return DecisionNode(
         condition = lambda: is_under_attack_condition(bot),
@@ -93,13 +101,13 @@ def create_economic_decision_tree(bot):
                 true_branch = DecisionNode(
                     action = lambda: build_needed_structure_action(bot)
                 ),
-                false_branch=DecisionNode(
-                    condition=lambda: is_military_count_low_condition(bot),
-                    true_branch=DecisionNode(
-                        action=lambda: balance_army_action(bot)
+                false_branch = DecisionNode(
+                    condition = lambda: should_expand_condition(bot),
+                    true_branch = DecisionNode(
+                        action = lambda: expansion_action(bot)
                     ),
-                    false_branch=DecisionNode(
-                        action=lambda: manage_offense_action(bot)  # Version simplifiée qui ne nécessite que bot
+                    false_branch = DecisionNode(
+                        action = lambda: balance_army_action(bot)
                     )
                 )
             )

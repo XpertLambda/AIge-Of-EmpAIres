@@ -563,6 +563,15 @@ class Bot:
     def check_building_needs(self):
         needed_buildings = []
         
+        # Ajouter des bâtiments militaires si on se prépare à l'expansion
+        if self.is_ready_to_expand():
+            if not any(isinstance(building, ArcheryRange) for building in self.team.buildings):
+                needed_buildings.append("ArcheryRange")
+            if not any(isinstance(building, Barracks) for building in self.team.buildings):
+                needed_buildings.append("Barracks")
+            if not any(isinstance(building, Keep) for building in self.team.buildings):
+                needed_buildings.append("Keep")
+        
         # Donner la priorité aux bâtiments de population si nécessaire
         if self.needs_population_buildings():
             if self.team.maximum_population < MAXIMUM_POPULATION - 10:
@@ -671,6 +680,61 @@ class Bot:
                         building = building_class(team=self.team.teamID, x=x, y=y)
                         if self.team.build(building_type, x, y, num_builders, self.game_map):  # Passez le nom du type de bâtiment ici
                             return True
+        return False
+
+    def is_ready_to_expand(self):
+        """Vérifie si le bot est prêt à s'étendre"""
+        # Vérifier qu'on a une économie stable
+        if self.get_resource_shortage():
+            return False
+            
+        # Vérifier qu'on a une armée suffisante
+        military_count = self.get_military_unit_count(self.team)
+        if military_count < 15:  # Minimum d'unités pour attaquer
+            return False
+            
+        # Vérifier qu'on a des bâtiments de base
+        has_essential_buildings = all(
+            any(isinstance(b, building_type) for b in self.team.buildings)
+            for building_type in [TownCentre, Keep, Barracks]
+        )
+        if not has_essential_buildings:
+            return False
+            
+        return True
+
+    def manage_expansion(self):
+        """Gère l'expansion du territoire via l'attaque"""
+        # Trouver l'ennemi le plus faible
+        weakest_enemy = None
+        min_military = float('inf')
+        
+        for enemy in self.enemies:
+            enemy_military = self.get_military_unit_count(enemy)
+            if enemy_military < min_military:
+                min_military = enemy_military
+                weakest_enemy = enemy
+                
+        if weakest_enemy:
+            # Organiser les troupes pour l'attaque
+            military_units = self.get_military_units()
+            # Envoyer 70% des unités militaires à l'attaque
+            attack_force = military_units[:int(len(military_units) * 0.7)]
+            
+            for unit in attack_force:
+                # Chercher en priorité les bâtiments qui augmentent la population
+                target = None
+                for building in weakest_enemy.buildings:
+                    if isinstance(building, (TownCentre, House)):
+                        target = building
+                        break
+                        
+                if not target:  # Si pas de bâtiment prioritaire, prendre n'importe quelle cible
+                    self.search_for_target(unit, weakest_enemy, True)
+                else:
+                    unit.set_target(target)
+            
+            return True
         return False
 
 
