@@ -452,20 +452,39 @@ class Bot:
         return False  # Return False if no suitable location found
 
     def gather_units_for_defense(self, units_per_target=2):
+        """Rassemble les unités militaires pour défendre contre les ennemis détectés"""
+        # Obtenir la liste des ennemis qui attaquent
+        attacking_enemies = self.is_under_attack()
+        if not attacking_enemies:
+            return
+
         # Dictionary to track the number of units assigned to each target
         target_counts = {}
+        
+        # Récupérer uniquement les unités militaires disponibles
+        available_units = [unit for unit in self.team.units 
+                         if not isinstance(unit, Villager) 
+                         and (not unit.attack_target or not unit.attack_target.isAlive())]
 
-        for unit in self.team.units:
-            if not hasattr(unit, 'carry') and not unit.attack_target:
-                for target in self.targets:
-                    if target not in target_counts:
-                        target_counts[target] = 0
-
-                    if target_counts[target] < units_per_target:
-                        unit.set_target(target)
-                        target_counts[target] += 1
-                        break
-
+        # Assigner les unités aux cibles
+        for unit in available_units:
+            # Trouver la cible la plus proche qui n'a pas assez d'unités assignées
+            closest_enemy = None
+            min_distance = float('inf')
+            
+            for enemy in attacking_enemies:
+                if enemy not in target_counts:
+                    target_counts[enemy] = 0
+                
+                if target_counts[enemy] < units_per_target:
+                    dist = math.dist((unit.x, unit.y), (enemy.x, enemy.y))
+                    if dist < min_distance:
+                        min_distance = dist
+                        closest_enemy = enemy
+            
+            if closest_enemy:
+                unit.set_target(closest_enemy)
+                target_counts[closest_enemy] = target_counts.get(closest_enemy, 0) + 1
 
     def defend_under_attack(self):
         #self.modify_target( None, players_target) # players_target is not used in defend_under_attack
