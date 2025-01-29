@@ -1,5 +1,4 @@
 # Chemin de C:/Users/cyril/OneDrive/Documents/INSA/3A/PYTHON_TEST/Projet_python\Controller\Decisonnode.py
-from Controller.terminal_display_debug import debug_print
 
 class DecisionNode:
     def __init__(self, condition=None, true_branch=None, false_branch=None, action=None):
