@@ -76,10 +76,8 @@ class Team:
                     return True
         return False
 
-    def build(self, building_type, x, y, num_builders, game_map, force=False):
-        building_class = building_class_map[building_type]
-        building = building_class(team=self.teamID)
-
+    def build(self, building, x, y, num_builders, game_map, force=False):
+        building = building_class_map[building](team=self.teamID)
         x, y = round(x), round(y)
         if not self.resources.has_enough(building.cost.get()):
             del building
@@ -88,9 +86,9 @@ class Team:
         builders = set()
         for unit in self.units:
             if unit.acronym == "v" and (force or unit.isAvailable()):
-                builders.add(unit)
-                if len(builders) == num_builders:
-                    break
+                    builders.add(unit)
+                    if len(builders) == num_builders:
+                        break
         if not builders:
             del building
             return False

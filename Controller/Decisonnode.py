@@ -45,7 +45,7 @@ def defend_action(bot):
     bot.priorty1() # Using priority 1 for defense
 
 def address_resource_shortage_action(bot):
-    #print("Decision Node Action: Addressing resource shortage.")
+    print("Decision Node Action: Addressing resource shortage.")
     bot.priority7() # Using priority 7 for resource management
 
 def build_needed_structure_action(bot):

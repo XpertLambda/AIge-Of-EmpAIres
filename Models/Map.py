@@ -27,8 +27,7 @@ class GameMap:
         self.inactive_matrix = {}
         self.projectiles = {}
         self.game_state = None
-        self.width = grid_width
-        self.height = grid_height
+
         self.terminal_view_x = 0
         self.terminal_view_y = 0
 
@@ -425,6 +424,9 @@ class GameMap:
             entity.update(self, dt)
             if not entity.isAlive():
                 self.move_to_inactive(entity)
+                if entity.hasResources:
+                    self.resources[(round(entity.x), round(entity.y))].remove(entity)
+
 
         inactive_entities = set()
         for entities in self.inactive_matrix.values():

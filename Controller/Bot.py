@@ -50,17 +50,9 @@ class Bot:
             "wood": Tree,
             "gold": Gold,
         }
-        
-        resources = self.team.resources  # Utilisation directe des ressources actuelles de l'équipe
-        debug_print(f'Team resources: {resources}')
-        
-        # Vérifier s'il y a une pénurie en comparant avec RESOURCE_THRESHOLDS
-        for resource in ["food", "wood", "gold"]:
-            if getattr(resources, resource) < getattr(RESOURCE_THRESHOLDS, resource):
-                return RESOURCE_MAPPING[resource]
-        
-        return None  # Aucune pénurie détectée
-
+        resources = self.team.resources.copy()
+        resources.difference(RESOURCE_THRESHOLDS.get())
+        return RESOURCE_MAPPING[resources.min_resource()]
 
 
     def reallocate_villagers(self, Resource):
@@ -68,7 +60,6 @@ class Bot:
                                if isinstance(unit, Villager) and unit.isAvailable()]
         available_farms = [farm for farm in self.team.buildings
                            if isinstance(farm, Farm)]
-        
         for villager in available_villagers:
             drop_points = [b for b in self.team.buildings if b.resourceDropPoint]
             if not drop_points:
@@ -105,6 +96,9 @@ class Bot:
                             # Attempt building at the discovered position
                             if self.team.build('Farm', x, y, 1, self.game_map, True):
                                 return
+                            else:
+                                Resource = Tree
+
                     else:
                         closest_buildable_position = None
                         min_distance = float('inf')
@@ -118,6 +112,9 @@ class Bot:
                             x, y = closest_buildable_position
                             if self.team.build('Farm', x, y, 1, self.game_map):
                                 return
+                            else:
+                                Resource = Tree
+                        else:
 
             resource_locations = []
             for pos, entities in self.game_map.resources.items():
@@ -137,10 +134,11 @@ class Bot:
                 villager.set_target(closest_resource[1])
                 break
 
+
+
     def priority7(self):
         resource_shortage = self.get_resource_shortage()
                 
-        debug_print(f'Reallocating villagers to {resource_shortage.__name__}')
         self.reallocate_villagers(resource_shortage)
 
 
@@ -644,14 +642,12 @@ class Bot:
 
         for building_type in needed_buildings:
             if building_type in building_class_map:
-                print(f"Building type: {building_type}")
                 building_class = building_class_map[building_type]
 
                 # Créer une instance temporaire pour accéder à `cost`
                 building_instance = building_class(team=self.team.teamID)
                 building_cost = building_instance.cost
 
-                print(f"Cout building: {building_cost}")
 
                 # Accès aux ressources via les attributs de l'instance `cost`
                 if (self.team.resources.food >= building_cost.food and
@@ -664,7 +660,6 @@ class Bot:
 
                         # Vérifier que self.game_map est un objet de type GameMap
                         if not isinstance(self.game_map, GameMap):
-                            print(f"Erreur: self.game_map n'est pas un objet GameMap. Type actuel: {type(self.game_map)}")
                             return False
 
                         # Construire le bâtiment

@@ -55,7 +55,7 @@ MAXIMUM_POPULATION = 200
 
 difficulty_config = {
     'lean' : {
-        'Resources' : Resources(food=50, gold=150, wood=50),
+        'Resources' : Resources(food=50, gold=150, wood=100),
         'Units' : {
             'Villager' : 3
         },
@@ -419,4 +419,4 @@ VALID_BOTS_COUNT = [i for i in range(1, 56)]
 VALID_LEVELS = ["lean", "mean", "marines", "DEBUG"]
 VALID_BOT_MODES = ["economique", "defensif", "offensif"] # Added valid bot modes - AJOUTÉ
 
-RESOURCE_THRESHOLDS = Resources(food = 150, gold=150, wood = 100)
+RESOURCE_THRESHOLDS = Resources(food = 300, gold=200, wood = 400)

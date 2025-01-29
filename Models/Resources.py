@@ -69,6 +69,12 @@ class Resources:
             (wood > 0 and self.wood < wood)
         )
 
+    def difference(self, resources):
+        food, gold, wood = resources
+        self.food -= food
+        self.gold -= gold
+        self.wood -= wood
+
     def min_resource(self):
         min_value = min(self.food, self.gold, self.wood)
         

@@ -51,12 +51,25 @@ class Villager(Unit):
 
     # ---------------- Controller ----------------
     def seekIdle(self):
-        if not self.attack_target and not self.collect_target and not self.stock_target and not self.build_target  and not self.path :
+        if (self.attack_target and not self.attack_target.isAlive()) or \
+             (self.collect_target and not self.collect_target.isAlive()) or \
+             (self.stock_target and not self.stock_target.isAlive()) or \
+             (self.build_target and not self.build_target.isAlive()):
+            # Reset the invalid target
+            self.attack_target = None if self.attack_target and not self.attack_target.isAlive() else self.attack_target
+            self.collect_target = None if self.collect_target and not self.collect_target.isAlive() else self.collect_target
+            self.stock_target = None if self.stock_target and not self.stock_target.isAlive() else self.stock_target
+            self.build_target = None if self.build_target and not self.build_target.isAlive() else self.build_target
+            
+        if not self.attack_target and not self.collect_target and not self.stock_target and not self.build_target and not self.path:
             self.state = 'idle'
             self.set_task(None)
+        
         self.cooldown_frame = None
 
+
     def set_target(self, target):
+        self.state == 'idle'
         self.attack_target = None
         self.collect_target = None
         self.build_target = None
@@ -65,15 +78,14 @@ class Villager(Unit):
         self.set_destination(None, None)
         if target and target.isAlive() and target.entity_id != self.entity_id:
             if target.team == self.team and hasattr(target, 'buildTime'):
-                if target.processTime < target.dynamicBuildTime:
+                if not target.isBuilt():
                     self.set_task('build', target)
-                
-                elif hasattr(target, 'resourceDropPoint') and target.resourceDropPoint and target.state == 'idle':
+                elif hasattr(target, 'resourceDropPoint') and target.resourceDropPoint and target.isBuilt():
                     self.set_task('stock', target)
+                else:
+                    self.set_task('collect', target)
             
             elif target.hasResources:
-                if type(target).__name__ == "Farm" and not target.isBuilt():
-                    return
                 self.set_task('collect', target)
 
             elif target.team != self.team:
@@ -83,9 +95,12 @@ class Villager(Unit):
         if task in villager_tasks:
             self.task = task
             setattr(self, villager_tasks[task], target)
+        else : 
+            self.task = None
 
     def isAvailable(self):
-        if self.isAlive() and self.state == 'idle' :
+        if self.isAlive() and not self.task:
+
             return True
         return False
 
@@ -147,9 +162,12 @@ class Villager(Unit):
             return
         if self.stock_target and self.stock_target.isAlive():
             distance = math.dist((self.x, self.y), (self.stock_target.x, self.stock_target.y)) - self.stock_target.hitbox - 1
-            if self.carry.total() == 0:
+            if self.carry.total() == 0 and self.collect_target and self.collect_target.isAlive():
                     self.task = 'collect'
                     return
+            elif self.carry.total() == 0:
+                self.set_target(None)
+                return
             if distance <= 0:
                 self.state = 'idle'
                 self.set_destination(None, game_map)
@@ -174,9 +192,7 @@ class Villager(Unit):
         if self.task != 'build':
             return
         if not self.build_target or not self.build_target.isAlive() or self.build_target.state != 'construction':
-            self.task = None
-            self.build_target = None
-            self.path = []
+            self.set_target(None)
             return
 
         if self not in self.build_target.builders:
