@@ -356,11 +356,12 @@ class Bot:
         critical_points.sort(key=lambda b: b.hp / b.max_hp)
         return critical_points
 
-    def build_defensive_structure(self, building_type,  num_builders):
-     critical_points= self.get_critical_points()
-     if critical_points:
-        for point in critical_points:
-             self.team.build(building_type, point.x, point.y ,num_builders,self.game_map)
+    def build_defensive_structure(self, building_type, num_builders):
+        point = self.find_building_location(building_type)  # Fix: Changed from find_build_location to find_building_location
+        if point:  # Add check for None return value
+            x, y = point
+            return self.team.build(building_type, x, y, num_builders, self.game_map)
+        return False  # Return False if no suitable location found
 
     def gather_units_for_defense(self, units_per_target=2):
         # Dictionary to track the number of units assigned to each target
@@ -571,7 +572,7 @@ class Bot:
 
                         # Construire le bâtiment
                         building = building_class(team=self.team.teamID, x=x, y=y)
-                        if self.team.build(building_type, x, y, self.game_map, num_builders):  # Passez le nom du type de bâtiment ici
+                        if self.team.build(building_type, x, y, num_builders, self.game_map):  # Passez le nom du type de bâtiment ici
                             return True
         return False
 
