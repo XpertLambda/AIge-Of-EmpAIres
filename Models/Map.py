@@ -325,32 +325,49 @@ class GameMap:
         # Temporarily store and remove unpicklable objects
         gui_state = {}
         if self.game_state:
-            gui_state = {
-                'screen': self.game_state.pop('screen', None),
-                'minimap_panel_sprite': self.game_state.pop('minimap_panel_sprite', None),
-                'minimap_background': self.game_state.pop('minimap_background', None),
-                'minimap_entities_surface': self.game_state.pop('minimap_entities_surface', None),
-                'player_selection_surface': self.game_state.pop('player_selection_surface', None),
-                'train_button_rects': self.game_state.pop('train_button_rects', {}),
-                'pause_menu_button_rects': self.game_state.pop('pause_menu_button_rects', {})
-            }
+            # Create a copy of game_state to avoid modifying the original
+            temp_game_state = self.game_state.copy()
+            
+            # Liste des clés GUI à exclure de la sauvegarde
+            gui_keys = ['screen', 'minimap_panel_sprite', 'minimap_background', 
+                       'minimap_entities_surface', 'player_selection_surface', 
+                       'train_button_rects', 'pause_menu_button_rects',
+                       'game_over_button_rect', 'main_menu_button_rect']
+            
+            # Stocker et supprimer les objets GUI
+            for key in gui_keys:
+                if key in temp_game_state:
+                    gui_state[key] = temp_game_state.pop(key)
 
-        try:
+            try:
+                data = {
+                    'grid': self.grid,
+                    'grid_width': self.num_tiles_x,
+                    'grid_height': self.num_tiles_y,
+                    'center_gold_flag': self.center_gold_flag,
+                    'players': self.players,
+                    'game_state': temp_game_state  # Use the cleaned game_state
+                }
+                with open(full_path, 'wb') as f:
+                    pickle.dump(data, f)
+                debug_print(f"Game map saved successfully to {full_path}.")
+            finally:
+                # Restore GUI objects to original game_state if they existed
+                if gui_state:
+                    self.game_state.update(gui_state)
+        else:
+            # Si pas de game_state, sauvegarder uniquement les données essentielles
             data = {
                 'grid': self.grid,
                 'grid_width': self.num_tiles_x,
                 'grid_height': self.num_tiles_y,
                 'center_gold_flag': self.center_gold_flag,
                 'players': self.players,
-                'game_state': self.game_state
+                'game_state': {}  # Empty game_state
             }
             with open(full_path, 'wb') as f:
                 pickle.dump(data, f)
             debug_print(f"Game map saved successfully to {full_path}.")
-        finally:
-            # Restore unpicklable objects
-            if self.game_state:
-                self.game_state.update(gui_state)
 
     def load_map(self, filename):
         try:

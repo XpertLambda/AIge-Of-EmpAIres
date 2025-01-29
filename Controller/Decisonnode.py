@@ -85,7 +85,7 @@ def expansion_action(bot):
 
 def create_economic_decision_tree(bot):
     """Decision tree for Economic mode - now includes expansion"""
-    debug_print("Creating economic decision tree")
+    print("Creating economic decision tree")
     return DecisionNode(
         condition = lambda: is_under_attack_condition(bot),
         true_branch = DecisionNode(
@@ -116,7 +116,7 @@ def create_economic_decision_tree(bot):
 
 def create_defensive_decision_tree(bot):
     """Decision tree for Defensive mode - focuses on defense and strong economy."""
-    debug_print("Creating defensive decision tree")
+    print("Creating defensive decision tree")
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot),
         true_branch=DecisionNode(
@@ -141,7 +141,7 @@ def create_defensive_decision_tree(bot):
 
 def create_offensive_decision_tree(bot):
     """Decision tree for Offensive mode - focuses on aggressive military actions."""
-    debug_print("Creating offensive decision tree")
+    print("Creating offensive decision tree")
     return DecisionNode(
         condition=lambda: is_under_attack_condition(bot),
         true_branch=DecisionNode(

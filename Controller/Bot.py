@@ -52,7 +52,7 @@ class Bot:
         }
         
         resources = self.team.resources  # Utilisation directe des ressources actuelles de l'équipe
-        debug_print(f'Team resources: {resources}')
+        print(f'Team resources: {resources}')
         
         # Vérifier s'il y a une pénurie en comparant avec RESOURCE_THRESHOLDS
         for resource in ["food", "wood", "gold"]:
@@ -140,7 +140,7 @@ class Bot:
     def priority7(self):
         resource_shortage = self.get_resource_shortage()
                 
-        debug_print(f'Reallocating villagers to {resource_shortage.__name__}')
+        print(f'Reallocating villagers to {resource_shortage.__name__}')
         self.reallocate_villagers(resource_shortage)
 
 
