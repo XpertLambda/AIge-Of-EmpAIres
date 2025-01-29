@@ -240,11 +240,9 @@ class Bot:
 
     def create_mode_decision_tree(self): 
         if self.mode == 'offensif':
-            return create_economic_decision_tree(self)
-            #return create_offensive_decision_tree(self, enemy_team, game_map, dt, players, players_target)
+            return create_offensive_decision_tree(self)
         elif self.mode == 'defensif':
-            return create_economic_decision_tree(self)
-            #return create_defensive_decision_tree(self, enemy_team)
+            return create_defensive_decision_tree(self)
         elif self.mode == 'economic':
             return create_economic_decision_tree(self)
         else:
