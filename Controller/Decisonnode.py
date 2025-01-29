@@ -106,11 +106,11 @@ def create_economic_decision_tree(bot):
         )
     )
 
-def create_defensive_decision_tree(bot, enemy_team):
+def create_defensive_decision_tree(bot):
     """Decision tree for Defensive mode - focuses on defense and strong economy."""
     debug_print("Creating defensive decision tree")
     return DecisionNode(
-        condition=lambda: is_under_attack_condition(bot, enemy_team),
+        condition=lambda: is_under_attack_condition(bot),
         true_branch=DecisionNode(
             action=lambda: defend_action(bot) # Prioritize defense
         ),
@@ -131,13 +131,13 @@ def create_defensive_decision_tree(bot, enemy_team):
         )
     )
 
-def create_offensive_decision_tree(bot, enemy_team, game_map, dt, players, selected_player, players_target):
+def create_offensive_decision_tree(bot):
     """Decision tree for Offensive mode - focuses on aggressive military actions."""
     debug_print("Creating offensive decision tree")
     return DecisionNode(
-        condition=lambda: is_under_attack_condition(bot, enemy_team),
+        condition=lambda: is_under_attack_condition(bot),
         true_branch=DecisionNode(
-            action=lambda: defend_action(bot, enemy_team, players_target, game_map, dt) # Défend si attaqué en premier
+            action=lambda: defend_action(bot) # Défend si attaqué en premier
         ),
         false_branch=DecisionNode(
             condition=lambda: is_army_below_threshold_condition(bot),
@@ -145,7 +145,7 @@ def create_offensive_decision_tree(bot, enemy_team, game_map, dt, players, selec
                 action=lambda: balance_army_action(bot) # Build army if small
             ),
             false_branch=DecisionNode( # If army is decent size, attack!
-                action=lambda: manage_offense_action(bot, players, selected_player, players_target, game_map, dt) # Manage offensive battle
+                action=lambda: manage_offense_action(bot) # Manage offensive battle
             )
         )
     )
