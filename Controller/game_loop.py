@@ -348,14 +348,51 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
     decision_timer = 0
     players_target = [None for _ in range(len(players))]
 
+    # Function to safely recreate bots after loading
+    def recreate_bots_with_modes():
+        nonlocal bots, players
+        bots = []
+        
+        # Get bot modes from game state or use defaults
+        bot_modes = game_map.game_state.get('bot_modes', [])
+        
+        # If no bot modes saved or mismatched count, use defaults
+        if len(bot_modes) != len(players):
+            bot_modes = ['economique'] * len(players)
+        
+        # Create bots with correct team IDs
+        for i, (player, mode) in enumerate(zip(players, bot_modes)):
+            player.teamID = i  # Reset team ID to match position
+            # Update team IDs for all player's entities
+            for unit in player.units:
+                unit.team = i
+            for building in player.buildings:
+                building.team = i
+            bot = Bot(player, game_map, players, mode, difficulty='medium')
+            bots.append(bot)
+        
+        # Store updated bot modes
+        game_map.game_state['bot_modes'] = bot_modes
 
-    players_target=[None for _ in range(0,len(players))]
+    # Initial bot creation
+    recreate_bots_with_modes()
 
-    # Initialisation des bots
+    # Initialize bots with saved modes if available, otherwise use default mode
     bots = []
-    for player in players:
-        bot = Bot(player, game_map, players, user_choices["bot_modes"], difficulty='medium')  # Pass the 'players' argument as well
+    bot_modes = game_map.game_state.get('bot_modes', ['economique'] * len(players))
+    # Ensure bot_modes matches the current number of players
+    while len(bot_modes) < len(players):
+        bot_modes.append('economique')  # Add default mode for new players
+    bot_modes = bot_modes[:len(players)]  # Trim if we have fewer players than modes
+    
+    # Create bots with correct team assignments
+    for i, (player, mode) in enumerate(zip(players, bot_modes)):
+        player.teamID = i  # Ensure teamID matches the player's position
+        bot = Bot(player, game_map, players, mode, difficulty='medium')
         bots.append(bot)
+
+    # Store updated bot modes back in game state
+    game_map.game_state['bot_modes'] = bot_modes
 
     bot_update_timer = 0  # Timer pour les mises à jour des bots
     bot_update_interval = 1.0 / DPS  
@@ -763,5 +800,6 @@ def game_loop(screen, game_map, screen_width, screen_height, players): # game_ma
             game_state['team_colors'] = generate_team_colors(len(players))
             game_state['force_full_redraw'] = True
             game_state['player_selection_updated'] = True
+            recreate_bots_with_modes()
 
     return "done"
