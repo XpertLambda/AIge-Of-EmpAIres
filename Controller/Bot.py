@@ -36,15 +36,41 @@ class Bot:
             's': 2,  # Swordsmen
             'h': 1   # Horsemen
         }
+        
+        # Add cooldown tracking to prevent infinite loops
+        self.last_action_time = 0
+        self.action_cooldown = 2.0  # 2 seconds between major actions
+        self.resource_check_cooldown = 3.0  # 3 seconds between resource checks
+        self.last_resource_check = 0
+        self.last_detected_shortage = None  # Track what shortage was last detected
 
     def update(self, game_map, dt):
+        import time
+        current_time = time.time()
+        
+        # Prevent too frequent decision making
+        if current_time - self.last_action_time < self.action_cooldown:
+            return
+            
         self.decision_tree = self.create_mode_decision_tree()
-        self.decision_tree.evaluate()
+        result = self.decision_tree.evaluate()
+        
+        if result:  # Only update cooldown if an action was actually taken
+            self.last_action_time = current_time
 
     def set_priority(self, priority):
         self.priority = priority
 
     def get_resource_shortage(self):
+        import time
+        current_time = time.time()
+        
+        # Rate limit resource checks to prevent spam
+        if current_time - self.last_resource_check < self.resource_check_cooldown:
+            return self.last_detected_shortage  # Return cached result
+            
+        self.last_resource_check = current_time
+        
         RESOURCE_MAPPING = {
             "food": Farm,
             "wood": Tree,
@@ -52,13 +78,24 @@ class Bot:
         }
         
         resources = self.team.resources  # Utilisation directe des ressources actuelles de l'équipe
-        print(f'Team resources: {resources}')
+        print(f'Team {self.team.teamID} resources: {resources}')
         
-        # Vérifier s'il y a une pénurie en comparant avec RESOURCE_THRESHOLDS
+        # Check for shortages with more reasonable thresholds for early game
+        early_game_thresholds = {
+            "food": 80,   # Reduced from 150
+            "wood": 60,   # Reduced from 100  
+            "gold": 100   # Reduced from 150
+        }
+        
+        # Vérifier s'il y a une pénurie en comparant avec des seuils plus raisonnables
         for resource in ["food", "wood", "gold"]:
-            if getattr(resources, resource) < getattr(RESOURCE_THRESHOLDS, resource):
-                return RESOURCE_MAPPING[resource]
+            if getattr(resources, resource) < early_game_thresholds[resource]:
+                print(f'Team {self.team.teamID} shortage detected: {resource} ({getattr(resources, resource)} < {early_game_thresholds[resource]})')
+                self.last_detected_shortage = RESOURCE_MAPPING[resource]
+                return self.last_detected_shortage
         
+        print(f'Team {self.team.teamID}: No resource shortage detected')
+        self.last_detected_shortage = None
         return None  # Aucune pénurie détectée
 
 
@@ -72,7 +109,7 @@ class Bot:
         for villager in available_villagers:
             drop_points = [b for b in self.team.buildings if b.resourceDropPoint]
             if not drop_points:
-                return
+                return False
             nearest_drop_point = min(
                 drop_points,
                 key=lambda dp: math.dist((villager.x, villager.y), (dp.x, dp.y))
@@ -80,44 +117,56 @@ class Bot:
 
             if issubclass(Resource, Farm):
                 if not available_farms:
-                    if not available_villagers:
-                        closest_buildable_position = None
-                        min_distance = float('inf')
-                        # Try to find a 2x2 area for a farm
-                        nx, ny = int(nearest_drop_point.x), int(nearest_drop_point.y)
-                        search_range = 10  # Adjust as needed
-                        closest_buildable_position = None
-                        min_distance = float('inf')
+                    # Try to build a farm near the drop point
+                    closest_buildable_position = None
+                    min_distance = float('inf')
+                    nx, ny = int(nearest_drop_point.x), int(nearest_drop_point.y)
+                    search_range = 10  # Adjust as needed
 
-                        for dx in range(-search_range, search_range + 1):
-                            for dy in range(-search_range, search_range + 1):
-                                x = nx + dx
-                                y = ny + dy
-                                # Check 2x2 area is buildable
-                                if (self.game_map.buildable_position(x, y, size = 4)):
-                                    distance = math.dist((nx, ny), (x, y))
-                                    if distance < min_distance:
-                                        min_distance = distance
-                                        closest_buildable_position = (x, y)
-
-                        if closest_buildable_position:
-                            x, y = closest_buildable_position
-                            # Attempt building at the discovered position
-                            if self.team.build('Farm', x, y, 1, self.game_map, True):
-                                return
-                    else:
-                        closest_buildable_position = None
-                        min_distance = float('inf')
-                        for x, y in self.team.zone.get_zone():
+                    for dx in range(-search_range, search_range + 1):
+                        for dy in range(-search_range, search_range + 1):
+                            x = nx + dx
+                            y = ny + dy
+                            # Check 2x2 area is buildable
                             if (self.game_map.buildable_position(x, y, size = 4)):
-                                distance = math.dist((nearest_drop_point.x, nearest_drop_point.y), (x, y))
+                                distance = math.dist((nx, ny), (x, y))
                                 if distance < min_distance:
                                     min_distance = distance
                                     closest_buildable_position = (x, y)
-                        if closest_buildable_position:
-                            x, y = closest_buildable_position
-                            if self.team.build('Farm', x, y, 1, self.game_map):
-                                return
+
+                    if closest_buildable_position:
+                        x, y = closest_buildable_position
+                        # Attempt building at the discovered position
+                        if self.team.build('Farm', x, y, 1, self.game_map):
+                            print(f"Successfully built farm at ({x}, {y})")
+                            return True
+                        
+                    # If that fails, try building in team zone
+                    closest_buildable_position = None
+                    min_distance = float('inf')
+                    for x, y in self.team.zone.get_zone():
+                        if (self.game_map.buildable_position(x, y, size = 4)):
+                            distance = math.dist((nearest_drop_point.x, nearest_drop_point.y), (x, y))
+                            if distance < min_distance:
+                                min_distance = distance
+                                closest_buildable_position = (x, y)
+                    if closest_buildable_position:
+                        x, y = closest_buildable_position
+                        if self.team.build('Farm', x, y, 1, self.game_map):
+                            print(f"Successfully built farm at ({x}, {y})")
+                            return True
+                
+                # Assign available villagers to existing farms
+                if available_villagers and available_farms:
+                    for villager in available_villagers:
+                        closest_farm = min(
+                            available_farms,
+                            key=lambda farm: math.dist((villager.x, villager.y), (farm.x, farm.y))
+                        )
+                        villager.set_target(closest_farm)
+                        print(f"Assigned villager to farm at ({closest_farm.x}, {closest_farm.y})")
+                        break
+                    return True
 
             resource_locations = []
             for pos, entities in self.game_map.resources.items():
@@ -135,13 +184,33 @@ class Bot:
                     )
                 )
                 villager.set_target(closest_resource[1])
-                break
+                print(f"Assigned villager to resource at {closest_resource[0]}")
+                return True
+        
+        print(f"Team {self.team.teamID}: Failed to reallocate villagers")
+        return False
 
     def priority7(self):
         resource_shortage = self.get_resource_shortage()
-                
-        print(f'Reallocating villagers to {resource_shortage.__name__}')
-        self.reallocate_villagers(resource_shortage)
+        
+        if resource_shortage is None:
+            # Even if no shortage, try to be proactive about villager training
+            villager_count = sum(1 for unit in self.team.units if isinstance(unit, Villager))
+            if villager_count < 5:  # Ensure minimum villagers
+                print(f'Team {self.team.teamID}: No shortage but training villagers (current: {villager_count})')
+                return self.train_units(Villager)
+            print(f'Team {self.team.teamID}: No resource shortage detected, economy stable')
+            return True  # Return True to indicate successful action
+            
+        print(f'Team {self.team.teamID}: Reallocating villagers to {resource_shortage.__name__}')
+        result = self.reallocate_villagers(resource_shortage)
+        
+        # If reallocation fails, try to train more villagers
+        if not result:
+            print(f'Team {self.team.teamID}: Reallocation failed, trying to train villagers')
+            return self.train_units(Villager)
+            
+        return result
 
 
     def search_for_target(self, unit, enemy_team, attack_mode=True):
@@ -487,12 +556,14 @@ class Bot:
     def defend_under_attack(self):
         #self.modify_target( None, players_target) # players_target is not used in defend_under_attack
         self.gather_units_for_defense()
-        self.balance_units()
-        self.build_defensive_structure("Keep", 3)
+        result = self.balance_units()
+        result2 = self.build_defensive_structure("Keep", 3)
+        return result or result2
         #self.manage_battle(self.team,None,enemy_team,self.game_map, dt) # players_target is None here
 
     def priorty1(self):
-        self.defend_under_attack()
+        print(f"Team {self.team.teamID}: Defending under attack")
+        return self.defend_under_attack()
 
     def adjust_priorities(self, enemy_teams):
         if not isinstance(enemy_teams, list):

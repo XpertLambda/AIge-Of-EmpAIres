@@ -44,26 +44,26 @@ def should_expand_condition(bot):
 
 # --- Actions ---
 def defend_action(bot):
-    print("Decision Node Action: Defend under attack.")
-    bot.priorty1() # Using priority 1 for defense
+    print(f"Team {bot.team.teamID}: Decision Node Action: Defend under attack.")
+    return bot.priorty1() # Using priority 1 for defense
 
 def address_resource_shortage_action(bot):
-    #print("Decision Node Action: Addressing resource shortage.")
-    bot.priority7() # Using priority 7 for resource management
+    print(f"Team {bot.team.teamID}: Decision Node Action: Addressing resource shortage.")
+    return bot.priority7() # Using priority 7 for resource management
 
 def build_needed_structure_action(bot):
-    print("Decision Node Action: Building needed structures.")
-    bot.build_structure() # Build structure action
+    print(f"Team {bot.team.teamID}: Decision Node Action: Building needed structures.")
+    return bot.build_structure() # Build structure action
 
 def balance_army_action(bot):
-    print("Decision Node Action: Balancing army units.")
-    bot.balance_units() # Balance units action
+    print(f"Team {bot.team.teamID}: Decision Node Action: Balancing army units.")
+    return bot.balance_units() # Balance units action
 
 def repair_buildings_action(bot):
-    print("Decision Node Action: Repairing damaged buildings.")
+    print(f"Team {bot.team.teamID}: Decision Node Action: Repairing damaged buildings.")
     # Assuming priority_6 is for repair as per your initial request
     # if priority_6 action is not defined in Bot.py please check and adapt or replace with relevant repair logic
-    pass # bot.priority_6() # Repair buildings action - adapt if needed
+    return True # bot.priority_6() # Repair buildings action - adapt if needed
 
 def manage_offense_action(bot):
     """Version simplifiée de manage_offense pour l'arbre de décision économique"""
